@@ -6,8 +6,9 @@ import { APP_SHELL } from '../../data/mockData.js';
 /**
  * Верхняя панель экрана: заголовок, поиск, уведомления, профиль.
  * На узких экранах слева появляется знак логотипа (ведёт на сайт).
+ * onSoon — для ещё не готовых функций (поиск, уведомления).
  */
-export default function Topbar({ title, subtitle, onExit, onAdd, onProfile }) {
+export default function Topbar({ title, subtitle, onExit, onAdd, onProfile, onSoon }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line/60 bg-surface/85 backdrop-blur-md">
       <div className="flex h-20 items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
@@ -22,19 +23,28 @@ export default function Topbar({ title, subtitle, onExit, onAdd, onProfile }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          {/* Поиск (на широких экранах) */}
-          <label className="hidden h-11 w-64 items-center gap-2 rounded-full bg-white px-4 shadow-soft xl:flex">
+          {/* Поиск (на широких экранах): пока только сообщает, что скоро появится */}
+          <form
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSoon();
+            }}
+            className="hidden h-11 w-64 items-center gap-2 rounded-full bg-white px-4 shadow-soft xl:flex"
+          >
             <Search className="h-4 w-4 text-ink-muted" />
             <input
               type="search"
+              aria-label={APP_SHELL.searchPlaceholder}
               placeholder={APP_SHELL.searchPlaceholder}
               className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
             />
-          </label>
+          </form>
 
           <button
             type="button"
             aria-label={APP_SHELL.notificationsLabel}
+            onClick={onSoon}
             className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light"
           >
             <Bell className="h-5 w-5" />

@@ -49,7 +49,7 @@ export default function GoalsSection() {
               eyebrow={goals.eyebrow}
               title={goals.title}
               description={goals.description}
-              action={<LinkArrow>{goals.allLink}</LinkArrow>}
+              action={<LinkArrow to="goals">{goals.allLink}</LinkArrow>}
             />
             <ul className="mt-4 divide-y divide-line">
               {goalList.map((goal) => (

@@ -5,6 +5,7 @@ import GoalCard from '../components/dashboard/GoalCard.jsx';
 import SavingsPreviewCard from '../components/dashboard/SavingsPreviewCard.jsx';
 import TransactionsCard from '../components/dashboard/TransactionsCard.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
+import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
 import { DASHBOARD, SAVINGS } from '../data/mockData.js';
 
@@ -19,6 +20,7 @@ import { DASHBOARD, SAVINGS } from '../data/mockData.js';
 export default function DashboardScreen({ onNavigate }) {
   const { summary, categories, transactions, goals, savingsBalance, hideBalance } = useFinance();
   const goal = goals.find((g) => g.id === DASHBOARD.goal.goalId);
+  const { notifySoon } = useAppActions();
   const openSavings = () => onNavigate('savings');
 
   return (
@@ -29,6 +31,7 @@ export default function DashboardScreen({ onNavigate }) {
           texts={DASHBOARD}
           hiddenByDefault={hideBalance}
           onDeposit={openSavings}
+          onTransfer={notifySoon}
         />
       </Reveal>
       <Reveal delay={0.05}>

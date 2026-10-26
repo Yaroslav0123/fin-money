@@ -10,7 +10,7 @@ export default function ExpenseStructureCard({ title, caption, allLink, categori
     <Card className={`p-6 ${className}`}>
       <div className="flex items-center justify-between">
         <h3 className="text-base font-bold text-ink">{title}</h3>
-        <LinkArrow>{allLink}</LinkArrow>
+        <LinkArrow to="analytics">{allLink}</LinkArrow>
       </div>
       <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row">
         <ExpenseDonut

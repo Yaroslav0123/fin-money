@@ -8,6 +8,7 @@ import Reveal from '../ui/Reveal.jsx';
 import SegmentedControl from '../ui/SegmentedControl.jsx';
 import TrendBadge from '../ui/TrendBadge.jsx';
 import Container from './Container.jsx';
+import { useAppActions } from '../../context/AppActionsContext.jsx';
 import { SAVINGS, SAVINGS_HISTORY, SAVINGS_PERIODS } from '../../data/mockData.js';
 import { formatMoney } from '../../utils/format.js';
 
@@ -17,6 +18,7 @@ const DEFAULT_PERIOD = 'month';
 // Секция «Накопительный счёт»: условия и график роста баланса
 export default function SavingsSection() {
   const [period, setPeriod] = useState(DEFAULT_PERIOD);
+  const { navigate } = useAppActions();
 
   return (
     <section id="savings" className="scroll-mt-20">
@@ -43,7 +45,8 @@ export default function SavingsSection() {
                   })}
                 </div>
 
-                <Button size="md" pill className="mt-8 px-10">
+                {/* Ведёт на экран «Накопления» в приложении */}
+                <Button size="md" pill className="mt-8 px-10" onClick={() => navigate('savings')}>
                   {SAVINGS.depositAction}
                 </Button>
               </div>

@@ -8,8 +8,9 @@ const AUTO_HIDE_MS = 2500;
 /**
  * Короткое всплывающее уведомление внизу экрана.
  * Само скрывается через пару секунд (вызывает onHide).
+ * icon — иконка lucide-react слева, по умолчанию галочка «готово».
  */
-export default function Toast({ message, onHide }) {
+export default function Toast({ message, icon: Icon = CircleCheck, onHide }) {
   useEffect(() => {
     if (!message) return undefined;
     const timer = setTimeout(onHide, AUTO_HIDE_MS);
@@ -28,7 +29,7 @@ export default function Toast({ message, onHide }) {
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             className="flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white shadow-lifted"
           >
-            <CircleCheck className="h-4 w-4 text-accent-green" />
+            <Icon className="h-4 w-4 text-accent-green" />
             {message}
           </motion.div>
         )}

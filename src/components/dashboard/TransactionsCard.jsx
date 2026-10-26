@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Card from '../ui/Card.jsx';
 import IconTile from '../ui/IconTile.jsx';
@@ -5,11 +6,13 @@ import LinkArrow from '../ui/LinkArrow.jsx';
 import { formatSignedMoney } from '../../utils/format.js';
 
 // Одна строка операции. Новые строки плавно появляются, остальные сдвигаются.
-function TransactionRow({ tx }) {
+// forwardRef нужен AnimatePresence mode="popLayout": он измеряет уходящую строку через ref.
+const TransactionRow = forwardRef(function TransactionRow({ tx }, ref) {
   const isIncome = tx.amount > 0;
 
   return (
     <motion.li
+      ref={ref}
       layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -29,7 +32,7 @@ function TransactionRow({ tx }) {
       </span>
     </motion.li>
   );
-}
+});
 
 // Карточка «Последние операции»
 export default function TransactionsCard({ transactions, texts, className = '' }) {

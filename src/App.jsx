@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import AppShell from './components/app/AppShell.jsx';
 import ScreenSwitcher from './components/layout/ScreenSwitcher.jsx';
+import { AppActionsProvider } from './context/AppActionsContext.jsx';
 import { FinanceProvider } from './context/FinanceContext.jsx';
 import AnalyticsScreen from './screens/AnalyticsScreen.jsx';
 import DashboardScreen from './screens/DashboardScreen.jsx';
@@ -58,31 +59,33 @@ export default function App() {
   return (
     // Общие финансовые данные доступны всем экранам и не сбрасываются при переходах
     <FinanceProvider>
-      <AnimatePresence mode="wait">
-        {isLanding ? (
-          <motion.div key="landing" className="min-h-full" {...layoutTransition}>
-            <LandingPage onStart={() => setActiveScreen('dashboard')} />
-            {/* Демо-переключатель экранов плавает внизу страницы */}
-            <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center">
-              <ScreenSwitcher screens={SCREENS} activeId={activeScreen} onChange={setActiveScreen} />
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div key="app" className="min-h-full" {...layoutTransition}>
-            <AppShell
-              activeScreen={activeScreen}
-              onNavigate={setActiveScreen}
-              onExit={() => setActiveScreen(LANDING_SCREEN)}
-            >
-              <AnimatePresence mode="wait">
-                <motion.div key={activeScreen} {...screenTransition}>
-                  {renderAppScreen()}
-                </motion.div>
-              </AnimatePresence>
-            </AppShell>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AppActionsProvider onNavigate={setActiveScreen}>
+        <AnimatePresence mode="wait">
+          {isLanding ? (
+            <motion.div key="landing" className="min-h-full" {...layoutTransition}>
+              <LandingPage onStart={() => setActiveScreen('dashboard')} />
+              {/* Демо-переключатель экранов плавает внизу страницы */}
+              <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center">
+                <ScreenSwitcher screens={SCREENS} activeId={activeScreen} onChange={setActiveScreen} />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div key="app" className="min-h-full" {...layoutTransition}>
+              <AppShell
+                activeScreen={activeScreen}
+                onNavigate={setActiveScreen}
+                onExit={() => setActiveScreen(LANDING_SCREEN)}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div key={activeScreen} {...screenTransition}>
+                    {renderAppScreen()}
+                  </motion.div>
+                </AnimatePresence>
+              </AppShell>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </AppActionsProvider>
     </FinanceProvider>
   );
 }

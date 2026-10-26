@@ -10,7 +10,7 @@ export default function GoalsListCard({ goals, texts, className = '' }) {
     <Card className={`p-6 ${className}`}>
       <div className="flex items-center justify-between">
         <h3 className="text-base font-bold text-ink">{texts.title}</h3>
-        <LinkArrow>{texts.allLink}</LinkArrow>
+        <LinkArrow to="goals">{texts.allLink}</LinkArrow>
       </div>
 
       <ul className="mt-5 space-y-5">

@@ -70,6 +70,7 @@ export const BOTTOM_NAV = [
 
 export const APP_SHELL = {
   searchPlaceholder: 'Поиск операций',
+  soonMessage: 'Скоро будет доступно',
   addAction: 'Добавить операцию',
   notificationsLabel: 'Уведомления',
   profileLabel: 'Профиль',
@@ -487,8 +488,9 @@ export const SETTINGS_PAGE = {
     // Вымышленные данные для прототипа
     defaults: { name: 'Алексей Смирнов', email: 'alexey@example.com', phone: '+7 900 000-00-00' },
     fields: [
-      { id: 'name', label: 'Имя', type: 'text' },
-      { id: 'email', label: 'Email', type: 'email' },
+      // required — поле нельзя оставить пустым; error — подсказка при ошибке
+      { id: 'name', label: 'Имя', type: 'text', required: true, error: 'Введите имя' },
+      { id: 'email', label: 'Email', type: 'email', required: true, error: 'Проверьте адрес почты' },
       { id: 'phone', label: 'Телефон', type: 'tel' },
     ],
     plan: 'Fin Money Free',
@@ -626,8 +628,9 @@ export const LANDING = {
   footer: {
     copyright: '© 2026 Fin Money. Все права защищены.',
     links: [
-      { id: 'privacy', label: 'Политика конфиденциальности', href: '#' },
-      { id: 'terms', label: 'Условия использования', href: '#' },
+      // Страниц пока нет — в подвале это обычный текст, не ссылки
+      { id: 'privacy', label: 'Политика конфиденциальности' },
+      { id: 'terms', label: 'Условия использования' },
     ],
   },
   // Пункты бокового меню в превью приложения на ноутбуке

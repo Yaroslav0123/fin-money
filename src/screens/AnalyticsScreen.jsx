@@ -16,6 +16,7 @@ import {
   INCOME_VS_EXPENSES,
   INSIGHTS,
 } from '../data/mockData.js';
+import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
 import { addExpensesToCategories, applyExpensesToPeriod } from '../utils/analytics.js';
 import { formatMoney, scaleCategories } from '../utils/format.js';
@@ -32,6 +33,7 @@ const expenseTone = (trend) => (trend.percent <= 0 ? 'positive' : 'negative');
 export default function AnalyticsScreen() {
   const [periodId, setPeriodId] = useState(ANALYTICS_PAGE.defaultPeriod);
   const { addedExpenses, summary } = useFinance();
+  const { notifySoon } = useAppActions();
   const { kpi } = ANALYTICS_PAGE;
 
   // Период с учётом трат, добавленных через «Добавить операцию» (они «сегодняшние»)
@@ -68,6 +70,7 @@ export default function AnalyticsScreen() {
         <button
           type="button"
           aria-label={ANALYTICS_PAGE.calendarLabel}
+          onClick={notifySoon}
           className="flex h-10 items-center gap-2 rounded-full bg-white px-4 text-xs font-semibold text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light"
         >
           <CalendarDays className="h-4 w-4 text-brand" />
@@ -125,7 +128,12 @@ export default function AnalyticsScreen() {
         </Card>
       </Reveal>
       <Reveal delay={0.15}>
-        <CategoryBreakdownCard categories={categories} texts={ANALYTICS_PAGE.categories} className="h-full" />
+        <CategoryBreakdownCard
+          categories={categories}
+          texts={ANALYTICS_PAGE.categories}
+          onCategoryClick={notifySoon}
+          className="h-full"
+        />
       </Reveal>
 
       {/* Доходы против расходов */}

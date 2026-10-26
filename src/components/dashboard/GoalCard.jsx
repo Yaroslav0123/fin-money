@@ -13,7 +13,7 @@ export default function GoalCard({ goal, texts }) {
     <Card className="flex h-full flex-col p-6">
       <div className="flex items-center justify-between">
         <h3 className="text-base font-bold text-ink">{texts.title}</h3>
-        <LinkArrow>{texts.allLink}</LinkArrow>
+        <LinkArrow to="goals">{texts.allLink}</LinkArrow>
       </div>
 
       <div className="mt-6 flex items-center gap-3">

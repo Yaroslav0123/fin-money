@@ -11,8 +11,9 @@ import { formatMoney } from '../../utils/format.js';
  * и быстрыми действиями «Пополнить» / «Перевести».
  * hiddenByDefault — сумма скрыта при открытии (настройка «Скрывать баланс»),
  * глазом её можно показать до ухода с экрана.
+ * onDeposit / onTransfer — нажатия на кнопки быстрых действий.
  */
-export default function BalanceCard({ balance, texts, hiddenByDefault = false, onDeposit }) {
+export default function BalanceCard({ balance, texts, hiddenByDefault = false, onDeposit, onTransfer }) {
   const [isHidden, setIsHidden] = useState(hiddenByDefault);
   const EyeIcon = isHidden ? EyeOff : Eye;
 
@@ -57,7 +58,7 @@ export default function BalanceCard({ balance, texts, hiddenByDefault = false, o
           <Plus className="h-4 w-4" />
           {texts.actions.deposit}
         </Button>
-        <Button size="md" variant="secondary" pill>
+        <Button size="md" variant="secondary" pill onClick={onTransfer}>
           <ArrowLeftRight className="h-4 w-4" />
           {texts.actions.transfer}
         </Button>

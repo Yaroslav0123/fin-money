@@ -6,8 +6,9 @@ import LinkArrow from '../ui/LinkArrow.jsx';
 import { ACCENTS } from '../../theme/accents.js';
 import { formatMoney } from '../../utils/format.js';
 
-// Список категорий как на мобильном макете + цветная полоска доли
-export default function CategoryBreakdownCard({ categories, texts, className = '' }) {
+// Список категорий как на мобильном макете + цветная полоска доли.
+// onCategoryClick — нажатие на строку категории.
+export default function CategoryBreakdownCard({ categories, texts, onCategoryClick, className = '' }) {
   return (
     <Card className={`p-6 ${className}`}>
       <div className="flex items-center justify-between">
@@ -20,6 +21,7 @@ export default function CategoryBreakdownCard({ categories, texts, className = '
           <li key={c.id}>
             <button
               type="button"
+              onClick={onCategoryClick}
               className="group flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors duration-200 hover:bg-surface"
             >
               <IconTile icon={c.icon} accent={c.accent} />

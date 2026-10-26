@@ -31,7 +31,7 @@ export default function CategoriesSection() {
             eyebrow={categories.eyebrow}
             title={categories.title}
             description={categories.description}
-            action={<LinkArrow>{categories.allLink}</LinkArrow>}
+            action={<LinkArrow to="analytics">{categories.allLink}</LinkArrow>}
           />
         </Reveal>
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
