@@ -17,11 +17,11 @@ export const colors = {
   ink: {
     DEFAULT: '#14201B',
     secondary: '#4B5563',
-    muted: '#8A9099',
+    muted: '#656B74', // затемнён до контраста 4.5:1 (WCAG AA) на белом и surface
   },
-  // Позитивные / негативные бейджи
-  positive: { DEFAULT: '#1F8A5B', bg: '#E3F4EA' },
-  negative: { DEFAULT: '#D64545', bg: '#FCE8E8' },
+  // Позитивные / негативные бейджи (текст затемнён до контраста 4.5:1 на своём фоне)
+  positive: { DEFAULT: '#1B7950', bg: '#E3F4EA' },
+  negative: { DEFAULT: '#C62C2C', bg: '#FCE8E8' },
   // Акцентные цвета для графиков и категорий
   accent: {
     blue: '#4C8DF6',

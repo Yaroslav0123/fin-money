@@ -57,9 +57,9 @@ export default function AnalyticsScreen() {
   const tone = expenseTone(period.trend);
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
       {/* Выбор периода */}
-      <Reveal className="flex flex-wrap items-center justify-between gap-3 lg:col-span-3">
+      <Reveal className="flex flex-wrap items-center justify-between gap-3 xl:col-span-3">
         <SegmentedControl
           id="analytics-period"
           options={ANALYTICS_PERIODS}
@@ -113,7 +113,7 @@ export default function AnalyticsScreen() {
       </Reveal>
 
       {/* Столбчатая диаграмма расходов */}
-      <Reveal delay={0.1} className="lg:col-span-2">
+      <Reveal delay={0.1} className="xl:col-span-2">
         <Card className="h-full p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -137,7 +137,7 @@ export default function AnalyticsScreen() {
       </Reveal>
 
       {/* Доходы против расходов */}
-      <Reveal delay={0.1} className="lg:col-span-2">
+      <Reveal delay={0.1} className="xl:col-span-2">
         <Card className="h-full p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>

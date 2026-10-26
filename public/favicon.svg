@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -7 48 48">
+  <!-- Знак Fin Money (как в LeafMark.jsx), цвета из theme/colors.js -->
+  <path fill="#CFE3D8" d="M1 20C4 8 16 1 30 3c-3 12-14 21-29 17Z"/>
+  <path fill="#1A5D46" d="M10 31C14 17 28 8 47 9c-4 15-19 24-37 22Z"/>
+  <path fill="none" stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="1.2" stroke-linecap="round" d="M14 28C22 21 31 16 40 13"/>
+</svg>

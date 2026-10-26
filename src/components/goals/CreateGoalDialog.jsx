@@ -95,6 +95,7 @@ export default function CreateGoalDialog({ isOpen, texts, iconOptions, termOptio
                 key={months}
                 type="button"
                 onClick={() => setTerm(months)}
+                aria-pressed={months === term}
                 className={`h-10 rounded-xl text-xs font-semibold transition-colors duration-200 ${
                   months === term ? 'bg-brand text-white' : 'bg-surface text-ink-secondary hover:bg-brand-light'
                 }`}
@@ -116,6 +117,8 @@ export default function CreateGoalDialog({ isOpen, texts, iconOptions, termOptio
                   key={option.id}
                   type="button"
                   onClick={() => setIconId(option.id)}
+                  aria-label={option.label}
+                  aria-pressed={isActive}
                   className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-200 ${
                     ACCENTS[option.accent].tile
                   } ${isActive ? 'ring-2 ring-brand ring-offset-2' : 'opacity-60 hover:opacity-100'}`}

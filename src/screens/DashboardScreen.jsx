@@ -24,8 +24,8 @@ export default function DashboardScreen({ onNavigate }) {
   const openSavings = () => onNavigate('savings');
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-      <Reveal className="lg:col-span-2">
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <Reveal className="xl:col-span-2">
         <BalanceCard
           balance={summary.balance}
           texts={DASHBOARD}
@@ -38,7 +38,7 @@ export default function DashboardScreen({ onNavigate }) {
         <GoalCard goal={goal} texts={DASHBOARD.goal} />
       </Reveal>
 
-      <div className="grid gap-5 sm:grid-cols-3 lg:col-span-3">
+      <div className="grid gap-5 sm:grid-cols-3 xl:col-span-3">
         <Reveal delay={0.1}>
           <StatCard stat={summary.income} className="h-full" />
         </Reveal>
@@ -60,7 +60,7 @@ export default function DashboardScreen({ onNavigate }) {
           className="h-full"
         />
       </Reveal>
-      <Reveal delay={0.15} className="lg:col-span-2">
+      <Reveal delay={0.15} className="xl:col-span-2">
         <TransactionsCard
           transactions={transactions.slice(0, DASHBOARD.transactions.limit)}
           texts={DASHBOARD.transactions}

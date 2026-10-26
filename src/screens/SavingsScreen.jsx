@@ -48,8 +48,8 @@ export default function SavingsScreen() {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <Reveal className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+        <Reveal className="xl:col-span-2">
           <AccountCard
             savings={SAVINGS}
             balance={balance}
@@ -61,7 +61,7 @@ export default function SavingsScreen() {
           <InterestCard texts={SAVINGS_PAGE.interest} />
         </Reveal>
 
-        <Reveal delay={0.1} className="lg:col-span-2">
+        <Reveal delay={0.1} className="xl:col-span-2">
           <BalanceHistoryCard
             title={SAVINGS_PAGE.chart.title}
             periods={SAVINGS_PERIODS}
@@ -78,7 +78,7 @@ export default function SavingsScreen() {
           />
         </Reveal>
 
-        <Reveal delay={0.1} className="lg:col-span-2">
+        <Reveal delay={0.1} className="xl:col-span-2">
           <SavingsHistoryCard
             transactions={transactions}
             types={SAVINGS_TX_TYPES}

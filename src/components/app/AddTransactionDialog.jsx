@@ -125,6 +125,7 @@ export default function AddTransactionDialog({ isOpen, onClose, onAdded }) {
                   key={category.id}
                   type="button"
                   onClick={() => setCategoryId(category.id)}
+                  aria-pressed={isActive}
                   className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-1 py-2.5 text-[11px] font-semibold transition-colors duration-200 ${
                     isActive ? 'border-brand bg-brand-light/60 text-ink' : 'border-transparent bg-surface text-ink-secondary hover:bg-brand-light/40'
                   }`}

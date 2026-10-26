@@ -70,7 +70,7 @@ export default function GoalsScreen() {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         {/* Сводка */}
         <Reveal>
           <KpiCard icon={PiggyBank} accent="brand" label={kpi.saved} value={formatMoney(totalSaved)} footer={kpi.savedHint} />
@@ -89,7 +89,7 @@ export default function GoalsScreen() {
         </Reveal>
 
         {/* Фильтр и кнопка создания */}
-        <Reveal delay={0.1} className="flex flex-wrap items-center justify-between gap-3 lg:col-span-3">
+        <Reveal delay={0.1} className="flex flex-wrap items-center justify-between gap-3 xl:col-span-3">
           <SegmentedControl
             id="goals-filter"
             options={GOALS_PAGE.filters}
@@ -104,7 +104,7 @@ export default function GoalsScreen() {
         </Reveal>
 
         {/* Список целей */}
-        <div className="grid content-start gap-5 sm:grid-cols-2 lg:col-span-2">
+        <div className="grid content-start gap-5 sm:grid-cols-2 xl:col-span-2">
           <AnimatePresence mode="popLayout" initial={false}>
             {visibleGoals.map((goal) => (
               <motion.div
@@ -129,7 +129,7 @@ export default function GoalsScreen() {
         </div>
 
         <Reveal delay={0.15}>
-          <GoalsDistributionCard goals={goals} texts={GOALS_PAGE.distribution} className="lg:sticky lg:top-28" />
+          <GoalsDistributionCard goals={goals} texts={GOALS_PAGE.distribution} className="xl:sticky xl:top-28" />
         </Reveal>
       </div>
 

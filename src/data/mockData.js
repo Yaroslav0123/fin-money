@@ -412,12 +412,13 @@ export const ANALYTICS_PAGE = {
 
 // Иконки, из которых можно выбрать при создании новой цели
 export const GOAL_ICON_OPTIONS = [
-  { id: 'plane', icon: Plane, accent: 'green' },
-  { id: 'laptop', icon: Laptop, accent: 'purple' },
-  { id: 'car', icon: Car, accent: 'blue' },
-  { id: 'house', icon: House, accent: 'orange' },
-  { id: 'gift', icon: Gift, accent: 'pink' },
-  { id: 'study', icon: GraduationCap, accent: 'brand' },
+  // label — подпись для экранных дикторов (на экране видна только иконка)
+  { id: 'plane', icon: Plane, accent: 'green', label: 'Путешествие' },
+  { id: 'laptop', icon: Laptop, accent: 'purple', label: 'Техника' },
+  { id: 'car', icon: Car, accent: 'blue', label: 'Автомобиль' },
+  { id: 'house', icon: House, accent: 'orange', label: 'Жильё' },
+  { id: 'gift', icon: Gift, accent: 'pink', label: 'Подарок' },
+  { id: 'study', icon: GraduationCap, accent: 'brand', label: 'Учёба' },
 ];
 
 // Варианты срока для новой цели (в месяцах)
@@ -594,6 +595,9 @@ export const LANDING = {
     { id: 'about', label: 'О приложении', href: '#about' },
   ],
   headerAction: 'Начать',
+  // Кнопка меню разделов на телефонах
+  menuOpenLabel: 'Открыть меню',
+  menuCloseLabel: 'Закрыть меню',
   hero: {
     badge: 'Ваши финансы — под контролем',
     titleLines: ['Управляй деньгами.', 'Достигай целей.'],

@@ -16,6 +16,7 @@ export default function SegmentedControl({ id, options, value, onChange, classNa
             key={option.id}
             type="button"
             onClick={() => onChange(option.id)}
+            aria-pressed={isActive}
             className={`relative shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors duration-200 ${
               isActive ? 'text-white' : 'text-ink-muted hover:text-ink'
             }`}

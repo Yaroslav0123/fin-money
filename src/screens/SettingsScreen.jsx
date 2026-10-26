@@ -20,8 +20,8 @@ export default function SettingsScreen({ onLogout }) {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <Reveal className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+        <Reveal className="xl:col-span-2">
           <ProfileCard texts={SETTINGS_PAGE.profile} onSave={() => notify(SETTINGS_PAGE.saved)} />
         </Reveal>
         <Reveal delay={0.05}>

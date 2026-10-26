@@ -1,19 +1,68 @@
-import { useEffect } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
+
+// Элементы, на которые можно перейти клавишей Tab
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Модальное окно. На телефоне выезжает снизу (как шторка),
  * на десктопе появляется по центру. Закрывается по Esc и клику по фону.
+ * Пока окно открыто: фокус не уходит за его пределы, страница под ним не прокручивается,
+ * а после закрытия фокус возвращается на кнопку, которая окно открыла.
  */
 export default function Modal({ isOpen, title, onClose, closeLabel, children }) {
-  // Закрытие по клавише Esc
+  const dialogRef = useRef(null);
+  const titleId = useId();
+
+  // Элемент, который открыл окно. Запоминаем при отрисовке: к моменту эффектов
+  // фокус уже может перейти в поле с autoFocus внутри окна.
+  const openerRef = useRef(null);
+  const wasOpenRef = useRef(false);
+  if (isOpen && !wasOpenRef.current) openerRef.current = document.activeElement;
+  wasOpenRef.current = isOpen;
+
+  // Esc закрывает окно, Tab и Shift+Tab ходят по кругу внутри окна
   useEffect(() => {
     if (!isOpen) return undefined;
-    const handleKey = (e) => e.key === 'Escape' && onClose();
+    const handleKey = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = [...dialogRef.current.querySelectorAll(FOCUSABLE)];
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const isInside = dialogRef.current.contains(document.activeElement);
+      if (e.shiftKey && (document.activeElement === first || !isInside)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !isInside)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
+
+  // Блокируем прокрутку страницы, после закрытия возвращаем фокус
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const opener = openerRef.current;
+    document.body.classList.add('overflow-hidden');
+    // Если внутри нет поля с autoFocus — фокусируем само окно
+    if (dialogRef.current && !dialogRef.current.contains(document.activeElement)) {
+      dialogRef.current.focus();
+    }
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+      if (opener instanceof HTMLElement) opener.focus();
+    };
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -26,10 +75,12 @@ export default function Modal({ isOpen, title, onClose, closeLabel, children }) 
           onClick={onClose}
         >
           <motion.div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
-            aria-label={title}
-            className="max-h-[92vh] w-full overflow-y-auto rounded-t-panel bg-white p-6 shadow-lifted sm:max-w-md sm:rounded-panel sm:p-8"
+            aria-labelledby={titleId}
+            tabIndex={-1}
+            className="max-h-[92vh] w-full overflow-y-auto rounded-t-panel bg-white p-6 shadow-lifted focus:outline-none sm:max-w-md sm:rounded-panel sm:p-8"
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
@@ -37,7 +88,9 @@ export default function Modal({ isOpen, title, onClose, closeLabel, children }) 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-ink">{title}</h2>
+              <h2 id={titleId} className="text-lg font-bold text-ink">
+                {title}
+              </h2>
               <button
                 type="button"
                 onClick={onClose}
