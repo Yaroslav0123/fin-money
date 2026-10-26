@@ -3,7 +3,7 @@ import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
 import SegmentedControl from '../ui/SegmentedControl.jsx';
 import { useFinance } from '../../context/FinanceContext.jsx';
-import { ADD_TRANSACTION, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../../data/mockData.js';
+import { ADD_TRANSACTION, AMOUNT_LIMIT, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../../data/mockData.js';
 import { ACCENTS } from '../../theme/accents.js';
 import { formatMoney } from '../../utils/format.js';
 
@@ -24,7 +24,8 @@ export default function AddTransactionDialog({ isOpen, onClose, onAdded }) {
 
   const categories = CATEGORIES_BY_TYPE[type];
   const amount = Number(rawAmount) || 0;
-  const canSubmit = amount > 0;
+  const isTooMuch = amount > AMOUNT_LIMIT.max;
+  const canSubmit = amount > 0 && !isTooMuch;
   const t = ADD_TRANSACTION;
 
   const reset = () => {
@@ -72,7 +73,11 @@ export default function AddTransactionDialog({ isOpen, onClose, onAdded }) {
           <label htmlFor="add-tx-amount" className="text-xs font-medium text-ink-muted">
             {t.amountLabel}
           </label>
-          <div className="mt-2 flex items-center rounded-2xl border-2 border-transparent bg-surface px-4 transition-colors duration-200 focus-within:border-brand focus-within:bg-white">
+          <div
+            className={`mt-2 flex items-center rounded-2xl border-2 bg-surface px-4 transition-colors duration-200 focus-within:bg-white ${
+              isTooMuch ? 'border-negative' : 'border-transparent focus-within:border-brand'
+            }`}
+          >
             <span className={`mr-1 text-2xl font-bold ${type === 'income' ? 'text-positive' : 'text-ink-muted'}`}>
               {type === 'income' ? '+' : '−'}
             </span>
@@ -89,6 +94,11 @@ export default function AddTransactionDialog({ isOpen, onClose, onAdded }) {
             />
             <span className="text-2xl font-bold text-ink-muted">₽</span>
           </div>
+          {isTooMuch && (
+            <p className="mt-2 text-xs text-negative" role="alert">
+              {AMOUNT_LIMIT.error} — {formatMoney(AMOUNT_LIMIT.max)}
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             {t.quickAmounts.map((value) => (
               <button

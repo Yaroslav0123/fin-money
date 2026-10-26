@@ -208,6 +208,20 @@ export const SAVINGS_TRANSFER = {
   titles: { deposit: 'Пополнение накоплений', withdraw: 'Снятие с накоплений' },
 };
 
+// Пополнение финансовой цели: деньги уходят с основного счёта, как и в накопления
+export const GOAL_TRANSFER = {
+  category: 'Цели',
+  icon: Target,
+  accent: 'blue',
+  titlePrefix: 'Пополнение цели',
+};
+
+// Общий потолок суммы одной операции во всех диалогах
+export const AMOUNT_LIMIT = {
+  max: 10000000,
+  error: 'Максимальная сумма одной операции',
+};
+
 // ───────────── Экран «Накопления» ─────────────
 
 // Типы операций по накопительному счёту: иконка, цвет и подпись
@@ -267,8 +281,11 @@ export const SAVINGS_PAGE = {
     amountPlaceholder: '0',
     quickAmounts: [1000, 5000, 10000],
     available: 'Доступно',
+    availableMain: 'На основном счёте',
     cancel: 'Отмена',
     errorTooMuch: 'Сумма больше баланса счёта',
+    errorNoFunds: 'Недостаточно средств на основном счёте',
+    fillMax: 'Ввести максимум',
     newTxDate: 'Сегодня',
   },
 };
@@ -440,7 +457,9 @@ export const GOALS_PAGE = {
     quickAmounts: [1000, 5000, 10000],
     available: 'Осталось накопить',
     cancel: 'Отмена',
-    errorTooMuch: '',
+    errorTooMuch: 'Сумма больше, чем осталось до цели',
+    errorNoFunds: 'Недостаточно средств на основном счёте',
+    fillMax: 'Ввести максимум',
   },
   // Диалог создания цели
   createDialog: {

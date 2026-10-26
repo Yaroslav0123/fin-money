@@ -23,8 +23,23 @@ import {
  * сразу отражается в общем балансе и операциях на «Главной».
  */
 export default function SavingsScreen() {
-  const { savingsBalance: balance, savingsTransactions: transactions, moveSavings, goals } = useFinance();
+  const { savingsBalance: balance, savingsTransactions: transactions, moveSavings, goals, summary } = useFinance();
   const [dialogMode, setDialogMode] = useState(null);
+
+  // Пополнение ограничено деньгами на основном счёте, снятие — балансом накоплений
+  const { dialog } = SAVINGS_PAGE;
+  const mainBalance = summary.balance.amount;
+  const dialogRules = {
+    deposit: {
+      hint: { label: dialog.availableMain, amount: mainBalance },
+      limits: [{ max: mainBalance, error: dialog.errorNoFunds }],
+    },
+    withdraw: {
+      hint: { label: dialog.available, amount: balance },
+      limits: [{ max: balance, error: dialog.errorTooMuch }],
+    },
+  };
+  const rules = dialogRules[dialogMode ?? 'deposit'];
 
   const handleConfirm = (mode, amount) => {
     moveSavings(mode, amount);
@@ -78,8 +93,9 @@ export default function SavingsScreen() {
 
       <AmountDialog
         mode={dialogMode}
-        balance={balance}
-        texts={SAVINGS_PAGE.dialog}
+        hint={rules.hint}
+        limits={rules.limits}
+        texts={dialog}
         onClose={() => setDialogMode(null)}
         onConfirm={handleConfirm}
       />

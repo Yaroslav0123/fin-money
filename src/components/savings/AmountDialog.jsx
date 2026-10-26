@@ -1,19 +1,30 @@
 import { useState } from 'react';
 import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
+import { AMOUNT_LIMIT } from '../../data/mockData.js';
 import { formatMoney } from '../../utils/format.js';
+
+// Общий потолок одной операции действует всегда, даже если вызывающий экран не задал лимитов
+const AMOUNT_LIMIT_RULE = {
+  max: AMOUNT_LIMIT.max,
+  error: `${AMOUNT_LIMIT.error} — ${formatMoney(AMOUNT_LIMIT.max)}`,
+};
 
 /**
  * Диалог пополнения или снятия.
  * mode — 'deposit' | 'withdraw' | null (закрыт).
+ * hint — подсказка под полем: { label, amount }.
+ * limits — ограничения суммы [{ max, error }]; действует самое строгое.
  * Сам диалог ничего не меняет: сумму получает onConfirm(mode, amount).
  */
-export default function AmountDialog({ mode, balance, texts, onClose, onConfirm }) {
+export default function AmountDialog({ mode, hint, limits = [], texts, onClose, onConfirm }) {
   const [rawAmount, setRawAmount] = useState('');
 
   const amount = Number(rawAmount) || 0;
-  const isWithdraw = mode === 'withdraw';
-  const isTooMuch = isWithdraw && amount > balance;
+  const limit = [...limits, AMOUNT_LIMIT_RULE].reduce((strict, rule) => (rule.max < strict.max ? rule : strict));
+  // Баланс может быть отрицательным — тогда доступно 0
+  const maxAmount = Math.max(0, limit.max);
+  const isTooMuch = amount > maxAmount;
   const canConfirm = amount > 0 && !isTooMuch;
   const modeTexts = mode ? texts[mode] : texts.deposit;
 
@@ -55,9 +66,21 @@ export default function AmountDialog({ mode, balance, texts, onClose, onConfirm 
           <span className="text-2xl font-bold text-ink-muted">₽</span>
         </div>
 
-        <p className={`mt-2 text-xs ${isTooMuch ? 'text-negative' : 'text-ink-muted'}`}>
-          {isTooMuch ? texts.errorTooMuch : `${texts.available}: ${formatMoney(balance)}`}
-        </p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
+          <p className={isTooMuch ? 'text-negative' : 'text-ink-muted'} role={isTooMuch ? 'alert' : undefined}>
+            {isTooMuch ? limit.error : hint && `${hint.label}: ${formatMoney(hint.amount)}`}
+          </p>
+          {/* Подставляем максимально допустимую сумму */}
+          {isTooMuch && maxAmount > 0 && (
+            <button
+              type="button"
+              onClick={() => setRawAmount(String(maxAmount))}
+              className="font-semibold text-brand transition-colors duration-200 hover:text-brand-dark"
+            >
+              {texts.fillMax} ({formatMoney(maxAmount)})
+            </button>
+          )}
+        </div>
 
         {/* Быстрый выбор суммы */}
         <div className="mt-4 flex flex-wrap gap-2">

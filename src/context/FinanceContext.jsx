@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import {
   ADD_TRANSACTION,
   EXPENSE_CATEGORIES,
+  GOAL_TRANSFER,
   GOALS,
   INCOME_CATEGORIES,
   SAVINGS,
@@ -18,7 +19,7 @@ import { addExpensesToCategories, sumExpenses } from '../utils/analytics.js';
  * Общее состояние финансов для всего приложения:
  * - операции из диалога «Добавить операцию» → баланс, доходы, расходы, категории;
  * - накопительный счёт: баланс и история пополнений / снятий;
- * - финансовые цели: пополнение и создание;
+ * - финансовые цели: пополнение (перевод с основного счёта) и создание;
  * - настройка «Скрывать баланс».
  * Это прототип: данные живут до перезагрузки страницы.
  */
@@ -94,8 +95,22 @@ export function FinanceProvider({ children }) {
     ]);
   }, []);
 
-  const depositToGoal = useCallback((goalId, amount) => {
-    setGoals((prev) => prev.map((g) => (g.id === goalId ? { ...g, saved: g.saved + amount } : g)));
+  // Пополнение цели — перевод с основного счёта: цель растёт, общий баланс уменьшается
+  const depositToGoal = useCallback((goal, amount) => {
+    setGoals((prev) => prev.map((g) => (g.id === goal.id ? { ...g, saved: g.saved + amount } : g)));
+    setAdded((prev) => [
+      {
+        id: newId('goal-transfer'),
+        type: 'transfer',
+        title: `${GOAL_TRANSFER.titlePrefix} «${goal.name}»`,
+        category: GOAL_TRANSFER.category,
+        date: todayLabel(),
+        amount: -amount,
+        icon: GOAL_TRANSFER.icon,
+        accent: GOAL_TRANSFER.accent,
+      },
+      ...prev,
+    ]);
   }, []);
 
   // draft — { name, target, icon, accent, deadline, ... } из диалога создания
@@ -105,7 +120,7 @@ export function FinanceProvider({ children }) {
 
   const value = useMemo(() => {
     const incomeAdded = sumAmounts(added.filter((t) => t.type === 'income'));
-    // Переводы на накопления и обратно: не доход и не расход
+    // Переводы на накопления, в цели и обратно: не доход и не расход
     const transfersAdded = sumAmounts(added.filter((t) => t.type === 'transfer'));
     // Добавленные расходы в виде { categoryId, amount } с положительной суммой
     const addedExpenses = added

@@ -29,7 +29,7 @@ const FILTERS = {
  * поэтому видны на «Главной», в «Накоплениях» и на лендинге (до перезагрузки страницы).
  */
 export default function GoalsScreen() {
-  const { goals, depositToGoal, createGoal } = useFinance();
+  const { goals, depositToGoal, createGoal, summary } = useFinance();
   const [filter, setFilter] = useState('all');
   const [depositGoal, setDepositGoal] = useState(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -42,7 +42,7 @@ export default function GoalsScreen() {
   const visibleGoals = goals.filter(FILTERS[filter]);
 
   const handleDeposit = (_mode, amount) => {
-    depositToGoal(depositGoal.id, amount);
+    depositToGoal(depositGoal, amount);
     setDepositGoal(null);
   };
 
@@ -51,6 +51,13 @@ export default function GoalsScreen() {
     setIsCreateOpen(false);
     setFilter('all');
   };
+
+  // Пополнить можно не больше остатка до цели и не больше денег на основном счёте
+  const goalLeft = depositGoal ? depositGoal.target - depositGoal.saved : 0;
+  const depositLimits = [
+    { max: goalLeft, error: GOALS_PAGE.depositDialog.errorTooMuch },
+    { max: summary.balance.amount, error: GOALS_PAGE.depositDialog.errorNoFunds },
+  ];
 
   // Тексты диалога пополнения с названием выбранной цели
   const depositTexts = {
@@ -128,7 +135,8 @@ export default function GoalsScreen() {
 
       <AmountDialog
         mode={depositGoal ? 'deposit' : null}
-        balance={depositGoal ? depositGoal.target - depositGoal.saved : 0}
+        hint={{ label: GOALS_PAGE.depositDialog.available, amount: goalLeft }}
+        limits={depositLimits}
         texts={depositTexts}
         onClose={() => setDepositGoal(null)}
         onConfirm={handleDeposit}
