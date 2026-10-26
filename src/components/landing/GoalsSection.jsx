@@ -5,7 +5,8 @@ import ProgressBar from '../ui/ProgressBar.jsx';
 import Reveal from '../ui/Reveal.jsx';
 import Container from './Container.jsx';
 import SectionHeading from './SectionHeading.jsx';
-import { GOALS, LANDING } from '../../data/mockData.js';
+import { useFinance } from '../../context/FinanceContext.jsx';
+import { LANDING } from '../../data/mockData.js';
 import { formatMoney, toPercent } from '../../utils/format.js';
 
 // Строка одной цели: название, прогресс и накопленная сумма
@@ -34,9 +35,10 @@ function GoalRow({ goal, progressOf }) {
   );
 }
 
-// Секция «Цели»: список финансовых целей с прогрессом
+// Секция «Цели»: список финансовых целей с прогрессом (из общего состояния)
 export default function GoalsSection() {
   const { goals } = LANDING;
+  const { goals: goalList } = useFinance();
 
   return (
     <section id="goals" className="scroll-mt-20">
@@ -50,7 +52,7 @@ export default function GoalsSection() {
               action={<LinkArrow>{goals.allLink}</LinkArrow>}
             />
             <ul className="mt-4 divide-y divide-line">
-              {GOALS.map((goal) => (
+              {goalList.map((goal) => (
                 <GoalRow key={goal.id} goal={goal} progressOf={goals.progressOf} />
               ))}
             </ul>

@@ -6,13 +6,17 @@ import SecurityCard from '../components/settings/SecurityCard.jsx';
 import ToggleListCard from '../components/settings/ToggleListCard.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
 import Toast from '../components/ui/Toast.jsx';
-import { SETTINGS_PAGE, SUMMARY } from '../data/mockData.js';
+import { useFinance } from '../context/FinanceContext.jsx';
+import { SETTINGS_PAGE } from '../data/mockData.js';
 
 /**
  * Экран «Настройки» (веб-версия).
  * onLogout — «выход из аккаунта» (в прототипе возвращает на лендинг).
+ * Бюджет считает актуальные расходы, а «Скрывать баланс» хранится в общем состоянии
+ * и действует на «Главной».
  */
 export default function SettingsScreen({ onLogout }) {
+  const { summary, hideBalance, setHideBalance } = useFinance();
   const [toast, setToast] = useState(null);
   const hideToast = useCallback(() => setToast(null), []);
 
@@ -23,7 +27,7 @@ export default function SettingsScreen({ onLogout }) {
           <ProfileCard texts={SETTINGS_PAGE.profile} onSave={() => setToast(SETTINGS_PAGE.saved)} />
         </Reveal>
         <Reveal delay={0.05}>
-          <BudgetCard spent={SUMMARY.expenses.amount} texts={SETTINGS_PAGE.budget} className="h-full" />
+          <BudgetCard spent={summary.expenses.amount} texts={SETTINGS_PAGE.budget} className="h-full" />
         </Reveal>
 
         <Reveal delay={0.1}>
@@ -37,7 +41,12 @@ export default function SettingsScreen({ onLogout }) {
           <PreferencesCard texts={SETTINGS_PAGE.preferences} className="h-full" />
         </Reveal>
         <Reveal delay={0.2}>
-          <SecurityCard texts={SETTINGS_PAGE.security} onLogout={onLogout} className="h-full" />
+          <SecurityCard
+            texts={SETTINGS_PAGE.security}
+            controlled={{ hideBalance: { checked: hideBalance, onChange: setHideBalance } }}
+            onLogout={onLogout}
+            className="h-full"
+          />
         </Reveal>
       </div>
 

@@ -9,9 +9,11 @@ import { formatMoney } from '../../utils/format.js';
 /**
  * Главная карточка «Общий баланс» с возможностью скрыть сумму
  * и быстрыми действиями «Пополнить» / «Перевести».
+ * hiddenByDefault — сумма скрыта при открытии (настройка «Скрывать баланс»),
+ * глазом её можно показать до ухода с экрана.
  */
-export default function BalanceCard({ balance, texts, onDeposit }) {
-  const [isHidden, setIsHidden] = useState(false);
+export default function BalanceCard({ balance, texts, hiddenByDefault = false, onDeposit }) {
+  const [isHidden, setIsHidden] = useState(hiddenByDefault);
   const EyeIcon = isHidden ? EyeOff : Eye;
 
   return (

@@ -3,10 +3,11 @@ import Button from '../ui/Button.jsx';
 import SettingRow from './SettingRow.jsx';
 import ToggleListCard from './ToggleListCard.jsx';
 
-// Карточка «Безопасность»: переключатели, ссылки и выход из аккаунта
-export default function SecurityCard({ texts, onLogout, className = '' }) {
+// Карточка «Безопасность»: переключатели, ссылки и выход из аккаунта.
+// controlled — внешние значения переключателей (см. ToggleListCard).
+export default function SecurityCard({ texts, controlled, onLogout, className = '' }) {
   return (
-    <ToggleListCard title={texts.title} items={texts.toggles} className={className}>
+    <ToggleListCard title={texts.title} items={texts.toggles} controlled={controlled} className={className}>
       <div className="divide-y divide-line border-t border-line">
         {texts.links.map((link) => (
           <SettingRow key={link.id} as="button" type="button" icon={link.icon} label={link.label} className="group">

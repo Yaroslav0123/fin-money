@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import AccountCard from '../components/savings/AccountCard.jsx';
 import AmountDialog from '../components/savings/AmountDialog.jsx';
 import BalanceHistoryCard from '../components/savings/BalanceHistoryCard.jsx';
@@ -7,34 +7,27 @@ import InterestCard from '../components/savings/InterestCard.jsx';
 import SavingsHistoryCard from '../components/savings/SavingsHistoryCard.jsx';
 import YieldCalculator from '../components/savings/YieldCalculator.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
+import { useFinance } from '../context/FinanceContext.jsx';
 import {
-  GOALS,
   SAVINGS,
   SAVINGS_HISTORY,
   SAVINGS_PAGE,
   SAVINGS_PERIODS,
-  SAVINGS_TRANSACTIONS,
   SAVINGS_TX_TYPES,
 } from '../data/mockData.js';
 
 /**
  * Экран 3. Накопительный счёт (веб-версия).
  * Пополнение и снятие работают «по-настоящему» внутри прототипа:
- * меняют баланс и добавляют строку в историю (без сохранения на сервер).
+ * баланс счёта и история живут в общем состоянии, а перевод
+ * сразу отражается в общем балансе и операциях на «Главной».
  */
 export default function SavingsScreen() {
-  const [balance, setBalance] = useState(SAVINGS.balance);
-  const [transactions, setTransactions] = useState(SAVINGS_TRANSACTIONS);
+  const { savingsBalance: balance, savingsTransactions: transactions, moveSavings, goals } = useFinance();
   const [dialogMode, setDialogMode] = useState(null);
-  const nextId = useRef(1);
 
   const handleConfirm = (mode, amount) => {
-    const signedAmount = mode === 'withdraw' ? -amount : amount;
-    setBalance((prev) => prev + signedAmount);
-    setTransactions((prev) => [
-      { id: `new-${nextId.current++}`, type: mode, date: SAVINGS_PAGE.dialog.newTxDate, amount: signedAmount },
-      ...prev,
-    ]);
+    moveSavings(mode, amount);
     setDialogMode(null);
   };
 
@@ -79,7 +72,7 @@ export default function SavingsScreen() {
           />
         </Reveal>
         <Reveal delay={0.15}>
-          <GoalsListCard goals={GOALS} texts={SAVINGS_PAGE.goals} className="h-full" />
+          <GoalsListCard goals={goals} texts={SAVINGS_PAGE.goals} className="h-full" />
         </Reveal>
       </div>
 

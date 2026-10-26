@@ -9,9 +9,15 @@ const initialState = (items) => Object.fromEntries(items.map((item) => [item.id,
 /**
  * Карточка со списком переключателей (уведомления, безопасность).
  * children — дополнительный контент под списком.
+ * controlled — переключатели, чьё значение хранится снаружи:
+ * { [id]: { checked, onChange } }. Остальные живут в состоянии карточки.
  */
-export default function ToggleListCard({ title, items, children, className = '' }) {
+export default function ToggleListCard({ title, items, controlled = {}, children, className = '' }) {
   const [values, setValues] = useState(() => initialState(items));
+
+  const isChecked = (id) => (controlled[id] ? controlled[id].checked : values[id]);
+  const handleChange = (id, checked) =>
+    controlled[id] ? controlled[id].onChange(checked) : setValues((prev) => ({ ...prev, [id]: checked }));
 
   return (
     <Card className={`p-6 ${className}`}>
@@ -20,9 +26,9 @@ export default function ToggleListCard({ title, items, children, className = '' 
         {items.map((item) => (
           <SettingRow key={item.id} icon={item.icon} label={item.label} hint={item.hint}>
             <Toggle
-              checked={values[item.id]}
+              checked={isChecked(item.id)}
               label={item.label}
-              onChange={(checked) => setValues((prev) => ({ ...prev, [item.id]: checked }))}
+              onChange={(checked) => handleChange(item.id, checked)}
             />
           </SettingRow>
         ))}

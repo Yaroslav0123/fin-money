@@ -6,7 +6,7 @@ import { formatMoney } from '../../utils/format.js';
 /**
  * Диалог пополнения или снятия.
  * mode — 'deposit' | 'withdraw' | null (закрыт).
- * Это прототип: операция меняет только локальное состояние экрана.
+ * Сам диалог ничего не меняет: сумму получает onConfirm(mode, amount).
  */
 export default function AmountDialog({ mode, balance, texts, onClose, onConfirm }) {
   const [rawAmount, setRawAmount] = useState('');

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PiggyBank, Plus, Target, Trophy } from 'lucide-react';
 import KpiCard from '../components/analytics/KpiCard.jsx';
@@ -10,7 +10,8 @@ import AmountDialog from '../components/savings/AmountDialog.jsx';
 import Button from '../components/ui/Button.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
 import SegmentedControl from '../components/ui/SegmentedControl.jsx';
-import { GOAL_ICON_OPTIONS, GOAL_TERM_OPTIONS, GOALS, GOALS_PAGE } from '../data/mockData.js';
+import { useFinance } from '../context/FinanceContext.jsx';
+import { GOAL_ICON_OPTIONS, GOAL_TERM_OPTIONS, GOALS_PAGE } from '../data/mockData.js';
 import { formatMoney } from '../utils/format.js';
 
 const isDone = (goal) => goal.saved >= goal.target;
@@ -24,15 +25,14 @@ const FILTERS = {
 
 /**
  * Экран «Цели» (веб-версия).
- * Можно пополнять цели и создавать новые — изменения живут
- * в состоянии экрана до перезагрузки страницы.
+ * Можно пополнять цели и создавать новые — изменения живут в общем состоянии,
+ * поэтому видны на «Главной», в «Накоплениях» и на лендинге (до перезагрузки страницы).
  */
 export default function GoalsScreen() {
-  const [goals, setGoals] = useState(GOALS);
+  const { goals, depositToGoal, createGoal } = useFinance();
   const [filter, setFilter] = useState('all');
   const [depositGoal, setDepositGoal] = useState(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const nextId = useRef(1);
   const { kpi, tile } = GOALS_PAGE;
 
   // Сводные показатели
@@ -42,12 +42,12 @@ export default function GoalsScreen() {
   const visibleGoals = goals.filter(FILTERS[filter]);
 
   const handleDeposit = (_mode, amount) => {
-    setGoals((prev) => prev.map((g) => (g.id === depositGoal.id ? { ...g, saved: g.saved + amount } : g)));
+    depositToGoal(depositGoal.id, amount);
     setDepositGoal(null);
   };
 
   const handleCreate = (draft) => {
-    setGoals((prev) => [...prev, { ...draft, id: `new-goal-${nextId.current++}`, saved: 0 }]);
+    createGoal(draft);
     setIsCreateOpen(false);
     setFilter('all');
   };
