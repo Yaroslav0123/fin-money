@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, PiggyBank } from 'lucide-react';
 import Button from '../ui/Button.jsx';
+import IgnorePresence from '../ui/IgnorePresence.jsx';
 import Logo from '../ui/Logo.jsx';
 import { APP_NAME, APP_NAV, APP_SHELL } from '../../data/mockData.js';
 
@@ -35,11 +36,13 @@ export default function Sidebar({ activeScreen, onNavigate, onExit }) {
             >
               {/* Подложка активного пункта плавно переезжает */}
               {isActive && (
-                <motion.span
-                  layoutId="sidebar-active"
-                  className="absolute inset-0 rounded-xl bg-brand-light"
-                  transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-                />
+                <IgnorePresence>
+                  <motion.span
+                    layoutId="sidebar-active"
+                    className="absolute inset-0 rounded-xl bg-brand-light"
+                    transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                  />
+                </IgnorePresence>
               )}
               <Icon className="relative h-[18px] w-[18px]" />
               <span className="relative">{item.label}</span>

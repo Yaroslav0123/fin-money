@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import IgnorePresence from './IgnorePresence.jsx';
 
 /**
  * Переключатель периодов («Неделя / Месяц / Год»).
@@ -20,11 +21,13 @@ export default function SegmentedControl({ id, options, value, onChange, classNa
             }`}
           >
             {isActive && (
-              <motion.span
-                layoutId={`${id}-pill`}
-                className="absolute inset-0 rounded-full bg-brand"
-                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-              />
+              <IgnorePresence>
+                <motion.span
+                  layoutId={`${id}-pill`}
+                  className="absolute inset-0 rounded-full bg-brand"
+                  transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                />
+              </IgnorePresence>
             )}
             <span className="relative">{option.label}</span>
           </button>
