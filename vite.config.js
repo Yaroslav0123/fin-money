@@ -36,6 +36,11 @@ const manualChunks = (id) => {
 
 export default defineConfig({
   plugins: [react()],
+  // Режим разработки: начинаем обрабатывать модули сразу при старте сервера,
+  // а не при первом открытии страницы — первая загрузка заметно быстрее
+  server: {
+    warmup: { clientFiles: ['./src/main.jsx'] },
+  },
   build: {
     rollupOptions: {
       output: { manualChunks },

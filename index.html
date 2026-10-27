@@ -23,9 +23,57 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!--
+      Экран загрузки: виден, пока браузер скачивает скрипты приложения
+      (в режиме разработки первый запуск может занять до минуты).
+      Стили здесь, а не в Tailwind: CSS приложения подключается вместе со скриптами.
+      Цвета — из src/theme/colors.js (surface, brand, brand.soft, ink.muted).
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #f8f9fa;
+      }
+      .boot {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        font-family: Manrope, system-ui, sans-serif;
+        color: #656b74;
+      }
+      .boot-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #cfe3d8;
+        border-top-color: #1a5d46;
+        border-radius: 50%;
+        animation: boot-spin 0.8s linear infinite;
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-spinner {
+          animation-duration: 2.4s;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- React заменит содержимое #root, когда приложение загрузится -->
+    <div id="root">
+      <div class="boot" role="status">
+        <div class="boot-spinner" aria-hidden="true"></div>
+        <span>Загружаем Fin Money…</span>
+      </div>
+    </div>
+    <noscript>Для работы Fin Money включите JavaScript.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
