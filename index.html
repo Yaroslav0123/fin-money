@@ -63,17 +63,93 @@
           animation-duration: 2.4s;
         }
       }
+      .boot-hint {
+        display: none;
+        max-width: 320px;
+        text-align: center;
+        font-size: 14px;
+      }
+      .boot.is-slow .boot-hint {
+        display: block;
+      }
+      /* При ошибке индикатор загрузки уже не нужен */
+      .boot.is-failed .boot-spinner {
+        display: none;
+      }
+      .boot-reload {
+        margin-top: 12px;
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 24px;
+        background: #1a5d46;
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
     <!-- React заменит содержимое #root, когда приложение загрузится -->
     <div id="root">
-      <div class="boot" role="status">
+      <div class="boot" id="boot" role="status">
         <div class="boot-spinner" aria-hidden="true"></div>
         <span>Загружаем Fin Money…</span>
+        <div class="boot-hint">
+          <span id="boot-hint-text">Загрузка занимает больше обычного.</span>
+          <br />
+          <button type="button" class="boot-reload" onclick="location.reload()">Обновить</button>
+        </div>
       </div>
     </div>
     <noscript>Для работы Fin Money включите JavaScript.</noscript>
-    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Страховка экрана загрузки: приложение не должно «висеть» на нём без объяснений.
+      // Если скрипты не загрузились (например, dev-сервер пересобрал зависимости прямо во время
+      // загрузки), один раз перезагружаем страницу сами, а дальше показываем кнопку «Обновить».
+      (function () {
+        var RETRY_KEY = 'fin-money:boot-retry';
+        var SLOW_AFTER_MS = 20000;
+
+        var showHint = function (text) {
+          var boot = document.getElementById('boot');
+          if (!boot) return; // приложение уже отрисовалось
+          if (text) {
+            document.getElementById('boot-hint-text').textContent = text;
+            boot.classList.add('is-failed');
+          }
+          boot.classList.add('is-slow');
+        };
+
+        window.__finMoneyBootFailed = function () {
+          var retried = false;
+          try {
+            retried = sessionStorage.getItem(RETRY_KEY) === '1';
+            sessionStorage.setItem(RETRY_KEY, '1');
+          } catch (e) {
+            retried = true;
+          }
+          if (!retried) {
+            location.reload();
+            return;
+          }
+          showHint('Не удалось загрузить приложение.');
+        };
+
+        // Приложение отрисовалось — сбрасываем счётчик автоперезагрузок
+        window.__finMoneyBootDone = function () {
+          try {
+            sessionStorage.removeItem(RETRY_KEY);
+          } catch (e) {
+            // хранилище недоступно — ничего страшного
+          }
+        };
+
+        setTimeout(function () {
+          showHint();
+        }, SLOW_AFTER_MS);
+      })();
+    </script>
+    <script type="module" src="/src/main.jsx" onerror="window.__finMoneyBootFailed()"></script>
   </body>
 </html>
