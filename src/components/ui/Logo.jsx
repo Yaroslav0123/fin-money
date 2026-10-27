@@ -15,7 +15,8 @@ export default function Logo({ name, size = 'lg', light = false, className = '' 
   return (
     <div className={`flex items-center ${s.gap} ${className}`}>
       <LeafMark className={`${s.mark} shrink-0`} light={light} />
-      <span className={`${s.text} font-bold leading-none tracking-tight ${textColor}`}>{name}</span>
+      {/* Название не переносится на две строки */}
+      <span className={`${s.text} whitespace-nowrap font-bold leading-none tracking-tight ${textColor}`}>{name}</span>
     </div>
   );
 }

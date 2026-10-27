@@ -60,6 +60,53 @@ describe('FinanceContext', () => {
     expect(result.current.transactions[0].title).toContain(goal.name);
   });
 
+  it('восстанавливает данные после перезагрузки вместе с иконками', () => {
+    const first = renderFinance();
+    const goal = first.result.current.goals[0];
+    act(() => first.result.current.moveSavings('deposit', 2000));
+    act(() => first.result.current.depositToGoal(goal, 1000));
+    act(() => first.result.current.setHideBalance(true));
+    first.unmount();
+
+    // «Перезагрузка»: новый провайдер читает localStorage
+    const { result } = renderFinance();
+    expect(result.current.savingsBalance).toBe(SAVINGS.balance + 2000);
+    expect(result.current.summary.balance.amount).toBe(SUMMARY.balance.amount - 3000);
+    expect(result.current.goals[0].saved).toBe(goal.saved + 1000);
+    expect(result.current.goals[0].icon).toBe(goal.icon);
+    expect(result.current.hideBalance).toBe(true);
+    expect(result.current.transactions[0].icon).toBeTruthy();
+  });
+
+  it('id новых записей не повторяются после перезагрузки', () => {
+    const first = renderFinance();
+    act(() => first.result.current.moveSavings('deposit', 100));
+    const firstId = first.result.current.transactions[0].id;
+    first.unmount();
+
+    const { result } = renderFinance();
+    act(() => result.current.moveSavings('deposit', 100));
+    expect(result.current.transactions[0].id).not.toBe(firstId);
+  });
+
+  it('сброс возвращает исходные данные и очищает сохранение', () => {
+    const first = renderFinance();
+    act(() => first.result.current.moveSavings('deposit', 5000));
+    act(() => first.result.current.resetDemo());
+    expect(first.result.current.savingsBalance).toBe(SAVINGS.balance);
+    expect(first.result.current.summary.balance.amount).toBe(SUMMARY.balance.amount);
+    first.unmount();
+
+    const { result } = renderFinance();
+    expect(result.current.savingsBalance).toBe(SAVINGS.balance);
+  });
+
+  it('игнорирует повреждённое сохранение', () => {
+    window.localStorage.setItem('fin-money:demo:v1', '{не json');
+    const { result } = renderFinance();
+    expect(result.current.summary.balance.amount).toBe(SUMMARY.balance.amount);
+  });
+
   it('новая цель добавляется с нулевым накоплением', () => {
     const { result } = renderFinance();
     act(() => result.current.createGoal({ name: 'Велосипед', target: 50000, icon: null, accent: 'green' }));

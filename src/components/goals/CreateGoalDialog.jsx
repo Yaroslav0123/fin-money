@@ -50,6 +50,8 @@ export default function CreateGoalDialog({ isOpen, texts, iconOptions, termOptio
       monthsLeft: term,
       deadline: `${texts.deadlinePrefix} ${term} ${texts.termSuffix}`,
       icon: option.icon,
+      // id иконки нужен, чтобы восстановить её после перезагрузки страницы
+      iconId: option.id,
       accent: option.accent,
     });
     reset();

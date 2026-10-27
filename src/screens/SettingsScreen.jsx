@@ -1,4 +1,5 @@
 import BudgetCard from '../components/settings/BudgetCard.jsx';
+import DemoDataCard from '../components/settings/DemoDataCard.jsx';
 import PreferencesCard from '../components/settings/PreferencesCard.jsx';
 import ProfileCard from '../components/settings/ProfileCard.jsx';
 import SecurityCard from '../components/settings/SecurityCard.jsx';
@@ -12,10 +13,10 @@ import { SETTINGS_PAGE } from '../data/mockData.js';
  * Экран «Настройки» (веб-версия).
  * onLogout — «выход из аккаунта» (в прототипе возвращает на лендинг).
  * Бюджет считает актуальные расходы, а «Скрывать баланс» хранится в общем состоянии
- * и действует на «Главной».
+ * и действует на «Главной». Внизу — сброс демо-данных, сохранённых в браузере.
  */
 export default function SettingsScreen({ onLogout }) {
-  const { summary, hideBalance, setHideBalance } = useFinance();
+  const { summary, hideBalance, setHideBalance, resetDemo } = useFinance();
   const { notify, notifySoon } = useAppActions();
 
   return (
@@ -45,6 +46,16 @@ export default function SettingsScreen({ onLogout }) {
             onLogout={onLogout}
             onLinkClick={notifySoon}
             className="h-full"
+          />
+        </Reveal>
+
+        <Reveal delay={0.1} className="xl:col-span-3">
+          <DemoDataCard
+            texts={SETTINGS_PAGE.demo}
+            onReset={() => {
+              resetDemo();
+              notify(SETTINGS_PAGE.demo.done);
+            }}
           />
         </Reveal>
       </div>

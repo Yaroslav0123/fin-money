@@ -1,0 +1,9 @@
+# Все текстовые файлы храним и выгружаем с концами строк LF (как в репозитории),
+# чтобы на Windows не было предупреждений «LF will be replaced by CRLF»
+* text=auto eol=lf
+
+# Бинарные файлы не трогаем
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

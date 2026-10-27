@@ -38,13 +38,13 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/60 bg-surface/80 backdrop-blur-md">
-      <Container className="flex h-16 items-center justify-between gap-6">
+      <Container className="flex h-16 items-center justify-between gap-3 sm:gap-6">
         <a href="#top" onClick={() => handleNavClick(nav[0].id)}>
           <Logo name={appName} size="sm" />
         </a>
 
         {/* Навигация (на мобильных — в выпадающем меню) */}
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-5 md:flex lg:gap-8">
           {nav.map((item) => {
             const isActive = item.id === activeId;
             return (
@@ -53,7 +53,7 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
                 href={item.href}
                 onClick={() => handleNavClick(item.id)}
                 aria-current={isActive ? 'location' : undefined}
-                className={`relative py-1 text-sm transition-colors duration-200 ${
+                className={`relative whitespace-nowrap py-1 text-sm transition-colors duration-200 ${
                   isActive ? 'font-semibold text-ink' : 'text-ink-secondary hover:text-ink'
                 }`}
               >
@@ -77,7 +77,8 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
             type="button"
             aria-label={APP_SHELL.notificationsLabel}
             onClick={notifySoon}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors duration-200 hover:bg-black/5"
+            // На самых узких экранах колокольчик прячем, чтобы шапка помещалась
+            className="relative hidden h-10 w-10 items-center justify-center rounded-full text-ink transition-colors duration-200 hover:bg-black/5 sm:flex"
           >
             <Bell className="h-5 w-5" />
             <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-surface bg-accent-pink" />

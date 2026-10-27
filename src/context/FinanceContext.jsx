@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ADD_TRANSACTION,
   EXPENSE_CATEGORIES,
@@ -14,6 +14,7 @@ import {
   TRANSACTIONS,
 } from '../data/mockData.js';
 import { addExpensesToCategories, sumExpenses } from '../utils/analytics.js';
+import { clearFinanceState, loadFinanceState, saveFinanceState } from './financeStorage.js';
 
 /*
  * Общее состояние финансов для всего приложения:
@@ -21,7 +22,8 @@ import { addExpensesToCategories, sumExpenses } from '../utils/analytics.js';
  * - накопительный счёт: баланс и история пополнений / снятий;
  * - финансовые цели: пополнение (перевод с основного счёта) и создание;
  * - настройка «Скрывать баланс».
- * Это прототип: данные живут до перезагрузки страницы.
+ * Это прототип без сервера: данные сохраняются в localStorage этого браузера,
+ * resetDemo() возвращает исходные данные из mockData.
  */
 
 const FinanceContext = createContext(null);
@@ -38,15 +40,36 @@ const HIDE_BALANCE_DEFAULT = SETTINGS_PAGE.security.toggles.find((t) => t.id ===
 
 const sumAmounts = (items) => items.reduce((sum, t) => sum + t.amount, 0);
 
+// Счётчик id новых записей начинается с единицы
+const FIRST_ID = 1;
+
 export function FinanceProvider({ children }) {
+  // Сохранённое в браузере состояние читаем один раз при запуске
+  const [saved] = useState(loadFinanceState);
   // Только добавленные пользователем операции по основному счёту; исходные лежат в mockData
-  const [added, setAdded] = useState([]);
-  const [savingsBalance, setSavingsBalance] = useState(SAVINGS.balance);
-  const [savingsTransactions, setSavingsTransactions] = useState(SAVINGS_TRANSACTIONS);
-  const [goals, setGoals] = useState(GOALS);
-  const [hideBalance, setHideBalance] = useState(HIDE_BALANCE_DEFAULT);
-  const nextId = useRef(1);
+  const [added, setAdded] = useState(saved?.added ?? []);
+  const [savingsBalance, setSavingsBalance] = useState(saved?.savingsBalance ?? SAVINGS.balance);
+  const [savingsTransactions, setSavingsTransactions] = useState(saved?.savingsTransactions ?? SAVINGS_TRANSACTIONS);
+  const [goals, setGoals] = useState(saved?.goals ?? GOALS);
+  const [hideBalance, setHideBalance] = useState(saved?.hideBalance ?? HIDE_BALANCE_DEFAULT);
+  const nextId = useRef(saved?.nextId ?? FIRST_ID);
   const newId = (prefix) => `${prefix}-${nextId.current++}`;
+
+  // Любое изменение сразу сохраняем в браузере
+  useEffect(() => {
+    saveFinanceState({ added, savingsBalance, savingsTransactions, goals, hideBalance, nextId: nextId.current });
+  }, [added, savingsBalance, savingsTransactions, goals, hideBalance]);
+
+  // Сброс демо-данных к исходным из mockData
+  const resetDemo = useCallback(() => {
+    clearFinanceState();
+    nextId.current = FIRST_ID;
+    setAdded([]);
+    setSavingsBalance(SAVINGS.balance);
+    setSavingsTransactions(SAVINGS_TRANSACTIONS);
+    setGoals(GOALS);
+    setHideBalance(HIDE_BALANCE_DEFAULT);
+  }, []);
 
   // type — 'income' | 'expense', amount — положительное число
   const addTransaction = useCallback(({ type, amount, categoryId, comment }) => {
@@ -84,6 +107,7 @@ export function FinanceProvider({ children }) {
       {
         id: newId('transfer'),
         type: 'transfer',
+        kind: 'savings',
         title: SAVINGS_TRANSFER.titles[mode],
         category: SAVINGS_TRANSFER.category,
         date: todayLabel(),
@@ -102,6 +126,7 @@ export function FinanceProvider({ children }) {
       {
         id: newId('goal-transfer'),
         type: 'transfer',
+        kind: 'goal',
         title: `${GOAL_TRANSFER.titlePrefix} «${goal.name}»`,
         category: GOAL_TRANSFER.category,
         date: todayLabel(),
@@ -154,6 +179,7 @@ export function FinanceProvider({ children }) {
       createGoal,
       hideBalance,
       setHideBalance,
+      resetDemo,
     };
   }, [
     added,
@@ -165,6 +191,7 @@ export function FinanceProvider({ children }) {
     depositToGoal,
     createGoal,
     hideBalance,
+    resetDemo,
   ]);
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;
