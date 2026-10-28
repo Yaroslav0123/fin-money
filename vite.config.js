@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { configDefaults } from 'vitest/config';
 
 // Крупные библиотеки — в отдельные файлы: они меняются реже кода приложения
 // и кэшируются браузером отдельно. Ключ — имя файла, значение — пакеты из node_modules.
@@ -51,5 +52,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.js'],
+    // Сквозные тесты из e2e/ запускает Playwright, а не Vitest
+    exclude: [...configDefaults.exclude, 'e2e/**'],
   },
 });

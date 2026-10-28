@@ -24,6 +24,30 @@ npm run dev
 | `npm run lint` | проверка кода ESLint |
 | `npm test` | тесты Vitest (однократно) |
 | `npm run test:watch` | тесты в режиме наблюдения |
+| `npm run test:e2e` | сквозные тесты Playwright в браузере (сайт собирается и запускается сам) |
+
+Перед первым запуском сквозных тестов скачайте браузер: `npx playwright install chromium`.
+Если скачанный Chromium не запускается (бывает на Windows), используйте установленный Chrome или Edge:
+`PW_CHANNEL=chrome npm run test:e2e` (в PowerShell — `$env:PW_CHANNEL='chrome'; npm run test:e2e`).
+
+## Автопроверка (GitHub Actions)
+
+После каждого push в `main` и в каждом pull request GitHub запускает `.github/workflows/ci.yml`:
+линтер, модульные тесты, сборка и сквозные тесты. Результат — на вкладке Actions репозитория.
+Если сквозные тесты упали, на странице проверки можно скачать отчёт `playwright-report` со снимками экрана.
+
+## Статистика и ошибки (необязательно)
+
+Яндекс Метрика и Sentry включаются переменными окружения на Netlify
+(Site configuration → Environment variables), после чего нужно пересобрать сайт (Deploys → Trigger deploy):
+
+| Переменная | Что это | Где взять |
+|---|---|---|
+| `VITE_YM_ID` | номер счётчика Метрики | metrika.yandex.ru → Добавить счётчик |
+| `VITE_SENTRY_DSN` | адрес проекта Sentry | sentry.io → проект Browser JavaScript → Settings → Client Keys (DSN) |
+
+Без переменных сайт ничего никуда не отправляет. Вебвизор Метрики выключен, финансовые данные не передаются.
+Код — в `src/utils/monitoring.js`.
 
 ## Публикация (Netlify)
 

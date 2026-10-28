@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Target } from 'lucide-react';
-import BalanceAreaChart from '../charts/BalanceAreaChart.jsx';
+import { BalanceAreaChart } from '../charts/lazy.jsx';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import IconTile from '../ui/IconTile.jsx';

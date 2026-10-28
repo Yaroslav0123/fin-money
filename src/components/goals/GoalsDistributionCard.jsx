@@ -1,5 +1,5 @@
 import DonutLegend from '../charts/DonutLegend.jsx';
-import ExpenseDonut from '../charts/ExpenseDonut.jsx';
+import { ExpenseDonut } from '../charts/lazy.jsx';
 import Card from '../ui/Card.jsx';
 import { formatMoney, toPercent } from '../../utils/format.js';
 

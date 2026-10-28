@@ -1,0 +1,54 @@
+# Автопроверка на GitHub: после каждого push и в каждом pull request
+# проверяем код линтером, запускаем модульные тесты, собираем сайт и проходим сквозные тесты в браузере.
+# Результат виден на вкладке Actions репозитория и галочкой у коммита.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Новый push отменяет ещё не законченную проверку той же ветки
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Установка зависимостей
+        run: npm ci
+
+      - name: Линтер
+        run: npm run lint
+
+      - name: Модульные тесты
+        run: npm test
+
+      - name: Сборка
+        run: npm run build
+
+      - name: Браузер для сквозных тестов
+        run: npx playwright install --with-deps chromium
+
+      - name: Сквозные тесты
+        run: npm run test:e2e
+
+      # Если сквозные тесты упали — отчёт со снимками экрана можно скачать со страницы проверки
+      - name: Отчёт Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 14

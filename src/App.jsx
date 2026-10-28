@@ -1,18 +1,29 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
-import AppShell from './components/app/AppShell.jsx';
 import { AppActionsProvider } from './context/AppActionsContext.jsx';
 import { FinanceProvider } from './context/FinanceContext.jsx';
-import AnalyticsScreen from './screens/AnalyticsScreen.jsx';
-import DashboardScreen from './screens/DashboardScreen.jsx';
-import GoalsScreen from './screens/GoalsScreen.jsx';
 import LandingPage from './screens/LandingPage.jsx';
-import SavingsScreen from './screens/SavingsScreen.jsx';
-import SettingsScreen from './screens/SettingsScreen.jsx';
-import TransactionsScreen from './screens/TransactionsScreen.jsx';
+import { trackScreen } from './utils/monitoring.js';
 
 // Экран-лендинг (сайт). Остальные экраны живут внутри каркаса веб-приложения.
 const LANDING_SCREEN = 'onboarding';
+
+// Код приложения скачивается отдельно от лендинга: первая страница открывается быстрее.
+// Пока посетитель читает лендинг, браузер в свободное время подгружает приложение заранее.
+const appModules = [
+  () => import('./components/app/AppShell.jsx'),
+  () => import('./screens/DashboardScreen.jsx'),
+  () => import('./screens/AnalyticsScreen.jsx'),
+  () => import('./screens/GoalsScreen.jsx'),
+  () => import('./screens/SavingsScreen.jsx'),
+  () => import('./screens/SettingsScreen.jsx'),
+  () => import('./screens/TransactionsScreen.jsx'),
+];
+const [AppShell, DashboardScreen, AnalyticsScreen, GoalsScreen, SavingsScreen, SettingsScreen, TransactionsScreen] =
+  appModules.map((load) => lazy(load));
+
+// В Safari нет requestIdleCallback — там просто ждём пару секунд
+const whenIdle = (callback) => (window.requestIdleCallback ? window.requestIdleCallback(callback) : setTimeout(callback, 2000));
 
 // Анимация смены экранов внутри приложения
 const screenTransition = {
@@ -42,6 +53,16 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [route]);
+
+  // Просмотр экрана для статистики посещений (если Метрика включена)
+  useEffect(() => {
+    trackScreen(activeScreen);
+  }, [activeScreen]);
+
+  // Заранее подгружаем приложение, чтобы переход с лендинга был мгновенным
+  useEffect(() => {
+    whenIdle(() => appModules.forEach((load) => load()));
+  }, []);
 
   // Выбираем, какой экран отрисовать внутри приложения
   const renderAppScreen = () => {
@@ -74,14 +95,17 @@ export default function App() {
               </motion.div>
             ) : (
               <motion.div key="app" className="min-h-full" {...layoutTransition}>
-                <AppShell activeScreen={activeScreen} onNavigate={navigate} onExit={exitToLanding}>
-                  <AnimatePresence mode="wait">
-                    {/* Новые параметры (другой поиск, другая категория) — тот же экран заново */}
-                    <motion.div key={`${activeScreen}:${JSON.stringify(route.params)}`} {...screenTransition}>
-                      {renderAppScreen()}
-                    </motion.div>
-                  </AnimatePresence>
-                </AppShell>
+                {/* Пока код приложения не скачался — пустой фон вместо мигания */}
+                <Suspense fallback={<div className="min-h-screen bg-surface" />}>
+                  <AppShell activeScreen={activeScreen} onNavigate={navigate} onExit={exitToLanding}>
+                    <AnimatePresence mode="wait">
+                      {/* Новые параметры (другой поиск, другая категория) — тот же экран заново */}
+                      <motion.div key={`${activeScreen}:${JSON.stringify(route.params)}`} {...screenTransition}>
+                        <Suspense fallback={null}>{renderAppScreen()}</Suspense>
+                      </motion.div>
+                    </AnimatePresence>
+                  </AppShell>
+                </Suspense>
               </motion.div>
             )}
           </AnimatePresence>

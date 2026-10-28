@@ -1,2 +1,5 @@
 node_modules
 dist
+# Отчёты сквозных тестов Playwright
+test-results
+playwright-report

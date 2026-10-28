@@ -1,5 +1,5 @@
 import DonutLegend from '../charts/DonutLegend.jsx';
-import ExpenseDonut from '../charts/ExpenseDonut.jsx';
+import { ExpenseDonut } from '../charts/lazy.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import LeafMark from '../ui/LeafMark.jsx';
 import TrendBadge from '../ui/TrendBadge.jsx';

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
 import { ABOUT_PROJECT } from '../../data/mockData.js';
+import { isMonitoringEnabled } from '../../utils/monitoring.js';
 
 /**
  * Окно «О проекте»: учебный проект, виртуальные деньги, персональные данные не собираются.
@@ -30,6 +31,7 @@ export default function AboutDialog({ sectionId, onClose }) {
               {section.paragraphs.map((text) => (
                 <p key={text}>{text}</p>
               ))}
+              {isMonitoringEnabled && section.monitoringParagraph && <p>{section.monitoringParagraph}</p>}
             </div>
           </section>
         ))}

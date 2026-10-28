@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import BalanceAreaChart from '../charts/BalanceAreaChart.jsx';
+import { BalanceAreaChart } from '../charts/lazy.jsx';
 import Card from '../ui/Card.jsx';
 import SegmentedControl from '../ui/SegmentedControl.jsx';
 
