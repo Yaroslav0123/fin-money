@@ -10,7 +10,7 @@ import { APP_NAME, LANDING } from '../data/mockData.js';
 
 /**
  * Экран 1. Приветствие в виде веб-лендинга.
- * onStart — переход в приложение по любой кнопке «Начать».
+ * onStart — переход в приложение по любой кнопке «Мои финансы».
  */
 export default function LandingPage({ onStart }) {
   return (

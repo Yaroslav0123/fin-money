@@ -594,7 +594,7 @@ export const LANDING = {
     { id: 'budget', label: 'Бюджет', href: '#categories' },
     { id: 'about', label: 'О приложении', href: '#about' },
   ],
-  headerAction: 'Начать',
+  headerAction: 'Мои финансы',
   // Кнопка меню разделов на телефонах
   menuOpenLabel: 'Открыть меню',
   menuCloseLabel: 'Закрыть меню',
@@ -602,7 +602,7 @@ export const LANDING = {
     badge: 'Ваши финансы — под контролем',
     titleLines: ['Управляй деньгами.', 'Достигай целей.'],
     textLines: ['Просто. Удобно. Эффективно.', 'Ваши финансы — под контролем.'],
-    action: 'Начать',
+    action: 'Мои финансы',
   },
   overview: {
     eyebrow: 'Обзор',
@@ -627,7 +627,7 @@ export const LANDING = {
   },
   cta: {
     text: 'Начните управлять своими финансами уже сегодня и достигайте своих целей.',
-    action: 'Начать',
+    action: 'Мои финансы',
   },
   footer: {
     copyright: '© 2026 Fin Money. Все права защищены.',
