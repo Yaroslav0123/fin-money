@@ -2,9 +2,10 @@ import { useEffect, useId, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 
-// Элементы, на которые можно перейти клавишей Tab
+// Элементы, на которые можно перейти клавишей Tab.
+// framer-motion ставит кнопкам tabindex="0", поэтому неактивные исключаем и в последнем правиле.
 const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])';
 
 /**
  * Модальное окно. На телефоне выезжает снизу (как шторка),

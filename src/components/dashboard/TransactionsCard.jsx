@@ -42,7 +42,8 @@ export default function TransactionsCard({ transactions, texts, className = '' }
         <h3 className="text-base font-bold text-ink">{texts.title}</h3>
         <LinkArrow>{texts.allLink}</LinkArrow>
       </div>
-      <ul className="-mx-2 mt-3 grid gap-x-6 md:grid-cols-2">
+      {/* grid-cols-1: колонка не шире экрана, длинные названия обрезаются многоточием */}
+      <ul className="-mx-2 mt-3 grid grid-cols-1 gap-x-6 md:grid-cols-2">
         <AnimatePresence mode="popLayout" initial={false}>
           {transactions.map((tx) => (
             <TransactionRow key={tx.id} tx={tx} />
