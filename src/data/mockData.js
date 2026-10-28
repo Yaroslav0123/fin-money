@@ -477,7 +477,7 @@ export const SETTINGS_PAGE = {
     title: 'Профиль',
     description: 'Личные данные для входа и уведомлений',
     // Вымышленные данные для прототипа
-    defaults: { name: 'Алексей Смирнов', email: 'alexey@example.com', phone: '+7 900 000-00-00' },
+    defaults: { name: 'Маша', email: 'masha@example.com', phone: '+7 900 000-00-00' },
     fields: [
       // required — поле нельзя оставить пустым; error — подсказка при ошибке
       { id: 'name', label: 'Имя', type: 'text', required: true, error: 'Введите имя' },

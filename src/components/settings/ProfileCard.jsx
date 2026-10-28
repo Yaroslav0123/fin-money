@@ -3,7 +3,7 @@ import { BadgeCheck } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 
-// Инициалы для аватара: «Алексей Смирнов» → «АС»
+// Инициалы для аватара: «Мария Смирнова» → «МС», «Маша» → «М»
 const MAX_INITIALS = 2;
 const toInitials = (name) =>
   name
