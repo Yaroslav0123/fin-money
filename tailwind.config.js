@@ -21,10 +21,6 @@ export default {
         laptop: '0 40px 80px -20px rgba(20, 32, 27, 0.35)',
         button: '0 8px 20px rgba(26, 93, 70, 0.28)',
       },
-      // Ширина плавающего демо-переключателя экранов
-      maxWidth: {
-        phone: '430px',
-      },
     },
   },
   plugins: [],

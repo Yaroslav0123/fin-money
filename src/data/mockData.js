@@ -36,16 +36,6 @@ import {
   Wallet,
 } from 'lucide-react';
 
-// Список экранов для демо-переключателя
-export const SCREENS = [
-  { id: 'onboarding', label: 'Приветствие' },
-  { id: 'dashboard', label: 'Главная' },
-  { id: 'savings', label: 'Накопления' },
-  { id: 'analytics', label: 'Аналитика' },
-  { id: 'goals', label: 'Цели' },
-  { id: 'settings', label: 'Настройки' },
-];
-
 export const APP_NAME = 'Fin Money';
 
 // ───────────── Каркас веб-приложения ─────────────

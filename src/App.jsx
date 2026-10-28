@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import AppShell from './components/app/AppShell.jsx';
-import ScreenSwitcher from './components/layout/ScreenSwitcher.jsx';
 import { AppActionsProvider } from './context/AppActionsContext.jsx';
 import { FinanceProvider } from './context/FinanceContext.jsx';
 import AnalyticsScreen from './screens/AnalyticsScreen.jsx';
@@ -10,13 +9,9 @@ import GoalsScreen from './screens/GoalsScreen.jsx';
 import LandingPage from './screens/LandingPage.jsx';
 import SavingsScreen from './screens/SavingsScreen.jsx';
 import SettingsScreen from './screens/SettingsScreen.jsx';
-import { SCREENS } from './data/mockData.js';
 
 // Экран-лендинг (сайт). Остальные экраны живут внутри каркаса веб-приложения.
 const LANDING_SCREEN = 'onboarding';
-
-// Демо-переключатель экранов нужен только при разработке, в сборку для сайта не попадает
-const SHOW_SCREEN_SWITCHER = import.meta.env.DEV;
 
 // Анимация смены экранов внутри приложения
 const screenTransition = {
@@ -69,12 +64,6 @@ export default function App() {
             {isLanding ? (
               <motion.div key="landing" className="min-h-full" {...layoutTransition}>
                 <LandingPage onStart={() => setActiveScreen('dashboard')} />
-                {/* Демо-переключатель экранов плавает внизу страницы */}
-                {SHOW_SCREEN_SWITCHER && (
-                  <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center">
-                    <ScreenSwitcher screens={SCREENS} activeId={activeScreen} onChange={setActiveScreen} />
-                  </div>
-                )}
               </motion.div>
             ) : (
               <motion.div key="app" className="min-h-full" {...layoutTransition}>

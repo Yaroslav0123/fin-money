@@ -56,7 +56,6 @@ src/
    ├─ cards/      # StatCard, ExpenseStructureCard (общие для лендинга и «Главной»)
    ├─ app/        # AppShell, Sidebar, Topbar, BottomNav, AddTransactionDialog
    ├─ landing/    # секции лендинга + LaptopMockup (превью приложения на ноутбуке)
-   ├─ layout/     # ScreenSwitcher (демо-переключатель экранов, показывается только на лендинге)
    ├─ dashboard/ savings/ analytics/ goals/ settings/   # карточки конкретных экранов
 ```
 

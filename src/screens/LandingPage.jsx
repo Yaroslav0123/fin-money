@@ -14,7 +14,7 @@ import { APP_NAME, LANDING } from '../data/mockData.js';
  */
 export default function LandingPage({ onStart }) {
   return (
-    <div className="min-h-full bg-surface pb-20">
+    <div className="min-h-full bg-surface">
       <LandingHeader appName={APP_NAME} nav={LANDING.nav} actionLabel={LANDING.headerAction} onAction={onStart} />
       <main>
         <HeroSection appName={APP_NAME} onStart={onStart} />
