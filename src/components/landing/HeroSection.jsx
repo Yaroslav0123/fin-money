@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Target } from 'lucide-react';
-import Button from '../ui/Button.jsx';
+import Button3D from '../ui/Button3D.jsx';
 import Container from './Container.jsx';
 import LaptopMockup from './LaptopMockup.jsx';
 import { EXPENSE_CATEGORIES, LANDING, SAVINGS, SUMMARY } from '../../data/mockData.js';
@@ -77,11 +77,12 @@ export default function HeroSection({ appName, onStart }) {
             ))}
           </motion.p>
 
-          <motion.div variants={item} className="mt-8">
-            <Button size="md" pill onClick={onStart} className="px-10">
+          {/* Главное действие сайта — крупная объёмная кнопка */}
+          <motion.div variants={item} className="mt-10">
+            <Button3D onClick={onStart} className="w-full sm:w-72">
               {hero.action}
-              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </Button>
+              <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
+            </Button3D>
           </motion.div>
         </motion.div>
 

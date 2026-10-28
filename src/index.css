@@ -39,3 +39,112 @@
     margin: 0;
   }
 }
+
+/*
+ * 3D-кнопка «Twist» (по мотивам кнопки №37 из подборки msiter.ru, без jQuery).
+ * Кнопка разрезана на 4 вертикальные полосы — «кубики» с двумя гранями.
+ * При наведении полосы по очереди поворачиваются на 90° вокруг горизонтальной оси
+ * и показывают нижнюю грань другого цвета; надпись переворачивается вместе с ними.
+ * Высота кнопки — 4rem, поэтому грани сдвинуты на половину высоты (2rem).
+ */
+@layer components {
+  .twist-btn {
+    position: relative;
+    display: inline-block;
+    height: 4rem;
+    perspective: 40rem;
+  }
+
+  .twist-btn__strips {
+    position: absolute;
+    inset: 0;
+    display: flex;
+  }
+
+  .twist-btn__cube {
+    position: relative;
+    height: 100%;
+    transform-style: preserve-3d;
+    transform: translateZ(-2rem);
+    transition: transform 500ms cubic-bezier(0.97, 0, 0.395, 0.995);
+  }
+
+  /* Полосы чуть перекрываются, чтобы между ними не было щелей */
+  .twist-btn__strips .twist-btn__cube {
+    flex: 1 1 0;
+  }
+  .twist-btn__strips .twist-btn__cube + .twist-btn__cube {
+    margin-left: -1px;
+  }
+
+  /* Полосы поворачиваются по очереди */
+  .twist-btn__strips .twist-btn__cube:nth-child(2) {
+    transition-delay: 0.1s;
+  }
+  .twist-btn__strips .twist-btn__cube:nth-child(3) {
+    transition-delay: 0.2s;
+  }
+  .twist-btn__strips .twist-btn__cube:nth-child(4) {
+    transition-delay: 0.3s;
+  }
+
+  /* Надпись лежит поверх полос и переворачивается в середине волны */
+  .twist-btn__label {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition-delay: 0.15s;
+  }
+
+  .twist-btn:hover .twist-btn__cube,
+  .twist-btn:focus-visible .twist-btn__cube {
+    transform: translateZ(-2rem) rotateX(90deg);
+  }
+
+  .twist-btn__face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    backface-visibility: hidden;
+  }
+
+  /* Передняя грань видна сразу, нижняя — после поворота кубика */
+  .twist-btn__face--front {
+    transform: translateZ(2rem);
+  }
+  .twist-btn__face--back {
+    transform: rotateX(-90deg) translateZ(2rem);
+  }
+
+  .twist-btn__strips .twist-btn__face--front {
+    @apply bg-brand;
+  }
+  .twist-btn__strips .twist-btn__face--back {
+    @apply bg-brand-soft;
+  }
+  .twist-btn__label .twist-btn__face--front {
+    @apply text-white;
+  }
+  .twist-btn__label .twist-btn__face--back {
+    @apply text-brand-dark;
+  }
+
+  /* Скругляем только внешние края крайних полос */
+  .twist-btn__strips .twist-btn__cube:first-child .twist-btn__face {
+    @apply rounded-l-2xl;
+  }
+  .twist-btn__strips .twist-btn__cube:last-child .twist-btn__face {
+    @apply rounded-r-2xl;
+  }
+
+  /* При системной настройке «уменьшить движение» цвет меняется сразу, без поворота */
+  @media (prefers-reduced-motion: reduce) {
+    .twist-btn__cube {
+      transition-duration: 1ms;
+      transition-delay: 0s !important;
+    }
+  }
+}
