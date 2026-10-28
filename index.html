@@ -72,6 +72,16 @@
       .boot.is-slow .boot-hint {
         display: block;
       }
+      .boot-diag {
+        margin: 16px auto 0;
+        max-width: 90vw;
+        white-space: pre-wrap;
+        word-break: break-all;
+        text-align: left;
+        font-size: 11px;
+        line-height: 1.5;
+        color: #656b74;
+      }
       /* При ошибке индикатор загрузки уже не нужен */
       .boot.is-failed .boot-spinner {
         display: none;
@@ -98,18 +108,38 @@
         <div class="boot-hint">
           <span id="boot-hint-text">Загрузка занимает больше обычного.</span>
           <br />
-          <button type="button" class="boot-reload" onclick="location.reload()">Обновить</button>
+          <button type="button" class="boot-reload" onclick="window.__finMoneyBootReload()">Обновить</button>
+          <pre class="boot-diag" id="boot-diag" hidden></pre>
         </div>
       </div>
     </div>
     <noscript>Для работы Fin Money включите JavaScript.</noscript>
     <script>
       // Страховка экрана загрузки: приложение не должно «висеть» на нём без объяснений.
-      // Если скрипты не загрузились (например, dev-сервер пересобрал зависимости прямо во время
-      // загрузки), один раз перезагружаем страницу сами, а дальше показываем кнопку «Обновить».
+      // Если скрипты не загрузились (например, dev-сервер пересобирал зависимости прямо во время
+      // загрузки), сами пробуем ещё раз с паузами, а потом показываем кнопку «Обновить».
+      // Какие файлы не загрузились — пишем в консоль браузера, чтобы причину было видно.
       (function () {
         var RETRY_KEY = 'fin-money:boot-retry';
         var SLOW_AFTER_MS = 20000;
+        // Паузы перед автоматическими повторами: даём серверу закончить пересборку
+        var RETRY_DELAYS_MS = [1500, 4000, 8000];
+
+        var readRetries = function () {
+          try {
+            return Number(sessionStorage.getItem(RETRY_KEY)) || 0;
+          } catch (e) {
+            return RETRY_DELAYS_MS.length; // хранилище недоступно — без автоповторов
+          }
+        };
+        var writeRetries = function (count) {
+          try {
+            if (count) sessionStorage.setItem(RETRY_KEY, String(count));
+            else sessionStorage.removeItem(RETRY_KEY);
+          } catch (e) {
+            // хранилище недоступно — ничего страшного
+          }
+        };
 
         var showHint = function (text) {
           var boot = document.getElementById('boot');
@@ -121,28 +151,73 @@
           boot.classList.add('is-slow');
         };
 
-        window.__finMoneyBootFailed = function () {
-          var retried = false;
-          try {
-            retried = sessionStorage.getItem(RETRY_KEY) === '1';
-            sessionStorage.setItem(RETRY_KEY, '1');
-          } catch (e) {
-            retried = true;
-          }
-          if (!retried) {
-            location.reload();
-            return;
-          }
-          showHint('Не удалось загрузить приложение.');
+        // Файлы этого сайта, которые не загрузились (код ответа 400+ или обрыв соединения)
+        var failedResources = function () {
+          return performance
+            .getEntriesByType('resource')
+            .filter(function (e) {
+              return e.name.indexOf(location.origin) === 0 && (e.responseStatus >= 400 || e.responseEnd === 0);
+            })
+            .map(function (e) {
+              return (e.responseStatus || 'нет ответа') + ' ' + e.name.replace(location.origin, '');
+            });
         };
 
-        // Приложение отрисовалось — сбрасываем счётчик автоперезагрузок
-        window.__finMoneyBootDone = function () {
-          try {
-            sessionStorage.removeItem(RETRY_KEY);
-          } catch (e) {
-            // хранилище недоступно — ничего страшного
+        window.__finMoneyBootFailed = function () {
+          // Файл открыт из папки (file://): без dev-сервера скрипты не загрузятся, повторы бесполезны
+          if (location.protocol === 'file:') {
+            showHint('Страница открыта из папки, а не через сервер. Запустите в папке проекта «npm run dev» и откройте http://localhost:5173/');
+            return;
           }
+          var retries = readRetries();
+          console.error('[Fin Money] скрипты приложения не загрузились, попытка ' + (retries + 1), failedResources());
+          if (retries < RETRY_DELAYS_MS.length) {
+            writeRetries(retries + 1);
+            document.querySelector('#boot > span').textContent = 'Повторяем загрузку…';
+            setTimeout(function () {
+              location.reload();
+            }, RETRY_DELAYS_MS[retries]);
+            return;
+          }
+          showHint('Не удалось загрузить приложение. Проверьте, что dev-сервер запущен, и обновите страницу.');
+          showDiagnostics();
+        };
+
+        // Подробности сбоя прямо на экране: какие файлы не загрузились и что отвечает сервер
+        var showDiagnostics = function () {
+          var box = document.getElementById('boot-diag');
+          var lines = failedResources().slice(0, 6);
+          var render = function () {
+            box.textContent = lines.join('\n');
+            box.hidden = false;
+          };
+          if (lines.length) {
+            render();
+            return;
+          }
+          // Явных ошибок нет — проверяем главный скрипт приложения напрямую
+          fetch('/src/main.jsx', { cache: 'no-store' })
+            .then(function (res) {
+              lines.push('main.jsx: ' + res.status + ' ' + (res.headers.get('content-type') || 'без типа'));
+            })
+            .catch(function (err) {
+              lines.push('main.jsx: ' + err.message);
+            })
+            .then(function () {
+              lines.push(navigator.userAgent);
+              render();
+            });
+        };
+
+        // Кнопка «Обновить»: заново разрешаем автоповторы
+        window.__finMoneyBootReload = function () {
+          writeRetries(0);
+          location.reload();
+        };
+
+        // Приложение отрисовалось — сбрасываем счётчик автоповторов
+        window.__finMoneyBootDone = function () {
+          writeRetries(0);
         };
 
         setTimeout(function () {
