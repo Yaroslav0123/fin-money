@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { ChevronDown, Plus, Search, X } from 'lucide-react';
+import { ChevronDown, Download, Plus, Search, Upload, X } from 'lucide-react';
+import ImportDialog from '../components/app/ImportDialog.jsx';
 import { TransactionRow } from '../components/dashboard/TransactionsCard.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
@@ -8,9 +9,12 @@ import Reveal from '../components/ui/Reveal.jsx';
 import SegmentedControl from '../components/ui/SegmentedControl.jsx';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
-import { TRANSACTIONS_PAGE } from '../data/mockData.js';
-import { formatGroupDate, startOfDay } from '../utils/dates.js';
-import { formatMoney } from '../utils/format.js';
+import { CSV_TEXTS, IMPORT_DIALOG, TRANSACTIONS_PAGE } from '../data/mockData.js';
+import { toCsv } from '../utils/csv.js';
+import { formatGroupDate, startOfDay, toDateInputValue } from '../utils/dates.js';
+import { downloadFile } from '../utils/download.js';
+import { fillTemplate, formatMoney } from '../utils/format.js';
+import { transactionsToRows } from '../utils/statement.js';
 
 const ALL = 'all';
 
@@ -26,7 +30,8 @@ const matchesQuery = (tx, query) =>
  */
 export default function TransactionsScreen({ params = {} }) {
   const { transactions, categories, today } = useFinance();
-  const { openTransaction, openAddTransaction } = useAppActions();
+  const { openTransaction, openAddTransaction, notify } = useAppActions();
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const t = TRANSACTIONS_PAGE;
 
   const [query, setQuery] = useState(params.query ?? '');
@@ -66,6 +71,12 @@ export default function TransactionsScreen({ params = {} }) {
     setCategoryId(ALL);
   };
 
+  // Выгрузка найденных операций (с учётом поиска и фильтров) в CSV для Excel
+  const handleExport = () => {
+    downloadFile(toCsv(transactionsToRows(filtered)), `${CSV_TEXTS.fileName}-${toDateInputValue(today)}.csv`);
+    notify(t.exported);
+  };
+
   const handleTypeChange = (nextType) => {
     setType(nextType);
     // Категория другого типа больше не подходит
@@ -74,6 +85,18 @@ export default function TransactionsScreen({ params = {} }) {
 
   return (
     <div className="grid grid-cols-1 gap-5">
+      {/* Импорт выписки и выгрузка */}
+      <Reveal className="flex flex-wrap justify-end gap-2">
+        <Button size="sm" pill variant="secondary" onClick={() => setIsImportOpen(true)}>
+          <Upload className="h-4 w-4" />
+          {t.importAction}
+        </Button>
+        <Button size="sm" pill variant="secondary" onClick={handleExport} disabled={filtered.length === 0} className="disabled:opacity-40">
+          <Download className="h-4 w-4" />
+          {t.exportAction}
+        </Button>
+      </Reveal>
+
       {/* Поиск и фильтры */}
       <Reveal>
         <Card className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center">
@@ -170,6 +193,15 @@ export default function TransactionsScreen({ params = {} }) {
           )}
         </Card>
       </Reveal>
+
+      <ImportDialog
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onDone={(count) => {
+          setIsImportOpen(false);
+          notify(fillTemplate(IMPORT_DIALOG.done, { count }));
+        }}
+      />
     </div>
   );
 }

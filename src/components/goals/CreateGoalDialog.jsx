@@ -76,7 +76,7 @@ export default function CreateGoalDialog({ isOpen, goal = null, texts, iconOptio
   };
 
   const inputClass =
-    'mt-2 h-12 w-full rounded-2xl border-2 border-transparent bg-surface px-4 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-muted/70 transition-colors duration-200 focus:border-brand focus:bg-white focus:outline-none';
+    'mt-2 h-12 w-full rounded-2xl border-2 border-transparent bg-surface px-4 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-muted/70 transition-colors duration-200 focus:border-brand focus:bg-card focus:outline-none';
 
   return (
     <Modal isOpen={isOpen} title={isEdit ? texts.editTitle : texts.title} onClose={handleClose} closeLabel={texts.cancel}>

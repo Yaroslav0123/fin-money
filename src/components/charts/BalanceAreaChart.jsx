@@ -1,6 +1,7 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CHART_A11Y } from '../../data/mockData.js';
 import { colors } from '../../theme/colors.js';
-import { formatCompact } from '../../utils/format.js';
+import { fillTemplate, formatCompact, formatMoney } from '../../utils/format.js';
 import ChartTooltip from './ChartTooltip.jsx';
 
 // Настройки внешнего вида графика
@@ -32,8 +33,14 @@ function LastPointDot({ cx, cy, index, lastIndex }) {
 
 // Плавный график роста баланса накопительного счёта
 export default function BalanceAreaChart({ data, className = '' }) {
+  // Описание для экранных дикторов: с какого значения и до какого
+  const description = fillTemplate(CHART_A11Y.balance, {
+    first: formatMoney(data[0]?.value ?? 0),
+    last: formatMoney(data.at(-1)?.value ?? 0),
+  });
+
   return (
-    <div className={className}>
+    <div className={className} role="img" aria-label={description}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 10, right: 10, left: -8, bottom: 0 }}>
           <defs>

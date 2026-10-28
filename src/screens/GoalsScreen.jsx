@@ -116,7 +116,7 @@ export default function GoalsScreen() {
             options={GOALS_PAGE.filters}
             value={filter}
             onChange={setFilter}
-            className="bg-white shadow-soft"
+            className="bg-card shadow-soft"
           />
           <Button size="sm" pill onClick={() => setGoalDialog({ goal: null })}>
             <Plus className="h-4 w-4" />

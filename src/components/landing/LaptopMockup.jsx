@@ -15,7 +15,7 @@ import { formatMoney } from '../../utils/format.js';
 // Боковое меню мини-приложения
 function PreviewSidebar({ appName, items }) {
   return (
-    <aside className="flex flex-col gap-[0.35em] border-r border-line bg-white p-[1em]">
+    <aside className="flex flex-col gap-[0.35em] border-r border-line bg-card p-[1em]">
       <div className="mb-[1em] flex items-center gap-[0.4em]">
         <LeafMark className="h-[1.5em] w-[2em]" />
         <span className="text-[1.05em] font-bold">{appName}</span>
@@ -42,7 +42,7 @@ function PreviewSidebar({ appName, items }) {
 // Мини-карточка «Доходы» / «Расходы»
 function PreviewStat({ stat }) {
   return (
-    <div className="rounded-[0.9em] bg-white p-[0.9em] shadow-soft">
+    <div className="rounded-[0.9em] bg-card p-[0.9em] shadow-soft">
       <IconTile icon={stat.icon} accent={stat.accent} size="em" />
       <p className="mt-[0.6em] text-ink-muted">{stat.label}</p>
       <p className="text-[1.25em] font-bold">{formatMoney(stat.amount)}</p>
@@ -54,7 +54,7 @@ function PreviewStat({ stat }) {
 // Мини-карточка структуры расходов
 function PreviewDonut({ title, caption, total, categories }) {
   return (
-    <div className="rounded-[0.9em] bg-white p-[0.9em] shadow-soft">
+    <div className="rounded-[0.9em] bg-card p-[0.9em] shadow-soft">
       <p className="font-bold">{title}</p>
       <div className="mt-[0.6em] flex items-center gap-[1em]">
         <ExpenseDonut
@@ -75,7 +75,7 @@ function PreviewDonut({ title, caption, total, categories }) {
 // Мини-карточка накопительного счёта
 function PreviewSavings({ savings, savingsIcon }) {
   return (
-    <div className="flex flex-col gap-[0.8em] rounded-[0.9em] bg-white p-[1.1em] shadow-soft">
+    <div className="flex flex-col gap-[0.8em] rounded-[0.9em] bg-card p-[1.1em] shadow-soft">
       <IconTile icon={savingsIcon} accent="brand" size="em" />
       <div>
         <p className="text-[1.2em] font-bold">{savings.title}</p>
@@ -109,7 +109,7 @@ export default function LaptopMockup({ appName, sidebar, summary, categories, sa
   return (
     <div className="relative w-full [container-type:inline-size]">
       {/* Крышка с экраном */}
-      <div className="relative mx-[5%] rounded-t-[2.2cqw] bg-ink p-[1.3cqw] pb-[1.8cqw] shadow-laptop">
+      <div className="relative mx-[5%] rounded-t-[2.2cqw] bg-device p-[1.3cqw] pb-[1.8cqw] shadow-laptop">
         {/* Камера */}
         <span className="absolute left-1/2 top-[0.45cqw] h-[0.5cqw] w-[0.5cqw] -translate-x-1/2 rounded-full bg-white/25" />
 

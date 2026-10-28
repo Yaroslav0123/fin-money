@@ -13,12 +13,12 @@ export default function Sidebar({ activeScreen, onNavigate, onExit }) {
   const { promo } = APP_SHELL;
 
   return (
-    <aside className="sticky top-0 hidden h-screen flex-col border-r border-line bg-white px-5 py-7 lg:flex">
+    <aside className="sticky top-0 hidden h-screen flex-col border-r border-line bg-card px-5 py-7 lg:flex">
       <button type="button" onClick={onExit} className="px-2 text-left" title={APP_SHELL.backToSite}>
         <Logo name={APP_NAME} size="sm" />
       </button>
 
-      <nav className="mt-10 flex flex-col gap-1">
+      <nav aria-label={APP_SHELL.navLabel} className="mt-10 flex flex-col gap-1">
         {APP_NAV.map((item) => {
           const Icon = item.icon;
           const isActive = item.screen === activeScreen;
@@ -29,9 +29,10 @@ export default function Sidebar({ activeScreen, onNavigate, onExit }) {
               key={item.id}
               type="button"
               disabled={isDisabled}
+              aria-current={isActive ? 'page' : undefined}
               onClick={() => onNavigate(item.screen)}
               className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-200 disabled:cursor-default disabled:opacity-50 ${
-                isActive ? 'font-semibold text-brand' : 'text-ink-secondary enabled:hover:bg-black/[0.03] enabled:hover:text-ink'
+                isActive ? 'font-semibold text-brand' : 'text-ink-secondary enabled:hover:bg-ink/[0.03] enabled:hover:text-ink'
               }`}
             >
               {/* Подложка активного пункта плавно переезжает */}

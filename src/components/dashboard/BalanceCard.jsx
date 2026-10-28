@@ -30,7 +30,7 @@ export default function BalanceCard({ balance, texts, hiddenByDefault = false, o
             type="button"
             onClick={() => setIsHidden((v) => !v)}
             aria-label={isHidden ? texts.showBalanceLabel : texts.hideBalanceLabel}
-            className="rounded-full p-1 transition-colors duration-200 hover:bg-black/5 hover:text-ink"
+            className="rounded-full p-1 transition-colors duration-200 hover:bg-ink/5 hover:text-ink"
           >
             <EyeIcon className="h-4 w-4" />
           </button>

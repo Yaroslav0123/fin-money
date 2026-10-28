@@ -8,7 +8,7 @@ export default function NewGoalTile({ title, hint, onClick }) {
       type="button"
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="group flex h-full min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-card border-2 border-dashed border-brand-soft bg-white/40 p-6 text-center transition-colors duration-200 hover:border-brand-muted hover:bg-brand-light/40"
+      className="group flex h-full min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-card border-2 border-dashed border-brand-soft bg-card/40 p-6 text-center transition-colors duration-200 hover:border-brand-muted hover:bg-brand-light/40"
     >
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand transition-transform duration-200 group-hover:scale-110">
         <Plus className="h-6 w-6" />

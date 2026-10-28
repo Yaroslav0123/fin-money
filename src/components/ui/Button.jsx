@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 // Варианты оформления кнопки
 const VARIANTS = {
   primary: 'bg-brand text-white shadow-button hover:bg-brand-dark',
-  secondary: 'bg-black/5 text-ink hover:bg-black/10',
+  secondary: 'bg-ink/5 text-ink hover:bg-ink/10',
   ghost: 'bg-transparent text-brand hover:bg-brand-light',
   // Контурная светлая — для тёмных фонов (баннер внизу лендинга)
   outlineLight: 'border border-white/70 bg-transparent text-white hover:bg-white hover:text-brand',

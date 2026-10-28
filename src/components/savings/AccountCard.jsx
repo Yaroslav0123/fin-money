@@ -60,7 +60,7 @@ export default function AccountCard({ savings, balance, onDeposit, onWithdraw })
             <Plus className="h-4 w-4" />
             {savings.depositAction}
           </Button>
-          <Button size="md" variant="secondary" className="bg-white hover:bg-white/70" onClick={onWithdraw}>
+          <Button size="md" variant="secondary" className="bg-card hover:bg-card/70" onClick={onWithdraw}>
             <Minus className="h-4 w-4" />
             {savings.withdrawAction}
           </Button>

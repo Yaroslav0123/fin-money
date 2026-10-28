@@ -27,7 +27,8 @@ const greetingFor = (date) => {
  */
 export default function AppShell({ activeScreen, onNavigate, onExit, children }) {
   const { openAddTransaction } = useAppActions();
-  const { today, rawTransactions, goals, summary, settings, onboardingDone } = useFinance();
+  const { today, rawTransactions, goals, summary, settings, onboardingDone, isDark, setSetting } = useFinance();
+  const themeTexts = SETTINGS_PAGE.preferences.theme;
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const meta = SCREEN_META[activeScreen];
@@ -48,6 +49,13 @@ export default function AppShell({ activeScreen, onNavigate, onExit, children })
 
   return (
     <div className="min-h-full bg-surface lg:grid lg:grid-cols-[256px_minmax(0,1fr)]">
+      {/* Для клавиатуры: первая же клавиша Tab предлагает пропустить меню */}
+      <a
+        href="#main"
+        className="sr-only z-[80] rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        {APP_SHELL.skipLink}
+      </a>
       <Sidebar activeScreen={activeScreen} onNavigate={onNavigate} onExit={onExit} />
 
       <div className="min-w-0 pb-28 lg:pb-12">
@@ -60,8 +68,15 @@ export default function AppShell({ activeScreen, onNavigate, onExit, children })
           onSearch={(query) => onNavigate('transactions', { query })}
           hasNotifications={notifications.length > 0}
           onNotifications={() => setIsNotificationsOpen(true)}
+          theme={{
+            isDark,
+            toggleLabel: isDark ? themeTexts.toggleToLight : themeTexts.toggleToDark,
+            onToggle: () => setSetting('theme', isDark ? 'light' : 'dark'),
+          }}
         />
-        <main className="mx-auto max-w-7xl px-5 pt-6 sm:px-8 lg:px-10 lg:pt-8">{children}</main>
+        <main id="main" tabIndex={-1} className="mx-auto max-w-7xl px-5 pt-6 focus:outline-none sm:px-8 lg:px-10 lg:pt-8">
+          {children}
+        </main>
       </div>
 
       <BottomNav activeScreen={activeScreen} onNavigate={onNavigate} onAdd={openAddTransaction} />

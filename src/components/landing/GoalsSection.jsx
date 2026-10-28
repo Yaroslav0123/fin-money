@@ -24,7 +24,7 @@ function GoalRow({ goal, progressOf }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <ProgressBar value={percent} />
+        <ProgressBar value={percent} label={goal.name} />
         <span className="w-10 shrink-0 text-right text-xs font-semibold text-ink-secondary">{percent}%</span>
       </div>
 

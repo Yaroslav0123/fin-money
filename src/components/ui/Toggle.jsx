@@ -13,7 +13,7 @@ export default function Toggle({ checked, onChange, label }) {
       aria-label={label}
       onClick={() => onChange(!checked)}
       className={`flex h-7 w-12 shrink-0 items-center rounded-full p-1 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
-        checked ? 'justify-end bg-brand' : 'justify-start bg-black/10'
+        checked ? 'justify-end bg-brand' : 'justify-start bg-ink/10'
       }`}
     >
       <motion.span

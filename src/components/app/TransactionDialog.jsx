@@ -96,7 +96,7 @@ export default function TransactionDialog({ isOpen, transaction = null, onClose,
   };
 
   const inputClass =
-    'h-12 w-full rounded-2xl border-2 border-transparent bg-surface px-4 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-muted/70 transition-colors duration-200 focus:border-brand focus:bg-white focus:outline-none';
+    'h-12 w-full rounded-2xl border-2 border-transparent bg-surface px-4 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-muted/70 transition-colors duration-200 focus:border-brand focus:bg-card focus:outline-none';
 
   return (
     <Modal isOpen={isOpen} title={isEdit ? t.editTitle : t.title} onClose={handleClose} closeLabel={t.cancel}>
@@ -115,7 +115,7 @@ export default function TransactionDialog({ isOpen, transaction = null, onClose,
             {t.amountLabel}
           </label>
           <div
-            className={`mt-2 flex items-center rounded-2xl border-2 bg-surface px-4 transition-colors duration-200 focus-within:bg-white ${
+            className={`mt-2 flex items-center rounded-2xl border-2 bg-surface px-4 transition-colors duration-200 focus-within:bg-card ${
               isTooMuch ? 'border-negative' : 'border-transparent focus-within:border-brand'
             }`}
           >

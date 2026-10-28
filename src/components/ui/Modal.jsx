@@ -69,7 +69,7 @@ export default function Modal({ isOpen, title, onClose, closeLabel, children }) 
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/40 backdrop-blur-sm sm:items-center sm:p-6"
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-overlay/40 backdrop-blur-sm sm:items-center sm:p-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -81,7 +81,7 @@ export default function Modal({ isOpen, title, onClose, closeLabel, children }) 
             aria-modal="true"
             aria-labelledby={titleId}
             tabIndex={-1}
-            className="max-h-[92vh] w-full overflow-y-auto rounded-t-panel bg-white p-6 shadow-lifted focus:outline-none sm:max-w-md sm:rounded-panel sm:p-8"
+            className="max-h-[92vh] w-full overflow-y-auto rounded-t-panel bg-card p-6 shadow-lifted focus:outline-none sm:max-w-md sm:rounded-panel sm:p-8"
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
@@ -96,7 +96,7 @@ export default function Modal({ isOpen, title, onClose, closeLabel, children }) 
                 type="button"
                 onClick={onClose}
                 aria-label={closeLabel}
-                className="rounded-full p-2 text-ink-muted transition-colors duration-200 hover:bg-black/5 hover:text-ink"
+                className="rounded-full p-2 text-ink-muted transition-colors duration-200 hover:bg-ink/5 hover:text-ink"
               >
                 <X className="h-5 w-5" />
               </button>

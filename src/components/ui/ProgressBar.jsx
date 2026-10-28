@@ -1,9 +1,19 @@
 import { motion } from 'framer-motion';
 
-// Прогресс-бар, который плавно заполняется при появлении на экране
-export default function ProgressBar({ value, className = '' }) {
+const FULL = 100;
+
+// Прогресс-бар, который плавно заполняется при появлении на экране.
+// label — что измеряет полоса (для экранных дикторов), value — проценты.
+export default function ProgressBar({ value, label, className = '' }) {
   return (
-    <div className={`h-2 w-full overflow-hidden rounded-full bg-black/5 ${className}`}>
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={FULL}
+      aria-valuenow={Math.round(value)}
+      className={`h-2 w-full overflow-hidden rounded-full bg-ink/5 ${className}`}
+    >
       <motion.div
         className="h-full rounded-full bg-gradient-to-r from-brand to-accent-green"
         initial={{ width: 0 }}

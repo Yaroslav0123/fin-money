@@ -29,7 +29,7 @@ export default function GoalsListCard({ goals, texts, className = '' }) {
                 </div>
                 <span className="text-sm font-bold text-ink">{percent}%</span>
               </div>
-              <ProgressBar value={percent} className="mt-3" />
+              <ProgressBar value={percent} label={goal.name} className="mt-3" />
             </li>
           );
         })}

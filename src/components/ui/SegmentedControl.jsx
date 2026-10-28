@@ -8,7 +8,7 @@ import IgnorePresence from './IgnorePresence.jsx';
  */
 export default function SegmentedControl({ id, options, value, onChange, className = '' }) {
   return (
-    <div className={`no-scrollbar inline-flex max-w-full overflow-x-auto rounded-full bg-black/[0.04] p-1 ${className}`}>
+    <div className={`no-scrollbar inline-flex max-w-full overflow-x-auto rounded-full bg-ink/[0.04] p-1 ${className}`}>
       {options.map((option) => {
         const isActive = option.id === value;
         return (

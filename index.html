@@ -92,6 +92,18 @@
       .boot.is-failed .boot-spinner {
         display: none;
       }
+      /* Тёмная тема экрана загрузки (цвета из palettes.dark в src/theme/colors.js) */
+      html.dark,
+      html.dark body {
+        background: #111715;
+      }
+      html.dark .boot {
+        color: #8e9a94;
+      }
+      html.dark .boot-spinner {
+        border-color: #24443a;
+        border-top-color: #2e9470;
+      }
       .boot-reload {
         margin-top: 12px;
         border: 0;
@@ -120,6 +132,20 @@
       </div>
     </div>
     <noscript>Для работы Fin Money включите JavaScript.</noscript>
+    <script>
+      // Тема до загрузки приложения, чтобы тёмная тема не «мигала» светлой.
+      // Настройка хранится вместе с данными (ключ как в src/context/financeStorage.js).
+      (function () {
+        var theme = 'system';
+        try {
+          theme = JSON.parse(localStorage.getItem('fin-money:demo:v2')).settings.theme || theme;
+        } catch (e) {
+          // нет сохранения — как в системе
+        }
+        var dark = theme === 'dark' || (theme === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+      })();
+    </script>
     <script>
       // Страховка экрана загрузки: приложение не должно «висеть» на нём без объяснений.
       // Если скрипты не загрузились (например, dev-сервер пересобирал зависимости прямо во время

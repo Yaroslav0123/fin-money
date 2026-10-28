@@ -55,7 +55,7 @@ export default function CategoriesCard({ texts, className = '' }) {
   };
 
   const iconButtonClass =
-    'flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-colors duration-200 hover:bg-black/5 hover:text-ink disabled:pointer-events-none disabled:opacity-30';
+    'flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-colors duration-200 hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-30';
 
   return (
     <Card className={`p-6 ${className}`}>

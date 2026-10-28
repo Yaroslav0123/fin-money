@@ -51,7 +51,7 @@ export default function GoalCard({ goal, texts, onCreate }) {
           </p>
           <span className="text-2xl font-bold text-ink">{percent}%</span>
         </div>
-        <ProgressBar value={percent} className="mt-3 h-2.5" />
+        <ProgressBar value={percent} label={goal.name} className="mt-3 h-2.5" />
       </div>
     </Card>
   );

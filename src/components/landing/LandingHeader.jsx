@@ -80,7 +80,7 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
             aria-expanded={isMenuOpen}
             aria-controls={MOBILE_MENU_ID}
             onClick={() => setIsMenuOpen((open) => !open)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors duration-200 hover:bg-black/5 md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors duration-200 hover:bg-ink/5 md:hidden"
           >
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -107,7 +107,7 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
                     href={item.href}
                     onClick={() => handleNavClick(item.id)}
                     aria-current={isActive ? 'location' : undefined}
-                    className={`rounded-xl px-3 py-3 text-sm transition-colors duration-200 hover:bg-black/5 ${
+                    className={`rounded-xl px-3 py-3 text-sm transition-colors duration-200 hover:bg-ink/5 ${
                       isActive ? 'font-semibold text-brand' : 'text-ink-secondary'
                     }`}
                   >

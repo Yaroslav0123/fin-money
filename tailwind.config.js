@@ -1,16 +1,19 @@
-import { colors } from './src/theme/colors.js';
+import plugin from 'tailwindcss/plugin';
+import { cssVariables, palettes, tailwindColors, themeColor } from './src/theme/colors.js';
 
 /** @type {import('tailwindcss').Config} */
 // Дизайн-система Fin Money: цвета берутся из src/theme/colors.js,
 // радиусы и тени задаются здесь, чтобы в JSX были только семантические классы.
+// Тёмная тема — класс .dark на <html> (его ставит FinanceProvider по настройке «Тема»).
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
         sans: ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
       },
-      colors,
+      colors: tailwindColors,
       borderRadius: {
         card: '20px',
         panel: '28px',
@@ -23,5 +26,14 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Переменные палитры для светлой и тёмной темы; отступ колец фокуса — цвета карточки
+    plugin(({ addBase }) => {
+      addBase({
+        ':root': { ...cssVariables(palettes.light), colorScheme: 'light' },
+        '.dark': { ...cssVariables(palettes.dark), colorScheme: 'dark' },
+        '*': { '--tw-ring-offset-color': themeColor('card') },
+      });
+    }),
+  ],
 };

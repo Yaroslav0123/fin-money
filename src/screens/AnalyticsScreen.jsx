@@ -72,7 +72,7 @@ export default function AnalyticsScreen() {
   };
 
   const navButtonClass =
-    'flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light disabled:pointer-events-none disabled:opacity-40';
+    'flex h-10 w-10 items-center justify-center rounded-full bg-card text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light disabled:pointer-events-none disabled:opacity-40';
 
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
@@ -83,13 +83,13 @@ export default function AnalyticsScreen() {
           options={ANALYTICS_PAGE.periods}
           value={periodId}
           onChange={changePeriod}
-          className="bg-white shadow-soft"
+          className="bg-card shadow-soft"
         />
         <div className="flex items-center gap-2">
           <button type="button" aria-label={ANALYTICS_PAGE.prevLabel} onClick={() => setOffset((o) => o - 1)} className={navButtonClass}>
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="flex h-10 items-center rounded-full bg-white px-4 text-xs font-semibold text-ink shadow-soft" aria-live="polite">
+          <span className="flex h-10 items-center rounded-full bg-card px-4 text-xs font-semibold text-ink shadow-soft" aria-live="polite">
             {period.label}
           </span>
           <button

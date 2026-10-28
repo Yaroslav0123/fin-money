@@ -79,7 +79,7 @@ export default function ProfileCard({ texts, onSave }) {
                   aria-invalid={isInvalid}
                   aria-describedby={isInvalid ? errorId : undefined}
                   onChange={(e) => setForm((prev) => ({ ...prev, [field.id]: e.target.value }))}
-                  className={`mt-2 h-12 w-full rounded-2xl border-2 bg-surface px-4 text-sm font-semibold text-ink transition-colors duration-200 focus:bg-white focus:outline-none ${
+                  className={`mt-2 h-12 w-full rounded-2xl border-2 bg-surface px-4 text-sm font-semibold text-ink transition-colors duration-200 focus:bg-card focus:outline-none ${
                     isInvalid ? 'border-negative' : 'border-transparent focus:border-brand'
                   }`}
                 />

@@ -47,7 +47,7 @@ export default function BudgetCard({ spent, limit, month, texts, onLimitChange, 
             {formatMoney(spent)} {texts.of} {formatMoney(limit)}
           </span>
         </div>
-        <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-black/5">
+        <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-ink/5">
           <motion.div
             className={`h-full rounded-full ${isWarning ? 'bg-negative' : 'bg-gradient-to-r from-brand to-accent-green'}`}
             animate={{ width: `${Math.min(FULL, percent)}%` }}

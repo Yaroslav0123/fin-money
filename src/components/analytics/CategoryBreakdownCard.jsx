@@ -35,7 +35,7 @@ export default function CategoryBreakdownCard({ categories, texts, onCategoryCli
                   <span className="shrink-0 font-semibold text-ink">{formatMoney(c.amount)}</span>
                 </div>
                 <div className="mt-2 flex items-center gap-3">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/5">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink/5">
                     <motion.div
                       className={`h-full rounded-full ${ACCENTS[c.accent].dot}`}
                       initial={{ width: 0 }}

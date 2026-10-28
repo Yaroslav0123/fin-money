@@ -31,6 +31,7 @@ const FIRST_ID = 1;
 // Настройки по умолчанию: из карточек «Параметры», «Бюджет» и «Безопасность»
 const { preferences, budget, security } = SETTINGS_PAGE;
 const DEFAULT_SETTINGS = {
+  theme: preferences.theme.default,
   currency: preferences.currency.default,
   weekStart: preferences.weekStart.default,
   language: preferences.language.default,
@@ -55,6 +56,20 @@ const restoreState = () => {
 
 const byDateDesc = (a, b) => new Date(b.date) - new Date(a.date);
 
+// Нужна ли тёмная тема: явный выбор или (для «Авто») настройка устройства с подпиской на её смену
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+function useSystemDark(theme) {
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia?.(DARK_QUERY).matches ?? false);
+  useEffect(() => {
+    const query = window.matchMedia?.(DARK_QUERY);
+    if (!query) return undefined;
+    const handleChange = (e) => setSystemDark(e.matches);
+    query.addEventListener('change', handleChange);
+    return () => query.removeEventListener('change', handleChange);
+  }, []);
+  return theme === 'dark' || (theme === 'system' && systemDark);
+}
+
 // Запасная категория при удалении: «Другое» того же типа или первая оставшаяся
 const fallbackCategory = (categories, removed) => {
   const sameType = categories.filter((c) => c.type === removed.type && c.id !== removed.id);
@@ -71,6 +86,12 @@ export function FinanceProvider({ children }) {
 
   // Валюта отображения нужна formatMoney ещё до отрисовки дочерних компонентов
   setDisplayCurrency(state.settings.currency);
+
+  // Тема: класс .dark на <html>. «Авто» следит за настройкой устройства и её изменениями.
+  const isDark = useSystemDark(state.settings.theme);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+  }, [isDark]);
 
   // Изменение состояния с выдачей нового id: change(state, newId) → новое состояние
   const update = useCallback((change) => {
@@ -97,6 +118,23 @@ export function FinanceProvider({ children }) {
           date: (draft.date ?? new Date()).toISOString(),
         };
         return { ...prev, transactions: [tx, ...prev.transactions].sort(byDateDesc) };
+      }),
+    [update],
+  );
+
+  // Много операций сразу (импорт выписки): drafts — как у addTransaction, дата обязательна
+  const addTransactions = useCallback(
+    (drafts) =>
+      update((prev, newId) => {
+        const added = drafts.map((draft) => ({
+          id: newId('tx'),
+          type: draft.type,
+          categoryId: draft.categoryId,
+          comment: draft.comment ?? '',
+          amount: draft.type === 'income' ? draft.amount : -draft.amount,
+          date: draft.date.toISOString(),
+        }));
+        return { ...prev, transactions: [...added, ...prev.transactions].sort(byDateDesc) };
       }),
     [update],
   );
@@ -364,11 +402,13 @@ export function FinanceProvider({ children }) {
       savings,
       savingsTransactions,
       settings: state.settings,
+      isDark,
       hideBalance: state.settings.hideBalance,
       onboardingDone: state.onboardingDone,
       isEmpty: state.transactions.length === 0 && state.goals.length === 0 && state.savingsTransactions.length === 0,
       // Действия
       addTransaction,
+      addTransactions,
       updateTransaction,
       deleteTransaction,
       moveSavings,
@@ -387,7 +427,9 @@ export function FinanceProvider({ children }) {
     };
   }, [
     state,
+    isDark,
     addTransaction,
+    addTransactions,
     updateTransaction,
     deleteTransaction,
     moveSavings,

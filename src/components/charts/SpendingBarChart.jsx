@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CHART_A11Y } from '../../data/mockData.js';
 import { colors } from '../../theme/colors.js';
-import { formatCompact } from '../../utils/format.js';
+import { fillTemplate, formatCompact, formatMoney } from '../../utils/format.js';
 import ChartTooltip from './ChartTooltip.jsx';
 
 // Настройки внешнего вида графика
@@ -16,6 +17,14 @@ const BAR_RADIUS = [6, 6, 6, 6];
 export default function SpendingBarChart({ data, highlightIndex = data.length - 1, className = '' }) {
   const [hoverIndex, setHoverIndex] = useState(null);
 
+  // Описание для экранных дикторов: итог и самый «дорогой» столбец
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const peak = data.reduce((best, item) => (item.value > best.value ? item : best), data[0]);
+  const description =
+    total > 0
+      ? fillTemplate(CHART_A11Y.spending, { total: formatMoney(total), label: peak.label, max: formatMoney(peak.value) })
+      : CHART_A11Y.spendingEmpty;
+
   const barColor = (index) => {
     if (index === highlightIndex) return colors.brand.DEFAULT;
     if (index === hoverIndex) return colors.brand.muted;
@@ -23,7 +32,7 @@ export default function SpendingBarChart({ data, highlightIndex = data.length - 
   };
 
   return (
-    <div className={className}>
+    <div className={className} role="img" aria-label={description}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}

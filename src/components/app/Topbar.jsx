@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Plus, Search, User } from 'lucide-react';
+import { Bell, Moon, Plus, Search, Sun, User } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import LeafMark from '../ui/LeafMark.jsx';
 import { APP_SHELL } from '../../data/mockData.js';
@@ -9,8 +9,10 @@ import { APP_SHELL } from '../../data/mockData.js';
  * На узких экранах слева появляется знак логотипа (ведёт на сайт).
  * onSearch(query) — поиск по операциям (открывает экран «Операции» с запросом).
  * hasNotifications — показать красную точку на колокольчике.
+ * theme — { isDark, toggleLabel, onToggle }: быстрое переключение светлой и тёмной темы.
  */
-export default function Topbar({ title, subtitle, onExit, onAdd, onProfile, onSearch, hasNotifications, onNotifications }) {
+export default function Topbar({ title, subtitle, onExit, onAdd, onProfile, onSearch, hasNotifications, onNotifications, theme }) {
+  const ThemeIcon = theme.isDark ? Sun : Moon;
   const [query, setQuery] = useState('');
 
   const handleSearch = (e) => {
@@ -34,7 +36,7 @@ export default function Topbar({ title, subtitle, onExit, onAdd, onProfile, onSe
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           {/* Поиск по операциям (на широких экранах; на узких — на экране «Операции») */}
-          <form role="search" onSubmit={handleSearch} className="hidden h-11 w-64 items-center gap-2 rounded-full bg-white px-4 shadow-soft xl:flex">
+          <form role="search" onSubmit={handleSearch} className="hidden h-11 w-64 items-center gap-2 rounded-full bg-card px-4 shadow-soft xl:flex">
             <Search className="h-4 w-4 text-ink-muted" />
             <input
               type="search"
@@ -46,15 +48,26 @@ export default function Topbar({ title, subtitle, onExit, onAdd, onProfile, onSe
             />
           </form>
 
+          {/* На самых узких экранах прячем: тема есть в «Настройках» */}
+          <button
+            type="button"
+            aria-label={theme.toggleLabel}
+            title={theme.toggleLabel}
+            onClick={theme.onToggle}
+            className="hidden h-11 w-11 items-center justify-center rounded-full bg-card text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light min-[400px]:flex"
+          >
+            <ThemeIcon className="h-5 w-5" />
+          </button>
+
           <button
             type="button"
             aria-label={APP_SHELL.notificationsLabel}
             onClick={onNotifications}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full bg-card text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light"
           >
             <Bell className="h-5 w-5" />
             {hasNotifications && (
-              <span className="absolute right-3 top-3 h-2 w-2 rounded-full border-2 border-white bg-accent-pink" />
+              <span className="absolute right-3 top-3 h-2 w-2 rounded-full border-2 border-card bg-accent-pink" />
             )}
           </button>
 

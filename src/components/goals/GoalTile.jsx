@@ -15,7 +15,7 @@ export default function GoalTile({ goal, texts, onDeposit, onEdit, onDelete }) {
   const percent = Math.min(100, toPercent(goal.saved, goal.target));
   const remaining = Math.max(0, goal.target - goal.saved);
   const iconButtonClass =
-    'flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-colors duration-200 hover:bg-black/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
+    'flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-colors duration-200 hover:bg-ink/5 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 
   return (
     <Card
@@ -53,7 +53,7 @@ export default function GoalTile({ goal, texts, onDeposit, onEdit, onDelete }) {
         </p>
         <span className="text-lg font-bold text-ink">{percent}%</span>
       </div>
-      <ProgressBar value={percent} className="mt-3 h-2.5" />
+      <ProgressBar value={percent} label={goal.name} className="mt-3 h-2.5" />
 
       <div className="mt-auto flex items-center justify-between gap-3 pt-6">
         {isDone ? (

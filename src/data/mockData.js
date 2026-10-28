@@ -65,6 +65,8 @@ export const BOTTOM_NAV = [
 ];
 
 export const APP_SHELL = {
+  navLabel: 'Разделы приложения',
+  skipLink: 'Перейти к содержимому',
   searchPlaceholder: 'Поиск операций',
   addAction: 'Добавить операцию',
   notificationsLabel: 'Уведомления',
@@ -168,6 +170,16 @@ export const CURRENCIES = {
   rub: { symbol: '₽', rate: 1, quickAmounts: [500, 1000, 5000], savingsQuick: [1000, 5000, 10000] },
   usd: { symbol: '$', rate: 0.0125, quickAmounts: [5, 10, 50], savingsQuick: [10, 50, 100] },
   eur: { symbol: '€', rate: 0.0115, quickAmounts: [5, 10, 50], savingsQuick: [10, 50, 100] },
+};
+
+// Текстовые описания графиков для экранных дикторов ({…} — подстановки)
+export const CHART_A11Y = {
+  spending: 'Диаграмма расходов: всего {total}, больше всего — {label}: {max}',
+  spendingEmpty: 'Диаграмма расходов: расходов нет',
+  comparison: 'Доходы и расходы по месяцам: {items}',
+  comparisonItem: '{label} — доходы {income}, расходы {expenses}',
+  balance: 'График баланса накоплений: от {first} до {last}',
+  donut: 'Структура: {items}',
 };
 
 // ───────────── Категории операций ─────────────
@@ -482,6 +494,48 @@ export const TRANSACTIONS_PAGE = {
   showMore: 'Показать ещё',
   // Сколько операций показывать за раз
   pageSize: 40,
+  exportAction: 'Экспорт CSV',
+  importAction: 'Импорт CSV',
+  exported: 'Файл с операциями скачан',
+};
+
+// Экспорт и импорт операций в CSV
+export const CSV_TEXTS = {
+  fileName: 'fin-money-operations',
+  // Заголовки выгрузки (в этом же формате файл можно загрузить обратно)
+  header: ['Дата', 'Тип', 'Категория', 'Комментарий', 'Сумма, ₽'],
+  types: { income: 'Доход', expense: 'Расход', transfer: 'Перевод' },
+  // Как могут называться столбцы в выписках банков (после приведения к нижнему регистру)
+  columns: {
+    date: ['дата', 'дата операции', 'дата платежа', 'дата и время', 'date'],
+    amount: ['сумма', 'сумма операции', 'сумма платежа', 'сумма в валюте счета', 'amount'],
+    description: ['комментарий', 'описание', 'описание операции', 'назначение платежа', 'description'],
+    category: ['категория', 'category'],
+    type: ['тип', 'тип операции', 'type'],
+  },
+  // Слова в столбце «Тип», по которым понятно направление операции
+  incomeWords: ['доход', 'пополнение', 'зачисление', 'income'],
+  transferWords: ['перевод', 'transfer'],
+};
+
+export const IMPORT_DIALOG = {
+  title: 'Импорт выписки',
+  hint: 'Загрузите CSV-выписку из банка или файл, выгруженный из Fin Money. Нужны столбцы с датой и суммой; описание и категория — по желанию.',
+  dropLabel: 'Выберите файл или перетащите его сюда',
+  dropActive: 'Отпустите, чтобы загрузить',
+  chooseFile: 'Выбрать файл',
+  found: 'Найдено операций: {count}',
+  income: 'Доходы',
+  expenses: 'Расходы',
+  skipped: 'Пропущено строк: {count} (переводы, повторы, будущие даты или ошибки в данных)',
+  preview: 'Первые операции',
+  noColumns: 'Не нашли столбцы с датой и суммой. Проверьте, что в первой строке файла есть заголовки.',
+  empty: 'В файле нет операций, которые можно добавить.',
+  readError: 'Не удалось прочитать файл',
+  confirm: 'Импортировать',
+  another: 'Другой файл',
+  cancel: 'Отмена',
+  done: 'Импортировано операций: {count}',
 };
 
 // ───────────── Экран «Цели» ─────────────
@@ -618,6 +672,14 @@ export const SETTINGS_PAGE = {
   },
   preferences: {
     title: 'Параметры',
+    // system — как в настройках устройства
+    theme: {
+      label: 'Тема',
+      options: [{ id: 'light', label: 'Светлая' }, { id: 'dark', label: 'Тёмная' }, { id: 'system', label: 'Авто' }],
+      default: 'system',
+      toggleToDark: 'Включить тёмную тему',
+      toggleToLight: 'Включить светлую тему',
+    },
     currency: {
       label: 'Валюта',
       hint: 'Пересчёт по условному курсу',

@@ -40,7 +40,7 @@ export default function CategoryDialog({ isOpen, category = null, texts, onClose
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={texts.namePlaceholder}
-              className="h-12 w-full rounded-2xl border-2 border-transparent bg-surface px-4 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-muted/70 transition-colors duration-200 focus:border-brand focus:bg-white focus:outline-none"
+              className="h-12 w-full rounded-2xl border-2 border-transparent bg-surface px-4 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-muted/70 transition-colors duration-200 focus:border-brand focus:bg-card focus:outline-none"
             />
           </div>
         </div>

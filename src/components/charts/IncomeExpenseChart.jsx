@@ -1,6 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CHART_A11Y } from '../../data/mockData.js';
 import { colors } from '../../theme/colors.js';
-import { formatCompact } from '../../utils/format.js';
+import { fillTemplate, formatCompact, formatMoney } from '../../utils/format.js';
 import ChartTooltip from './ChartTooltip.jsx';
 
 // Настройки внешнего вида графика
@@ -15,8 +16,13 @@ const SERIES = {
 
 // Сгруппированные столбцы «доходы / расходы» по месяцам
 export default function IncomeExpenseChart({ data, labels, className = '' }) {
+  // Описание для экранных дикторов: доходы и расходы по каждому месяцу
+  const items = data
+    .map((row) => fillTemplate(CHART_A11Y.comparisonItem, { label: row.label, income: formatMoney(row.income), expenses: formatMoney(row.expenses) }))
+    .join('; ');
+
   return (
-    <div className={className}>
+    <div className={className} role="img" aria-label={fillTemplate(CHART_A11Y.comparison, { items })}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 10, right: 4, left: -8, bottom: 0 }} barGap={4} barCategoryGap="28%">
           <CartesianGrid vertical={false} stroke={colors.line} strokeDasharray="4 4" />

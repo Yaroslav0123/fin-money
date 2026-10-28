@@ -69,7 +69,7 @@ export default function OnboardingDialog({ isOpen }) {
       <div className="mt-6 flex items-center justify-between gap-3">
         <div className="flex gap-1.5" aria-label={fillTemplate(ONBOARDING.stepLabel, { current: stepIndex + 1, total: steps.length + 1 })}>
           {[...steps, null].map((_, index) => (
-            <span key={index} className={`h-1.5 rounded-full transition-all duration-300 ${index === stepIndex ? 'w-5 bg-brand' : 'w-1.5 bg-black/10'}`} />
+            <span key={index} className={`h-1.5 rounded-full transition-all duration-300 ${index === stepIndex ? 'w-5 bg-brand' : 'w-1.5 bg-ink/10'}`} />
           ))}
         </div>
         <div className="flex gap-2">

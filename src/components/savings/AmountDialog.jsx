@@ -55,7 +55,7 @@ export default function AmountDialog({ mode, hint, limits = [], texts, onClose, 
           {texts.amountLabel}
         </label>
         <div
-          className={`mt-2 flex items-center rounded-2xl border-2 bg-surface px-4 transition-colors duration-200 focus-within:bg-white ${
+          className={`mt-2 flex items-center rounded-2xl border-2 bg-surface px-4 transition-colors duration-200 focus-within:bg-card ${
             isTooMuch ? 'border-negative' : 'border-transparent focus-within:border-brand'
           }`}
         >

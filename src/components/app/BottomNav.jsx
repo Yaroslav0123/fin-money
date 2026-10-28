@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
-import { BOTTOM_NAV } from '../../data/mockData.js';
+import { APP_SHELL, BOTTOM_NAV } from '../../data/mockData.js';
 
 /**
  * Нижняя панель навигации для узких экранов — как в мобильном макете,
@@ -8,7 +8,7 @@ import { BOTTOM_NAV } from '../../data/mockData.js';
  */
 export default function BottomNav({ activeScreen, onNavigate, onAdd }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+    <nav aria-label={APP_SHELL.navLabel} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
       <div className="mx-auto grid h-[72px] max-w-lg grid-cols-5 items-center">
         {BOTTOM_NAV.map((item) => {
           // Центральная кнопка «Добавить»
@@ -35,6 +35,7 @@ export default function BottomNav({ activeScreen, onNavigate, onAdd }) {
               key={item.id}
               type="button"
               disabled={!item.screen}
+              aria-current={isActive ? 'page' : undefined}
               onClick={() => onNavigate(item.screen)}
               className={`flex flex-col items-center gap-1 text-[11px] font-medium transition-colors duration-200 ${
                 isActive ? 'text-brand' : 'text-ink-muted'

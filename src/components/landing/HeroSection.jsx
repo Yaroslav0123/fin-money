@@ -46,7 +46,7 @@ export default function HeroSection({ appName, onStart }) {
         <motion.div variants={container} initial="hidden" animate="show">
           <motion.span
             variants={item}
-            className="inline-flex rounded-full bg-black/[0.04] px-3 py-1 text-xs font-medium text-ink-secondary"
+            className="inline-flex rounded-full bg-ink/[0.04] px-3 py-1 text-xs font-medium text-ink-secondary"
           >
             {hero.badge}
           </motion.span>

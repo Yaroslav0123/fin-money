@@ -9,11 +9,12 @@ export default function ChartTooltip({ active, payload, label }) {
   const isMultiple = payload.length > 1;
 
   return (
-    <div className="rounded-xl bg-ink px-3 py-2 text-xs text-white shadow-lifted">
-      <div className="text-white/60">{label}</div>
+    // Инверсные цвета: тёмная подсказка в светлой теме и светлая — в тёмной
+    <div className="rounded-xl bg-ink px-3 py-2 text-xs text-card shadow-lifted">
+      <div className="text-card/60">{label}</div>
       {payload.map((item) => (
         <div key={item.dataKey} className="mt-0.5 flex items-center gap-1.5 font-bold">
-          {isMultiple && <span className="font-normal text-white/70">{item.name}:</span>}
+          {isMultiple && <span className="font-normal text-card/70">{item.name}:</span>}
           {formatMoney(item.value)}
         </div>
       ))}

@@ -1,5 +1,7 @@
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
+import { CHART_A11Y } from '../../data/mockData.js';
 import { ACCENTS } from '../../theme/accents.js';
+import { fillTemplate } from '../../utils/format.js';
 
 /**
  * Кольцевая диаграмма структуры расходов с суммой в центре.
@@ -15,8 +17,11 @@ export default function ExpenseDonut({
   captionClassName = 'text-xs',
   animate = true,
 }) {
+  // Описание для экранных дикторов: доли всех частей кольца
+  const items = data.map((item) => `${item.name} ${item.share}%`).join(', ');
+
   return (
-    <div className={`relative shrink-0 ${className}`}>
+    <div className={`relative shrink-0 ${className}`} role="img" aria-label={fillTemplate(CHART_A11Y.donut, { items })}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
