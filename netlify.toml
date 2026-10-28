@@ -1,0 +1,22 @@
+# Публикация на Netlify: после каждого git push в main сайт собирается и обновляется сам
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Та же основная версия Node, что и при разработке (Vite 6 требует 18+)
+  NODE_VERSION = "20"
+
+# Скрипты и стили из dist/assets: в имени есть хэш содержимого,
+# поэтому браузер может хранить их хоть год — новая версия придёт под новым именем
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Сама страница: браузер каждый раз проверяет, не вышла ли новая версия сайта
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

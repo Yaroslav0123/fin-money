@@ -1,7 +1,7 @@
 # Fin Money
 
 Прототип веб-приложения для учёта личных финансов: лендинг и экраны «Главная», «Накопления», «Аналитика», «Цели», «Настройки».
-Только фронтенд: все данные моковые (`src/data/mockData.js`) и живут до перезагрузки страницы.
+Только фронтенд: исходные данные моковые (`src/data/mockData.js`), изменения пользователя сохраняются в `localStorage` его браузера.
 
 Стек: React 18, Vite 6, Tailwind CSS 3, Recharts, Framer Motion, lucide-react.
 
@@ -24,6 +24,20 @@ npm run dev
 | `npm run lint` | проверка кода ESLint |
 | `npm test` | тесты Vitest (однократно) |
 | `npm run test:watch` | тесты в режиме наблюдения |
+
+## Публикация (Netlify)
+
+Сайт статический: `npm run build` собирает его в `dist/`, сервер не нужен.
+Netlify подключён к GitHub-репозиторию и после каждого `git push` в `main` сам собирает и обновляет сайт.
+Настройки сборки (команда, папка, версия Node) и кэширования — в `netlify.toml`, в интерфейсе Netlify менять ничего не нужно.
+
+Первое подключение:
+
+1. Netlify → Add new site → Import an existing project → GitHub → репозиторий проекта.
+2. Настройки подтянутся из `netlify.toml` — нажать Deploy.
+3. Site configuration → Change site name — задать понятный адрес, например `fin-money.netlify.app`.
+
+Картинка для превью ссылки в мессенджерах — `public/og-image.png` (1200×630).
 
 ## Структура
 

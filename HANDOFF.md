@@ -33,7 +33,9 @@ npm run build      # продакшн-сборка в dist/ (проверка, �
 npm run preview    # просмотр собранной версии
 ```
 
-`.claude/launch.json` содержит конфигурацию превью `fin-money`: `npm run dev -- --port 5173 --strictPort`.
+`.claude/launch.json` содержит две конфигурации превью: `fin-money` (`npm run dev -- --port 5173 --strictPort`) и `fin-money-preview` (собранная версия, `npm run preview -- --port 4173 --strictPort`).
+
+**Публикация:** Netlify, способ «через GitHub» — после `git push` в `main` сайт собирается сам. Настройки сборки и кэширования — в `netlify.toml`. Картинка превью ссылки — `public/og-image.png` (1200×630). Адрес сайта и полные пути в `og:url` / `og:image` в `index.html` прописываются после первой публикации.
 
 **Проверка:** автотестов и линтера в проекте нет. Проверяли так: `npm run build` плюс ручной просмотр в браузере на ширине 1440px и 375px.
 
