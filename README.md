@@ -27,6 +27,8 @@ npm run dev
 
 ## Публикация (Netlify)
 
+Сайт: https://fin-money-app.netlify.app · репозиторий: https://github.com/Yaroslav0123/fin-money
+
 Сайт статический: `npm run build` собирает его в `dist/`, сервер не нужен.
 Netlify подключён к GitHub-репозиторию и после каждого `git push` в `main` сам собирает и обновляет сайт.
 Настройки сборки (команда, папка, версия Node) и кэширования — в `netlify.toml`, в интерфейсе Netlify менять ничего не нужно.

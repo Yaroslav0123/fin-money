@@ -35,7 +35,7 @@ npm run preview    # просмотр собранной версии
 
 `.claude/launch.json` содержит две конфигурации превью: `fin-money` (`npm run dev -- --port 5173 --strictPort`) и `fin-money-preview` (собранная версия, `npm run preview -- --port 4173 --strictPort`).
 
-**Публикация:** Netlify, способ «через GitHub» — после `git push` в `main` сайт собирается сам. Настройки сборки и кэширования — в `netlify.toml`. Картинка превью ссылки — `public/og-image.png` (1200×630). Адрес сайта и полные пути в `og:url` / `og:image` в `index.html` прописываются после первой публикации.
+**Публикация:** Netlify, способ «через GitHub» — после `git push` в `main` сайт собирается сам. Настройки сборки и кэширования — в `netlify.toml`. Картинка превью ссылки — `public/og-image.png` (1200×630). Сайт: https://fin-money-app.netlify.app (этот адрес прописан в `og:url`, `og:image` и `canonical` в `index.html`). Репозиторий: https://github.com/Yaroslav0123/fin-money (публичный, коммиты с почтой `…@users.noreply.github.com`).
 
 **Проверка:** автотестов и линтера в проекте нет. Проверяли так: `npm run build` плюс ручной просмотр в браузере на ширине 1440px и 375px.
 
