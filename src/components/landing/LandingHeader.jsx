@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import IgnorePresence from '../ui/IgnorePresence.jsx';
 import Logo from '../ui/Logo.jsx';
-import { useAppActions } from '../../context/AppActionsContext.jsx';
-import { APP_SHELL, LANDING } from '../../data/mockData.js';
+import { LANDING } from '../../data/mockData.js';
 import Container from './Container.jsx';
 
 const MOBILE_MENU_ID = 'landing-mobile-menu';
 
 /**
- * Шапка лендинга: логотип, навигация по секциям, уведомления и кнопка «Мои финансы».
+ * Шапка лендинга: логотип, навигация по секциям и кнопка «Мои финансы».
  * Прилипает к верху страницы с размытием фона.
  * На телефонах разделы открываются кнопкой-«бургером» в выпадающей панели.
  */
 export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
   const [activeId, setActiveId] = useState(nav[0].id);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { notifySoon } = useAppActions();
 
   // Escape закрывает мобильное меню
   useEffect(() => {
@@ -73,16 +71,6 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
         </nav>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={APP_SHELL.notificationsLabel}
-            onClick={notifySoon}
-            // На самых узких экранах колокольчик прячем, чтобы шапка помещалась
-            className="relative hidden h-10 w-10 items-center justify-center rounded-full text-ink transition-colors duration-200 hover:bg-black/5 sm:flex"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-surface bg-accent-pink" />
-          </button>
           <Button size="sm" pill onClick={onAction}>
             {actionLabel}
           </Button>

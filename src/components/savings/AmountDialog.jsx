@@ -2,26 +2,33 @@ import { useState } from 'react';
 import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
 import { AMOUNT_LIMIT } from '../../data/mockData.js';
-import { formatMoney } from '../../utils/format.js';
+import {
+  currencyQuickAmounts,
+  currencySymbol,
+  formatDisplayMoney,
+  formatMoney,
+  fromDisplayAmount,
+  toDisplayAmount,
+} from '../../utils/format.js';
 
-// Общий потолок одной операции действует всегда, даже если вызывающий экран не задал лимитов
-const AMOUNT_LIMIT_RULE = {
-  max: AMOUNT_LIMIT.max,
-  error: `${AMOUNT_LIMIT.error} — ${formatMoney(AMOUNT_LIMIT.max)}`,
-};
+// Округление «максимума» в валюте отображения вниз, чтобы не превысить лимит
+const DISPLAY_PRECISION = 100;
+const floorDisplay = (value) => Math.floor(value * DISPLAY_PRECISION) / DISPLAY_PRECISION;
 
 /**
  * Диалог пополнения или снятия.
  * mode — 'deposit' | 'withdraw' | null (закрыт).
- * hint — подсказка под полем: { label, amount }.
- * limits — ограничения суммы [{ max, error }]; действует самое строгое.
- * Сам диалог ничего не меняет: сумму получает onConfirm(mode, amount).
+ * hint — подсказка под полем: { label, amount } (в рублях).
+ * limits — ограничения суммы [{ max, error }] в рублях; действует самое строгое.
+ * Сумма вводится в валюте отображения; onConfirm(mode, amount) получает рубли.
  */
 export default function AmountDialog({ mode, hint, limits = [], texts, onClose, onConfirm }) {
   const [rawAmount, setRawAmount] = useState('');
 
-  const amount = Number(rawAmount) || 0;
-  const limit = [...limits, AMOUNT_LIMIT_RULE].reduce((strict, rule) => (rule.max < strict.max ? rule : strict));
+  // Общий потолок одной операции действует всегда, даже если экран не задал лимитов
+  const ceiling = { max: AMOUNT_LIMIT.max, error: `${AMOUNT_LIMIT.error} — ${formatMoney(AMOUNT_LIMIT.max)}` };
+  const amount = fromDisplayAmount(Number(rawAmount) || 0);
+  const limit = [...limits, ceiling].reduce((strict, rule) => (rule.max < strict.max ? rule : strict));
   // Баланс может быть отрицательным — тогда доступно 0
   const maxAmount = Math.max(0, limit.max);
   const isTooMuch = amount > maxAmount;
@@ -55,15 +62,16 @@ export default function AmountDialog({ mode, hint, limits = [], texts, onClose, 
           <input
             id="amount-input"
             type="number"
-            inputMode="numeric"
+            inputMode="decimal"
             min="0"
+            step="any"
             autoFocus
             value={rawAmount}
             onChange={(e) => setRawAmount(e.target.value)}
             placeholder={texts.amountPlaceholder}
             className="no-spinner h-14 w-full bg-transparent text-2xl font-bold text-ink placeholder:text-ink-muted/50 focus:outline-none"
           />
-          <span className="text-2xl font-bold text-ink-muted">₽</span>
+          <span className="text-2xl font-bold text-ink-muted">{currencySymbol()}</span>
         </div>
 
         <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
@@ -74,7 +82,7 @@ export default function AmountDialog({ mode, hint, limits = [], texts, onClose, 
           {isTooMuch && maxAmount > 0 && (
             <button
               type="button"
-              onClick={() => setRawAmount(String(maxAmount))}
+              onClick={() => setRawAmount(String(floorDisplay(toDisplayAmount(maxAmount))))}
               className="font-semibold text-brand transition-colors duration-200 hover:text-brand-dark"
             >
               {texts.fillMax} ({formatMoney(maxAmount)})
@@ -82,16 +90,16 @@ export default function AmountDialog({ mode, hint, limits = [], texts, onClose, 
           )}
         </div>
 
-        {/* Быстрый выбор суммы */}
+        {/* Быстрый выбор суммы (в валюте отображения) */}
         <div className="mt-4 flex flex-wrap gap-2">
-          {texts.quickAmounts.map((value) => (
+          {currencyQuickAmounts('savingsQuick').map((value) => (
             <button
               key={value}
               type="button"
               onClick={() => setRawAmount(String(value))}
               className="rounded-full bg-brand-light px-4 py-2 text-xs font-semibold text-brand transition-colors duration-200 hover:bg-brand-soft"
             >
-              {formatMoney(value)}
+              {formatDisplayMoney(value)}
             </button>
           ))}
         </div>

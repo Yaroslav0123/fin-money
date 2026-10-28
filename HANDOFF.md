@@ -37,35 +37,40 @@ npm run preview    # просмотр собранной версии
 
 **Публикация:** Netlify, способ «через GitHub» — после `git push` в `main` сайт собирается сам. Настройки сборки и кэширования — в `netlify.toml`. Картинка превью ссылки — `public/og-image.png` (1200×630). Сайт: https://fin-money-app.netlify.app (этот адрес прописан в `og:url`, `og:image` и `canonical` в `index.html`). Репозиторий: https://github.com/Yaroslav0123/fin-money (публичный, коммиты с почтой `…@users.noreply.github.com`).
 
-**Проверка:** автотестов и линтера в проекте нет. Проверяли так: `npm run build` плюс ручной просмотр в браузере на ширине 1440px и 375px.
+**Проверка:** `npm run lint`, `npm test` (Vitest: расчёты, контекст, диалог суммы), `npm run build`, плюс ручной просмотр в браузере на ширине 1280, 375 и 320 px.
 
 ## 4. Архитектура
 
 ```
 src/
 ├─ main.jsx, index.css          # точка входа; базовые стили, утилиты .no-scrollbar и .no-spinner
-├─ App.jsx                      # переключение «лендинг ↔ приложение» через useState, без роутера
-├─ context/FinanceContext.jsx   # общее состояние: добавленные операции → summary, categories, transactions
-├─ data/mockData.js             # ВСЕ тексты и числа (~610 строк)
+├─ App.jsx                      # маршрут { screen, params } через useState, без роутера
+├─ context/FinanceContext.jsx   # общее состояние: история операций, накопления, цели, категории, настройки
+├─ context/AppActionsContext.jsx# navigate, notify, общие диалоги операции и «О проекте»
+├─ data/mockData.js             # ВСЕ тексты и витрина лендинга
+├─ data/demoData.js             # генератор демо-истории за 12 месяцев до сегодняшнего дня (детерминированный)
 ├─ theme/colors.js              # единый источник цветов (импортируется в tailwind.config.js и в графики)
 ├─ theme/accents.js             # акцент → { hex, tile, dot } (классы Tailwind + HEX для Recharts)
-├─ utils/format.js              # formatMoney, formatSignedMoney, formatCompact, formatTrend, toPercent, monthlyPayment, scaleCategories
-├─ utils/analytics.js           # учёт добавленных трат: категории, «сегодняшний» столбец, пересчёт динамики
-├─ screens/                     # LandingPage, DashboardScreen, SavingsScreen, AnalyticsScreen, GoalsScreen, SettingsScreen
+├─ utils/format.js              # formatMoney (с валютой отображения), plural, fillTemplate и др.
+├─ utils/dates.js               # даты: начало недели/месяца, подписи «Сегодня, 14:05», диапазоны
+├─ utils/finance.js             # все расчёты из истории: периоды, столбцы, категории, сводка, подсказки, накопления, уведомления
+├─ screens/                     # LandingPage, Dashboard, Savings, Analytics, Goals, Settings, TransactionsScreen
 └─ components/
    ├─ ui/         # Button, Card, IconTile, TrendBadge, ProgressBar, SegmentedControl, Modal, Toast, Toggle, Reveal, LinkArrow, Logo, LeafMark
    ├─ charts/     # ExpenseDonut, DonutLegend, BalanceAreaChart, SpendingBarChart, IncomeExpenseChart, ChartTooltip
    ├─ cards/      # StatCard, ExpenseStructureCard (общие для лендинга и «Главной»)
-   ├─ app/        # AppShell, Sidebar, Topbar, BottomNav, AddTransactionDialog
+   ├─ app/        # AppShell, Sidebar, Topbar, BottomNav, TransactionDialog, TransferDialog, Notifications/Onboarding/AboutDialog
    ├─ landing/    # секции лендинга + LaptopMockup (превью приложения на ноутбуке)
    ├─ dashboard/ savings/ analytics/ goals/ settings/   # карточки конкретных экранов
 ```
 
-**Навигация.** `App.jsx` хранит `activeScreen`. Возможные значения: `onboarding` (лендинг), `dashboard`, `savings`, `analytics`, `goals`, `settings`. Лендинг рисуется отдельно, остальные экраны внутри `AppShell`. Пункты меню берутся из `APP_NAV` (боковое меню) и `BOTTOM_NAV` (нижняя панель на телефоне: Главная, Аналитика, «+», Цели, Накопления) в `mockData.js`. Попасть в «Настройки» на телефоне можно кнопкой профиля в шапке. Вернуться на лендинг можно через логотип, «На сайт» или «Выйти из аккаунта».
+**Навигация.** `App.jsx` хранит `route = { screen, params }`. Экраны: `onboarding` (лендинг), `dashboard`, `savings`, `analytics`, `goals`, `settings`, `transactions` (вся история; открывается из «Все», поиска в шапке и категорий «Аналитики», params — `{ query }`, `{ categoryId }`, `{ type }`). Лендинг рисуется отдельно, остальные экраны внутри `AppShell`. Пункты меню берутся из `APP_NAV` (боковое меню) и `BOTTOM_NAV` (нижняя панель на телефоне: Главная, Аналитика, «+», Цели, Накопления) в `mockData.js`. Попасть в «Настройки» на телефоне можно кнопкой профиля в шапке. Вернуться на лендинг можно через логотип, «На сайт» или «Выйти из аккаунта».
 
 **Состояние:**
-- `FinanceContext` (оборачивает всё приложение в `App.jsx`) хранит только операции, добавленные через диалог «Добавить операцию». Из них считаются баланс, доходы, расходы, категории и список операций. Это видно на «Главной» и в «Аналитике».
-- Остальное состояние **локальное в экранах**: баланс и история «Накоплений», список целей, поля «Настроек». Оно сбрасывается при уходе с экрана или перезагрузке.
+- `FinanceContext` хранит историю операций основного счёта (с датами ISO), операции накопительного счёта, цели, категории и настройки (валюта, начало недели, язык, бюджет, «Скрывать баланс»). Всё сохраняется в `localStorage` (ключ `fin-money:demo:v2`). Баланс, показатели месяца, графики, подсказки и уведомления **считаются** функциями из `utils/finance.js`.
+- При первом запуске (и по «Новые демо-данные») история строится генератором `createDemoData()` от текущей даты: баланс всегда 142 560 ₽ на момент генерации. «Начать с нуля» — пустые данные.
+- Переводы (накопления, цели) нельзя изменить, только удалить — тогда откатывается и вторая сторона.
+- Лендинг — витрина: его цифры статичны (`SUMMARY`, `EXPENSE_CATEGORIES`, `SAVINGS_HISTORY`), кроме списка целей.
 
 ## 5. Реализованные этапы (все приняты пользователем)
 

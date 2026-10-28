@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import AppShell from './components/app/AppShell.jsx';
 import { AppActionsProvider } from './context/AppActionsContext.jsx';
@@ -9,6 +9,7 @@ import GoalsScreen from './screens/GoalsScreen.jsx';
 import LandingPage from './screens/LandingPage.jsx';
 import SavingsScreen from './screens/SavingsScreen.jsx';
 import SettingsScreen from './screens/SettingsScreen.jsx';
+import TransactionsScreen from './screens/TransactionsScreen.jsx';
 
 // Экран-лендинг (сайт). Остальные экраны живут внутри каркаса веб-приложения.
 const LANDING_SCREEN = 'onboarding';
@@ -30,13 +31,17 @@ const layoutTransition = {
 };
 
 export default function App() {
-  const [activeScreen, setActiveScreen] = useState(LANDING_SCREEN);
+  // Текущий экран и его параметры (например, поисковый запрос для «Операций»)
+  const [route, setRoute] = useState({ screen: LANDING_SCREEN, params: {} });
+  const activeScreen = route.screen;
   const isLanding = activeScreen === LANDING_SCREEN;
+  const navigate = useCallback((screen, params = {}) => setRoute({ screen, params }), []);
+  const exitToLanding = useCallback(() => navigate(LANDING_SCREEN), [navigate]);
 
   // При смене экрана возвращаемся к началу страницы
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [activeScreen]);
+  }, [route]);
 
   // Выбираем, какой экран отрисовать внутри приложения
   const renderAppScreen = () => {
@@ -48,9 +53,11 @@ export default function App() {
       case 'goals':
         return <GoalsScreen />;
       case 'settings':
-        return <SettingsScreen onLogout={() => setActiveScreen(LANDING_SCREEN)} />;
+        return <SettingsScreen onLogout={exitToLanding} />;
+      case 'transactions':
+        return <TransactionsScreen params={route.params} />;
       default:
-        return <DashboardScreen onNavigate={setActiveScreen} />;
+        return <DashboardScreen onNavigate={navigate} />;
     }
   };
 
@@ -59,21 +66,18 @@ export default function App() {
     // reducedMotion="user": при системной настройке «уменьшить движение» анимации сдвига отключаются.
     <MotionConfig reducedMotion="user">
       <FinanceProvider>
-        <AppActionsProvider onNavigate={setActiveScreen}>
+        <AppActionsProvider onNavigate={navigate}>
           <AnimatePresence mode="wait">
             {isLanding ? (
               <motion.div key="landing" className="min-h-full" {...layoutTransition}>
-                <LandingPage onStart={() => setActiveScreen('dashboard')} />
+                <LandingPage onStart={() => navigate('dashboard')} />
               </motion.div>
             ) : (
               <motion.div key="app" className="min-h-full" {...layoutTransition}>
-                <AppShell
-                  activeScreen={activeScreen}
-                  onNavigate={setActiveScreen}
-                  onExit={() => setActiveScreen(LANDING_SCREEN)}
-                >
+                <AppShell activeScreen={activeScreen} onNavigate={navigate} onExit={exitToLanding}>
                   <AnimatePresence mode="wait">
-                    <motion.div key={activeScreen} {...screenTransition}>
+                    {/* Новые параметры (другой поиск, другая категория) — тот же экран заново */}
+                    <motion.div key={`${activeScreen}:${JSON.stringify(route.params)}`} {...screenTransition}>
                       {renderAppScreen()}
                     </motion.div>
                   </AnimatePresence>

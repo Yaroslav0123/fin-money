@@ -1,14 +1,18 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { Clock } from 'lucide-react';
+import AboutDialog from '../components/app/AboutDialog.jsx';
+import TransactionDialog from '../components/app/TransactionDialog.jsx';
+import TransferDialog from '../components/app/TransferDialog.jsx';
 import Toast from '../components/ui/Toast.jsx';
-import { APP_SHELL } from '../data/mockData.js';
 
 /*
  * Общие действия интерфейса, доступные из любого компонента:
- * - navigate(screen) — переход на экран (с лендинга тоже);
+ * - navigate(screen, params) — переход на экран (с лендинга тоже), params — например { query };
  * - notify(text) — короткое уведомление внизу экрана;
- * - notifySoon() — уведомление «Скоро будет доступно» для ещё не готовых функций.
- * Уведомление одно на всё приложение, поэтому они не накладываются друг на друга.
+ * - openAddTransaction() — диалог новой операции;
+ * - openTransaction(tx) — операция из списка: доход и расход открываются на редактирование,
+ *   перевод — карточкой с возможностью удаления;
+ * - openAbout(sectionId) — окно «О проекте».
+ * Диалоги и уведомление по одному на всё приложение, поэтому они не накладываются друг на друга.
  */
 
 const AppActionsContext = createContext(null);
@@ -16,16 +20,43 @@ const AppActionsContext = createContext(null);
 export function AppActionsProvider({ onNavigate, children }) {
   // { text, icon } или null
   const [toast, setToast] = useState(null);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [aboutSection, setAboutSection] = useState(null);
+
   const hideToast = useCallback(() => setToast(null), []);
-
   const notify = useCallback((text, icon) => setToast({ text, icon }), []);
-  const notifySoon = useCallback(() => notify(APP_SHELL.soonMessage, Clock), [notify]);
+  const openAddTransaction = useCallback(() => setIsAddOpen(true), []);
+  const openTransaction = useCallback((tx) => setEditing(tx), []);
+  const openAbout = useCallback((sectionId) => setAboutSection(sectionId), []);
 
-  const value = useMemo(() => ({ navigate: onNavigate, notify, notifySoon }), [onNavigate, notify, notifySoon]);
+  // Диалог закрылся после сохранения или удаления — показываем, что получилось
+  const handleDone = useCallback(
+    (message) => {
+      setIsAddOpen(false);
+      setEditing(null);
+      notify(message);
+    },
+    [notify],
+  );
+
+  const value = useMemo(
+    () => ({ navigate: onNavigate, notify, openAddTransaction, openTransaction, openAbout }),
+    [onNavigate, notify, openAddTransaction, openTransaction, openAbout],
+  );
+
+  const isEditingTransfer = editing?.type === 'transfer';
 
   return (
     <AppActionsContext.Provider value={value}>
       {children}
+      <TransactionDialog key="add" isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} onDone={handleDone} />
+      {/* Для каждой операции свой экземпляр: форма сразу заполнена её значениями */}
+      {editing && !isEditingTransfer && (
+        <TransactionDialog key={editing.id} isOpen transaction={editing} onClose={() => setEditing(null)} onDone={handleDone} />
+      )}
+      <TransferDialog transaction={isEditingTransfer ? editing : null} onClose={() => setEditing(null)} onDone={handleDone} />
+      <AboutDialog sectionId={aboutSection} onClose={() => setAboutSection(null)} />
       <Toast message={toast?.text} icon={toast?.icon} onHide={hideToast} />
     </AppActionsContext.Provider>
   );

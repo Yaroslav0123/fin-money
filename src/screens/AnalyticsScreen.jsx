@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarDays, CalendarRange, Wallet } from 'lucide-react';
+import { CalendarRange, ChevronLeft, ChevronRight, Wallet } from 'lucide-react';
 import CategoryBreakdownCard from '../components/analytics/CategoryBreakdownCard.jsx';
 import InsightsCard from '../components/analytics/InsightsCard.jsx';
 import KpiCard from '../components/analytics/KpiCard.jsx';
@@ -9,73 +9,99 @@ import Card from '../components/ui/Card.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
 import SegmentedControl from '../components/ui/SegmentedControl.jsx';
 import TrendBadge from '../components/ui/TrendBadge.jsx';
-import {
-  ANALYTICS_PAGE,
-  ANALYTICS_PERIODS,
-  EXPENSE_CATEGORIES,
-  INCOME_VS_EXPENSES,
-  INSIGHTS,
-} from '../data/mockData.js';
+import { ANALYTICS_PAGE } from '../data/mockData.js';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
-import { addExpensesToCategories, applyExpensesToPeriod } from '../utils/analytics.js';
-import { formatMoney, scaleCategories } from '../utils/format.js';
+import { categoryBreakdown, incomeVsExpenses, insightData, periodExpenses } from '../utils/finance.js';
+import { fillTemplate, formatMoney, monthlyPayment } from '../utils/format.js';
 
 // Для расходов снижение — хорошо, поэтому зелёный бейдж при отрицательной динамике
 const expenseTone = (trend) => (trend.percent <= 0 ? 'positive' : 'negative');
 
+// Коэффициент для текста: 1.47 → «1,5»
+const ratioFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
+
+// Тексты подсказок из посчитанных данных
+const buildInsights = (data) => {
+  const t = ANALYTICS_PAGE.insights;
+  const items = [];
+  if (data.hasPreviousMonth && data.monthDiff !== 0) {
+    const rule = data.monthDiff < 0 ? t.less : t.more;
+    items.push({ id: 'month', ...rule, text: fillTemplate(rule.text, { amount: formatMoney(Math.abs(data.monthDiff)) }) });
+  }
+  if (data.topCategory) {
+    const { name, share, icon, accent } = data.topCategory;
+    items.push({ id: 'top', icon, accent, text: fillTemplate(t.top.text, { name, share }) });
+  }
+  if (data.weekendRatio) {
+    const rule = data.weekendRatio > 1 ? t.weekendMore : t.weekdayMore;
+    const ratio = data.weekendRatio > 1 ? data.weekendRatio : 1 / data.weekendRatio;
+    items.push({ id: 'weekend', ...rule, text: fillTemplate(rule.text, { ratio: ratioFormatter.format(ratio) }) });
+  }
+  if (data.nextGoal) {
+    const { name, left, monthsLeft } = data.nextGoal;
+    const payment = formatMoney(monthlyPayment(left, monthsLeft));
+    items.push({ id: 'goal', ...t.goal, text: fillTemplate(t.goal.text, { name, left: formatMoney(left), payment }) });
+  }
+  return items;
+};
+
 /**
  * Экран 4. Аналитика (веб-версия).
- * Переключатель периода меняет показатели, столбчатую диаграмму и суммы категорий.
- * Траты, добавленные через «Добавить операцию», учитываются в итоге,
- * «сегодняшнем» столбце и категориях.
+ * Всё считается из истории операций: переключатель периода меняет показатели,
+ * диаграмму и категории; стрелки листают периоды назад. Категория открывает свои операции.
  */
 export default function AnalyticsScreen() {
   const [periodId, setPeriodId] = useState(ANALYTICS_PAGE.defaultPeriod);
-  const { addedExpenses, summary } = useFinance();
-  const { notifySoon } = useAppActions();
+  const [offset, setOffset] = useState(0);
+  const { rawTransactions, categories, goals, settings, today } = useFinance();
+  const { navigate } = useAppActions();
   const { kpi } = ANALYTICS_PAGE;
 
-  // Период с учётом трат, добавленных через «Добавить операцию» (они «сегодняшние»)
-  const basePeriod = ANALYTICS_PERIODS.find((p) => p.id === periodId);
-  const period = applyExpensesToPeriod(basePeriod, addedExpenses);
-
-  // Категории под выбранный период + новые траты, крупнейшая — первая после сортировки
-  const categories = addExpensesToCategories(
-    scaleCategories(EXPENSE_CATEGORIES, basePeriod.total),
-    addedExpenses,
-    period.total,
-  );
-
-  // Последний месяц сравнения «доходы / расходы» — текущий, берём актуальные суммы
-  const comparison = INCOME_VS_EXPENSES.map((row, index) =>
-    index === INCOME_VS_EXPENSES.length - 1
-      ? { ...row, income: summary.income.amount, expenses: summary.expenses.amount }
-      : row,
-  );
-  const topCategory = [...categories].sort((a, b) => b.amount - a.amount)[0];
+  const period = periodExpenses(rawTransactions, periodId, today, offset, settings.weekStart);
+  const periodMeta = ANALYTICS_PAGE.periods.find((p) => p.id === periodId);
+  const categoriesInPeriod = categoryBreakdown(period.transactions, categories);
+  const topCategory = categoriesInPeriod[0];
+  const comparison = incomeVsExpenses(rawTransactions, today);
+  const insights = buildInsights(insightData(rawTransactions, categories, goals, today));
   const tone = expenseTone(period.trend);
+
+  const changePeriod = (id) => {
+    setPeriodId(id);
+    setOffset(0);
+  };
+
+  const navButtonClass =
+    'flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light disabled:pointer-events-none disabled:opacity-40';
 
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-      {/* Выбор периода */}
+      {/* Выбор периода и листание назад / вперёд */}
       <Reveal className="flex flex-wrap items-center justify-between gap-3 xl:col-span-3">
         <SegmentedControl
           id="analytics-period"
-          options={ANALYTICS_PERIODS}
+          options={ANALYTICS_PAGE.periods}
           value={periodId}
-          onChange={setPeriodId}
+          onChange={changePeriod}
           className="bg-white shadow-soft"
         />
-        <button
-          type="button"
-          aria-label={ANALYTICS_PAGE.calendarLabel}
-          onClick={notifySoon}
-          className="flex h-10 items-center gap-2 rounded-full bg-white px-4 text-xs font-semibold text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light"
-        >
-          <CalendarDays className="h-4 w-4 text-brand" />
-          {period.rangeLabel}
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" aria-label={ANALYTICS_PAGE.prevLabel} onClick={() => setOffset((o) => o - 1)} className={navButtonClass}>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="flex h-10 items-center rounded-full bg-white px-4 text-xs font-semibold text-ink shadow-soft" aria-live="polite">
+            {period.label}
+          </span>
+          <button
+            type="button"
+            aria-label={ANALYTICS_PAGE.nextLabel}
+            onClick={() => setOffset((o) => o + 1)}
+            disabled={offset >= 0}
+            className={navButtonClass}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </Reveal>
 
       {/* Ключевые показатели */}
@@ -86,29 +112,27 @@ export default function AnalyticsScreen() {
           label={kpi.expenses}
           value={formatMoney(period.total)}
           footer={
-            <span className="flex flex-wrap items-center gap-2">
-              <TrendBadge trend={period.trend} tone={tone} size="sm" />
-              {kpi.vsPrevious}
-            </span>
+            period.hasPrevious ? (
+              <span className="flex flex-wrap items-center gap-2">
+                <TrendBadge trend={period.trend} tone={tone} size="sm" />
+                {kpi.vsPrevious}
+              </span>
+            ) : (
+              kpi.noPrevious
+            )
           }
         />
       </Reveal>
       <Reveal delay={0.1}>
-        <KpiCard
-          icon={CalendarRange}
-          accent="blue"
-          label={kpi.perDay}
-          value={formatMoney(Math.round(period.total / period.days))}
-          footer={period.rangeLabel}
-        />
+        <KpiCard icon={CalendarRange} accent="blue" label={kpi.perDay} value={formatMoney(period.perDay)} footer={period.label} />
       </Reveal>
       <Reveal delay={0.15}>
         <KpiCard
-          icon={topCategory.icon}
-          accent={topCategory.accent}
+          icon={topCategory?.icon ?? Wallet}
+          accent={topCategory?.accent ?? 'gray'}
           label={kpi.topCategory}
-          value={topCategory.name}
-          footer={`${formatMoney(topCategory.amount)} · ${topCategory.share}% ${kpi.shareOfTotal}`}
+          value={topCategory?.name ?? kpi.noTopCategory}
+          footer={topCategory ? `${formatMoney(topCategory.amount)} · ${topCategory.share}% ${kpi.shareOfTotal}` : period.label}
         />
       </Reveal>
 
@@ -117,21 +141,26 @@ export default function AnalyticsScreen() {
         <Card className="h-full p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-xs font-medium text-ink-muted">{period.chartTitle}</p>
+              <p className="text-xs font-medium text-ink-muted">{periodMeta.chartTitle}</p>
               <div className="mt-1 flex items-center gap-3">
                 <span className="text-3xl font-bold tracking-tight text-ink">{formatMoney(period.total)}</span>
-                <TrendBadge trend={period.trend} tone={tone} />
+                {period.hasPrevious && <TrendBadge trend={period.trend} tone={tone} />}
               </div>
             </div>
           </div>
-          <SpendingBarChart key={period.id} data={period.bars} className="mt-6 h-72" />
+          <SpendingBarChart
+            key={`${periodId}:${offset}`}
+            data={period.bars}
+            highlightIndex={period.highlightIndex}
+            className="mt-6 h-72"
+          />
         </Card>
       </Reveal>
       <Reveal delay={0.15}>
         <CategoryBreakdownCard
-          categories={categories}
+          categories={categoriesInPeriod}
           texts={ANALYTICS_PAGE.categories}
-          onCategoryClick={notifySoon}
+          onCategoryClick={(category) => navigate('transactions', { categoryId: category.id })}
           className="h-full"
         />
       </Reveal>
@@ -159,7 +188,12 @@ export default function AnalyticsScreen() {
         </Card>
       </Reveal>
       <Reveal delay={0.15}>
-        <InsightsCard insights={INSIGHTS} title={ANALYTICS_PAGE.insights.title} className="h-full" />
+        <InsightsCard
+          insights={insights}
+          title={ANALYTICS_PAGE.insights.title}
+          emptyText={ANALYTICS_PAGE.insights.empty}
+          className="h-full"
+        />
       </Reveal>
     </div>
   );

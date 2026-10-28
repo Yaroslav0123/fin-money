@@ -19,7 +19,7 @@ function GoalRow({ goal, progressOf }) {
         <IconTile icon={goal.icon} accent={goal.accent} size="sm" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{goal.name}</p>
-          <p className="text-xs text-ink-muted">{goal.deadline}</p>
+          <p className="text-xs text-ink-muted">{goal.deadlineLabel}</p>
         </div>
       </div>
 

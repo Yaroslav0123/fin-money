@@ -11,26 +11,32 @@ import {
   CalendarDays,
   Car,
   Clapperboard,
+  Coffee,
+  Dumbbell,
   Ellipsis,
   EyeOff,
   Fingerprint,
   Gift,
   GraduationCap,
+  Heart,
   House,
-  KeyRound,
   LayoutGrid,
   Mail,
   Laptop,
+  PawPrint,
   Percent,
   PiggyBank,
+  Pill,
   Plane,
   Settings,
   ShieldCheck,
+  Shirt,
   ShoppingCart,
   Smartphone,
   Star,
   Target,
   TrendingDown,
+  TrendingUp,
   TriangleAlert,
   Utensils,
   Wallet,
@@ -60,7 +66,6 @@ export const BOTTOM_NAV = [
 
 export const APP_SHELL = {
   searchPlaceholder: 'Поиск операций',
-  soonMessage: 'Скоро будет доступно',
   addAction: 'Добавить операцию',
   notificationsLabel: 'Уведомления',
   profileLabel: 'Профиль',
@@ -70,18 +75,182 @@ export const APP_SHELL = {
     text: 'До 12% годовых на остаток. Пополнение в любое время.',
     action: 'Открыть',
   },
+  // Панель уведомлений (колокольчик): события считаются из данных
+  notifications: {
+    title: 'Уведомления',
+    empty: 'Новых уведомлений нет',
+    budget: 'Потрачено {percent}% месячного бюджета',
+    goal: 'До срока цели «{name}» осталось {days} дн.',
+    goalToday: 'Сегодня срок цели «{name}»',
+    large: 'Крупная трата: {title} — {amount}',
+    // Порог «крупной траты» в рублях
+    largeAmount: 5000,
+    close: 'Закрыть',
+  },
 };
 
-// Заголовки экранов в верхней панели
+// Заголовки экранов в верхней панели.
+// Подзаголовок «Главной» собирается из приветствия и текущего месяца (см. DASHBOARD.subtitle).
 export const SCREEN_META = {
-  dashboard: { title: 'Главная', subtitle: 'Добрый день! Вот ваши финансы за май' },
+  dashboard: { title: 'Главная' },
   savings: { title: 'Накопительный счёт', subtitle: 'Копите на важные цели с выгодной ставкой' },
   analytics: { title: 'Аналитика', subtitle: 'Расходы и доходы за выбранный период' },
   goals: { title: 'Цели', subtitle: 'Копите на мечты шаг за шагом' },
-  settings: { title: 'Настройки', subtitle: 'Профиль, уведомления и безопасность' },
+  settings: { title: 'Настройки', subtitle: 'Профиль, параметры и данные' },
+  transactions: { title: 'Операции', subtitle: 'Вся история основного счёта' },
 };
 
-// ───────────── Финансовые данные (общие для всех экранов) ─────────────
+// Знакомство с приложением при первом входе
+export const ONBOARDING = {
+  steps: [
+    { id: 'welcome', icon: Wallet, title: 'Добро пожаловать в Fin Money', text: 'Учебный проект: деньги здесь виртуальные, а данные хранятся только в вашем браузере.' },
+    { id: 'track', icon: BarChart3, title: 'Учитывайте доходы и расходы', text: 'Добавляйте операции кнопкой «+», а графики и подсказки посчитаются сами.' },
+    { id: 'goals', icon: Target, title: 'Копите на цели', text: 'Ставьте цели и откладывайте на накопительный счёт — прогресс видно сразу.' },
+  ],
+  next: 'Далее',
+  back: 'Назад',
+  choice: 'С чего начнём?',
+  demoAction: 'Посмотреть на демо-данных',
+  demoHint: 'Год правдоподобной истории операций',
+  emptyAction: 'Начать с нуля',
+  emptyHint: 'Чистый счёт без операций и целей',
+  stepLabel: 'Шаг {current} из {total}',
+};
+
+// Окно «О проекте» (ссылки в подвале сайта и в настройках)
+export const ABOUT_PROJECT = {
+  title: 'О проекте',
+  close: 'Закрыть',
+  sections: [
+    {
+      id: 'about',
+      title: 'Учебный проект',
+      paragraphs: [
+        'Fin Money — прототип приложения для учёта личных финансов, сделанный для портфолио.',
+        'Это не банк и не платёжный сервис: все деньги, операции и проценты — виртуальные.',
+      ],
+    },
+    {
+      id: 'privacy',
+      title: 'Данные и конфиденциальность',
+      paragraphs: [
+        'Персональные данные не собираются: регистрации нет, имя и почта в профиле — вымышленные.',
+        'Всё, что вы вводите, хранится только в localStorage вашего браузера и никуда не отправляется.',
+        'Стереть данные можно в «Настройки → Данные».',
+      ],
+    },
+  ],
+};
+
+// ───────────── Даты и валюты ─────────────
+
+export const DATE_TEXTS = {
+  today: 'Сегодня',
+  yesterday: 'Вчера',
+  months: ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'],
+  monthsShort: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+  // Порядок как у Date.getDay(): воскресенье — 0
+  weekdaysShort: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+  // Формы слова для чисел: 1 месяц, 2 месяца, 5 месяцев
+  monthWords: ['месяц', 'месяца', 'месяцев'],
+  // Приветствие на «Главной» по времени суток: [час начала, текст]
+  greetings: [
+    [5, 'Доброе утро!'],
+    [12, 'Добрый день!'],
+    [18, 'Добрый вечер!'],
+    [23, 'Доброй ночи!'],
+  ],
+};
+
+// Валюты отображения. Деньги в прототипе виртуальные и хранятся в рублях;
+// rate — условный курс для пересчёта при показе (1 ₽ = rate единиц валюты).
+export const CURRENCIES = {
+  rub: { symbol: '₽', rate: 1, quickAmounts: [500, 1000, 5000], savingsQuick: [1000, 5000, 10000] },
+  usd: { symbol: '$', rate: 0.0125, quickAmounts: [5, 10, 50], savingsQuick: [10, 50, 100] },
+  eur: { symbol: '€', rate: 0.0115, quickAmounts: [5, 10, 50], savingsQuick: [10, 50, 100] },
+};
+
+// ───────────── Категории операций ─────────────
+
+// Иконки, из которых собираются категории (и встроенные, и созданные пользователем)
+export const CATEGORY_ICONS = {
+  food: Utensils,
+  cart: ShoppingCart,
+  coffee: Coffee,
+  car: Car,
+  plane: Plane,
+  star: Star,
+  movie: Clapperboard,
+  house: House,
+  phone: Smartphone,
+  health: Pill,
+  sport: Dumbbell,
+  clothes: Shirt,
+  pet: PawPrint,
+  study: GraduationCap,
+  heart: Heart,
+  gift: Gift,
+  salary: Briefcase,
+  laptop: Laptop,
+  percent: Percent,
+  growth: TrendingUp,
+  shield: ShieldCheck,
+  other: Ellipsis,
+};
+
+// Подписи иконок для экранных дикторов (в выборе иконки видна только картинка)
+export const CATEGORY_ICON_LABELS = {
+  food: 'Еда',
+  cart: 'Покупки',
+  coffee: 'Кофе',
+  car: 'Транспорт',
+  plane: 'Путешествия',
+  star: 'Развлечения',
+  movie: 'Кино',
+  house: 'Дом',
+  phone: 'Связь',
+  health: 'Здоровье',
+  sport: 'Спорт',
+  clothes: 'Одежда',
+  pet: 'Питомцы',
+  study: 'Учёба',
+  heart: 'Близкие',
+  gift: 'Подарки',
+  salary: 'Работа',
+  laptop: 'Техника',
+  percent: 'Проценты',
+  growth: 'Рост',
+  shield: 'Безопасность',
+  other: 'Другое',
+};
+
+// Цвета, которые можно выбрать для категории, и их названия
+export const CATEGORY_ACCENTS = ['green', 'blue', 'purple', 'orange', 'pink', 'brand', 'gray'];
+export const ACCENT_LABELS = {
+  green: 'Зелёный',
+  blue: 'Синий',
+  purple: 'Фиолетовый',
+  orange: 'Оранжевый',
+  pink: 'Розовый',
+  brand: 'Тёмно-зелёный',
+  gray: 'Серый',
+};
+
+// Категории при первом запуске. type — 'expense' или 'income'.
+export const DEFAULT_CATEGORIES = [
+  { id: 'food', type: 'expense', name: 'Еда', iconId: 'food', accent: 'green' },
+  { id: 'transport', type: 'expense', name: 'Транспорт', iconId: 'car', accent: 'blue' },
+  { id: 'fun', type: 'expense', name: 'Развлечения', iconId: 'star', accent: 'purple' },
+  { id: 'housing', type: 'expense', name: 'Жильё', iconId: 'house', accent: 'orange' },
+  { id: 'other', type: 'expense', name: 'Другое', iconId: 'other', accent: 'gray' },
+  { id: 'salary', type: 'income', name: 'Зарплата', iconId: 'salary', accent: 'brand' },
+  { id: 'freelance', type: 'income', name: 'Подработка', iconId: 'laptop', accent: 'blue' },
+  { id: 'cashback', type: 'income', name: 'Кэшбэк', iconId: 'percent', accent: 'green' },
+  { id: 'gift', type: 'income', name: 'Подарок', iconId: 'gift', accent: 'pink' },
+];
+
+// ───────────── Витрина лендинга ─────────────
+// Цифры для рекламных блоков сайта. В самом приложении всё считается из истории операций.
 
 // Сводка по счетам
 export const SUMMARY = {
@@ -121,7 +290,7 @@ export const SAVINGS = {
   withdrawAction: 'Снять',
 };
 
-// История баланса накопительного счёта по периодам
+// История баланса накопительного счёта по периодам (витрина лендинга; экран «Накопления» считает свою)
 export const SAVINGS_PERIODS = [
   { id: 'week', label: 'Неделя' },
   { id: 'month', label: 'Месяц' },
@@ -172,24 +341,6 @@ export const SAVINGS_HISTORY = {
   ],
 };
 
-// Финансовые цели. monthsLeft — сколько месяцев осталось до срока.
-export const GOALS = [
-  { id: 'trip', name: 'Путешествие', icon: Plane, accent: 'green', deadline: 'до 12 мая 2027', monthsLeft: 12, saved: 43500, target: 100000 },
-  { id: 'laptop', name: 'Новый ноутбук', icon: Laptop, accent: 'purple', deadline: 'до 1 сентября 2026', monthsLeft: 4, saved: 54000, target: 120000 },
-  { id: 'car', name: 'Автомобиль', icon: Car, accent: 'blue', deadline: 'до 10 августа 2028', monthsLeft: 27, saved: 180000, target: 900000 },
-  { id: 'cushion', name: 'Подушка безопасности', icon: ShieldCheck, accent: 'orange', deadline: 'достигнута в марте 2026', monthsLeft: 0, saved: 150000, target: 150000 },
-];
-
-// Последние операции по основному счёту
-export const TRANSACTIONS = [
-  { id: 't1', title: 'Супермаркет', category: 'Еда', date: '31 мая, 18:40', amount: -2340, icon: ShoppingCart, accent: 'green' },
-  { id: 't2', title: 'Такси', category: 'Транспорт', date: '31 мая, 09:15', amount: -460, icon: Car, accent: 'blue' },
-  { id: 't3', title: 'Зарплата', category: 'Доход', date: '30 мая, 10:00', amount: 64800, icon: Briefcase, accent: 'brand' },
-  { id: 't4', title: 'Кинотеатр', category: 'Развлечения', date: '29 мая, 20:30', amount: -1200, icon: Clapperboard, accent: 'purple' },
-  { id: 't5', title: 'Коммунальные услуги', category: 'Жильё', date: '28 мая, 12:05', amount: -5400, icon: House, accent: 'orange' },
-  { id: 't6', title: 'Пополнение накоплений', category: 'Накопления', date: '12 мая, 14:20', amount: -10000, icon: PiggyBank, accent: 'brand' },
-];
-
 // Переводы между основным и накопительным счётом в списке операций «Главной».
 // Это не доход и не расход: меняется только общий баланс.
 export const SAVINGS_TRANSFER = {
@@ -205,6 +356,7 @@ export const GOAL_TRANSFER = {
   icon: Target,
   accent: 'blue',
   titlePrefix: 'Пополнение цели',
+  returnPrefix: 'Возврат с цели',
 };
 
 // Общий потолок суммы одной операции во всех диалогах
@@ -222,30 +374,20 @@ export const SAVINGS_TX_TYPES = {
   withdraw: { label: 'Снятия', title: 'Снятие', icon: ArrowDownLeft, accent: 'pink' },
 };
 
-// История операций по накопительному счёту
-export const SAVINGS_TRANSACTIONS = [
-  { id: 's1', type: 'deposit', date: '12 мая 2026', amount: 10000 },
-  { id: 's2', type: 'interest', date: '10 мая 2026', amount: 420 },
-  { id: 's3', type: 'withdraw', date: '28 апреля 2026', amount: -3000 },
-  { id: 's4', type: 'deposit', date: '15 апреля 2026', amount: 5000 },
-  { id: 's5', type: 'interest', date: '10 апреля 2026', amount: 380 },
-  { id: 's6', type: 'deposit', date: '1 апреля 2026', amount: 15000 },
-];
-
 export const SAVINGS_PAGE = {
   // Годовая ставка в процентах (для калькулятора)
   annualRate: 12,
+  // День месяца, когда начисляются проценты
+  interestDay: 10,
   interest: {
     title: 'Доход по процентам',
-    monthLabel: 'Начислено в мае',
-    monthAmount: 420,
+    monthLabel: 'Начислено за {month}',
     totalLabel: 'За всё время',
-    totalAmount: 2860,
     nextLabel: 'Следующее начисление',
-    nextDate: '10 июня',
     rateLabel: 'Ставка',
     rateValue: 'до 12% годовых',
   },
+  trendSuffix: 'за месяц',
   chart: { title: 'Динамика баланса' },
   calculator: {
     title: 'Калькулятор доходности',
@@ -262,145 +404,90 @@ export const SAVINGS_PAGE = {
       term: { min: 1, max: 36, step: 1 },
     },
   },
-  history: { title: 'История', allFilter: 'Все', empty: 'Операций этого типа пока нет' },
-  goals: { title: 'Копите на цели', allLink: 'Все цели' },
+  history: { title: 'История', allFilter: 'Все', empty: 'Операций этого типа пока нет', emptyAll: 'Пополните счёт — здесь появится история' },
+  periods: [
+    { id: 'week', label: 'Неделя' },
+    { id: 'month', label: 'Месяц' },
+    { id: 'year', label: 'Год' },
+  ],
+  goals: { title: 'Копите на цели', allLink: 'Все цели', empty: 'Целей пока нет' },
   // Диалог пополнения / снятия
   dialog: {
-    deposit: { title: 'Пополнить счёт', confirm: 'Пополнить' },
-    withdraw: { title: 'Снять со счёта', confirm: 'Снять' },
+    deposit: { title: 'Пополнить счёт', confirm: 'Пополнить', done: 'Накопительный счёт пополнен' },
+    withdraw: { title: 'Снять со счёта', confirm: 'Снять', done: 'Деньги переведены на основной счёт' },
     amountLabel: 'Сумма',
     amountPlaceholder: '0',
-    quickAmounts: [1000, 5000, 10000],
     available: 'Доступно',
     availableMain: 'На основном счёте',
     cancel: 'Отмена',
     errorTooMuch: 'Сумма больше баланса счёта',
     errorNoFunds: 'Недостаточно средств на основном счёте',
     fillMax: 'Ввести максимум',
-    newTxDate: 'Сегодня',
   },
 };
 
 // ───────────── Экран «Аналитика» ─────────────
 
-// Расходы по периодам. Сумма столбцов bars = total.
-// Доли категорий для любого периода берутся из EXPENSE_CATEGORIES.
-export const ANALYTICS_PERIODS = [
-  {
-    id: 'day',
-    chartTitle: 'Расходы по часам',
-    label: 'День',
-    rangeLabel: '31 мая 2026',
-    days: 1,
-    total: 2800,
-    trend: { percent: -12 },
-    bars: [
-      { label: '00:00', value: 20 },
-      { label: '02:00', value: 20 },
-      { label: '04:00', value: 20 },
-      { label: '06:00', value: 190 },
-      { label: '08:00', value: 190 },
-      { label: '10:00', value: 410 },
-      { label: '12:00', value: 290 },
-      { label: '14:00', value: 390 },
-      { label: '16:00', value: 440 },
-      { label: '18:00', value: 370 },
-      { label: '20:00', value: 370 },
-      { label: '22:00', value: 90 },
-    ],
-  },
-  {
-    id: 'week',
-    chartTitle: 'Расходы по дням',
-    label: 'Неделя',
-    rangeLabel: '25–31 мая 2026',
-    days: 7,
-    total: 14800,
-    trend: { percent: 4 },
-    bars: [
-      { label: 'Пн', value: 1500 },
-      { label: 'Вт', value: 1270 },
-      { label: 'Ср', value: 2950 },
-      { label: 'Чт', value: 1840 },
-      { label: 'Пт', value: 1400 },
-      { label: 'Сб', value: 3280 },
-      { label: 'Вс', value: 2560 },
-    ],
-  },
-  {
-    id: 'month',
-    chartTitle: 'Расходы по дням',
-    label: 'Месяц',
-    rangeLabel: '1–31 мая 2026',
-    days: 31,
-    total: 63200,
-    trend: { percent: -6 },
-    bars: [
-      1890, 2030, 1130, 1390, 1790, 2880, 1590, 2660, 2080, 1730, 1470, 2470, 3330, 1580, 1900, 1370, 2250, 1220,
-      2030, 2820, 1880, 1000, 2780, 2850, 1140, 1790, 4230, 1920, 1740, 2010, 2250,
-    ].map((value, index) => ({ label: `${index + 1} мая`, value })),
-  },
-  {
-    id: 'year',
-    chartTitle: 'Расходы по месяцам',
-    label: 'Год',
-    rangeLabel: 'июнь 2025 — май 2026',
-    days: 365,
-    total: 789100,
-    trend: { percent: -4 },
-    bars: [
-      { label: 'Июн', value: 61800 },
-      { label: 'Июл', value: 74300 },
-      { label: 'Авг', value: 58900 },
-      { label: 'Сен', value: 66200 },
-      { label: 'Окт', value: 70400 },
-      { label: 'Ноя', value: 59700 },
-      { label: 'Дек', value: 64800 },
-      { label: 'Янв', value: 71200 },
-      { label: 'Фев', value: 62500 },
-      { label: 'Мар', value: 68900 },
-      { label: 'Апр', value: 67200 },
-      { label: 'Май', value: 63200 },
-    ],
-  },
-];
-
-// Доходы и расходы за последние полгода
-export const INCOME_VS_EXPENSES = [
-  { label: 'Дек', income: 84000, expenses: 64800 },
-  { label: 'Янв', income: 81500, expenses: 71200 },
-  { label: 'Фев', income: 82000, expenses: 62500 },
-  { label: 'Мар', income: 84200, expenses: 68900 },
-  { label: 'Апр', income: 80100, expenses: 67200 },
-  { label: 'Май', income: 86400, expenses: 63200 },
-];
-
-// Подсказки-«инсайты» по тратам
-export const INSIGHTS = [
-  { id: 'i1', icon: TrendingDown, accent: 'brand', text: 'Расходы в мае на 4 000 ₽ ниже, чем в апреле. Так держать!' },
-  { id: 'i2', icon: Utensils, accent: 'green', text: 'Еда — самая крупная категория: 32% всех трат.' },
-  { id: 'i3', icon: CalendarDays, accent: 'purple', text: 'В выходные вы тратите примерно в 1,5 раза больше, чем в будни.' },
-  { id: 'i4', icon: Target, accent: 'blue', text: 'До цели «Новый ноутбук» осталось 66 000 ₽ — около 4 месяцев.' },
-];
-
 export const ANALYTICS_PAGE = {
   defaultPeriod: 'month',
-  calendarLabel: 'Выбрать период',
+  periods: [
+    { id: 'day', label: 'День', chartTitle: 'Расходы по часам' },
+    { id: 'week', label: 'Неделя', chartTitle: 'Расходы по дням' },
+    { id: 'month', label: 'Месяц', chartTitle: 'Расходы по дням' },
+    { id: 'year', label: 'Год', chartTitle: 'Расходы по месяцам' },
+  ],
+  prevLabel: 'Предыдущий период',
+  nextLabel: 'Следующий период',
   kpi: {
     expenses: 'Расходы',
     perDay: 'В среднем за день',
     topCategory: 'Крупнейшая категория',
     vsPrevious: 'к прошлому периоду',
+    noPrevious: 'нет данных за прошлый период',
     shareOfTotal: 'от всех расходов',
+    noTopCategory: 'Нет расходов',
   },
-  categories: { title: 'Категории', allLink: 'Все' },
+  categories: { title: 'Категории', allLink: 'Все', empty: 'За этот период расходов нет' },
   comparison: { title: 'Доходы и расходы', subtitle: 'За последние 6 месяцев', income: 'Доходы', expenses: 'Расходы' },
-  insights: { title: 'Подсказки' },
+  // Подсказки собираются из истории операций; {…} — подстановки
+  insights: {
+    title: 'Подсказки',
+    empty: 'Добавьте несколько операций — здесь появятся подсказки по тратам.',
+    less: { icon: TrendingDown, accent: 'brand', text: 'В этом месяце вы потратили на {amount} меньше, чем за те же дни прошлого. Так держать!' },
+    more: { icon: TrendingUp, accent: 'pink', text: 'В этом месяце вы потратили на {amount} больше, чем за те же дни прошлого. Стоит присмотреться к тратам.' },
+    top: { text: '{name} — самая крупная категория месяца: {share}% всех трат.' },
+    weekendMore: { icon: CalendarDays, accent: 'purple', text: 'В выходные вы тратите примерно в {ratio} раза больше, чем в будни.' },
+    weekdayMore: { icon: CalendarDays, accent: 'purple', text: 'В будни вы тратите примерно в {ratio} раза больше, чем в выходные.' },
+    goal: { icon: Target, accent: 'blue', text: 'До цели «{name}» осталось {left} — это около {payment} в месяц до срока.' },
+  },
+};
+
+// ───────────── Экран «Операции» (полная история) ─────────────
+
+export const TRANSACTIONS_PAGE = {
+  searchPlaceholder: 'Поиск по названию или категории',
+  filters: [
+    { id: 'all', label: 'Все' },
+    { id: 'expense', label: 'Расходы' },
+    { id: 'income', label: 'Доходы' },
+    { id: 'transfer', label: 'Переводы' },
+  ],
+  allCategories: 'Все категории',
+  categoryLabel: 'Категория',
+  resetFilters: 'Сбросить фильтры',
+  totals: { income: 'Доходы', expenses: 'Расходы', count: 'Операций' },
+  empty: 'Ничего не нашлось. Попробуйте изменить поиск или фильтры.',
+  emptyAll: 'Операций пока нет',
+  addFirst: 'Добавить операцию',
+  showMore: 'Показать ещё',
+  // Сколько операций показывать за раз
+  pageSize: 40,
 };
 
 // ───────────── Экран «Цели» ─────────────
 
-// Иконки, из которых можно выбрать при создании новой цели
+// Иконки, из которых можно выбрать цель. id совпадают с ключами CATEGORY_ICONS —
+// по ним иконка восстанавливается после перезагрузки страницы.
 export const GOAL_ICON_OPTIONS = [
   // label — подпись для экранных дикторов (на экране видна только иконка)
   { id: 'plane', icon: Plane, accent: 'green', label: 'Путешествие' },
@@ -409,9 +496,11 @@ export const GOAL_ICON_OPTIONS = [
   { id: 'house', icon: House, accent: 'orange', label: 'Жильё' },
   { id: 'gift', icon: Gift, accent: 'pink', label: 'Подарок' },
   { id: 'study', icon: GraduationCap, accent: 'brand', label: 'Учёба' },
+  { id: 'shield', icon: ShieldCheck, accent: 'orange', label: 'Подушка безопасности' },
+  { id: 'heart', icon: Heart, accent: 'pink', label: 'Для близких' },
 ];
 
-// Варианты срока для новой цели (в месяцах)
+// Быстрый выбор срока цели (в месяцах от сегодня)
 export const GOAL_TERM_OPTIONS = [3, 6, 12, 24];
 
 export const GOALS_PAGE = {
@@ -437,34 +526,52 @@ export const GOALS_PAGE = {
     perMonth: 'в месяц',
     deposit: 'Пополнить',
     done: 'Цель достигнута',
+    edit: 'Изменить цель',
+    delete: 'Удалить цель',
   },
+  // Подпись срока цели
+  deadline: { before: 'до', overdue: 'Срок прошёл' },
   empty: 'Здесь пока нет целей',
-  distribution: { title: 'Распределение накоплений', caption: 'накоплено' },
+  emptyHint: 'Создайте первую цель — например, на отпуск или новый телефон.',
+  distribution: { title: 'Распределение накоплений', caption: 'накоплено', empty: 'Пока ничего не накоплено' },
+  created: 'Цель создана',
+  updated: 'Цель сохранена',
+  deleteDialog: {
+    title: 'Удалить цель?',
+    refund: 'Накопленные {amount} вернутся на основной счёт.',
+    noRefund: 'На цели пока ничего не накоплено.',
+    confirm: 'Удалить',
+    cancel: 'Отмена',
+    done: 'Цель удалена',
+  },
   // Диалог пополнения цели (переиспользует AmountDialog)
   depositDialog: {
     titlePrefix: 'Пополнить цель',
     confirm: 'Пополнить',
     amountLabel: 'Сумма',
     amountPlaceholder: '0',
-    quickAmounts: [1000, 5000, 10000],
     available: 'Осталось накопить',
     cancel: 'Отмена',
     errorTooMuch: 'Сумма больше, чем осталось до цели',
     errorNoFunds: 'Недостаточно средств на основном счёте',
     fillMax: 'Ввести максимум',
   },
-  // Диалог создания цели
+  // Диалог создания и изменения цели
   createDialog: {
     title: 'Новая цель',
+    editTitle: 'Изменить цель',
     nameLabel: 'Название',
     namePlaceholder: 'Например, «Велосипед»',
     targetLabel: 'Сколько нужно накопить',
     termLabel: 'Срок',
     termSuffix: 'мес.',
+    deadlineLabel: 'Дата',
     iconLabel: 'Иконка',
     perMonthHint: 'Ежемесячный взнос составит',
-    deadlinePrefix: 'через',
+    pastDeadline: 'Выберите дату в будущем',
+    targetBelowSaved: 'Уже накоплено {amount} — сумма цели не может быть меньше',
     confirm: 'Создать цель',
+    save: 'Сохранить',
     cancel: 'Отмена',
   },
 };
@@ -490,7 +597,7 @@ export const SETTINGS_PAGE = {
   budget: {
     title: 'Месячный бюджет',
     description: 'Предупредим, когда расходы подойдут к лимиту',
-    spentLabel: 'Потрачено в мае',
+    spentLabel: 'Потрачено за {month}',
     of: 'из',
     left: 'Осталось',
     over: 'Превышение',
@@ -511,11 +618,17 @@ export const SETTINGS_PAGE = {
   },
   preferences: {
     title: 'Параметры',
-    currency: { label: 'Валюта', options: [{ id: 'rub', label: '₽' }, { id: 'usd', label: '$' }, { id: 'eur', label: '€' }], default: 'rub' },
+    currency: {
+      label: 'Валюта',
+      hint: 'Пересчёт по условному курсу',
+      options: [{ id: 'rub', label: '₽' }, { id: 'usd', label: '$' }, { id: 'eur', label: '€' }],
+      default: 'rub',
+    },
     weekStart: { label: 'Начало недели', options: [{ id: 'mon', label: 'Пн' }, { id: 'sun', label: 'Вс' }], default: 'mon' },
     language: {
       label: 'Язык',
-      options: [{ id: 'ru', label: 'Русский' }, { id: 'en', label: 'English' }],
+      // disabled — язык ещё не переведён
+      options: [{ id: 'ru', label: 'Русский' }, { id: 'en', label: 'English (скоро)', disabled: true }],
       default: 'ru',
     },
   },
@@ -525,63 +638,112 @@ export const SETTINGS_PAGE = {
       { id: 'biometry', icon: Fingerprint, label: 'Вход по биометрии', hint: 'Face ID или отпечаток пальца', defaultOn: true },
       { id: 'hideBalance', icon: EyeOff, label: 'Скрывать баланс', hint: 'Суммы скрыты при открытии', defaultOn: false },
     ],
-    links: [
-      { id: 'password', icon: KeyRound, label: 'Сменить пароль' },
-      { id: 'devices', icon: Smartphone, label: 'Активные устройства', badge: '2' },
-    ],
     logout: 'Выйти из аккаунта',
   },
-  // Сброс данных прототипа, сохранённых в браузере
-  demo: {
-    title: 'Демо-данные',
-    description: 'Операции, накопления и цели сохраняются в этом браузере. Сброс вернёт исходные данные.',
-    action: 'Сбросить демо-данные',
-    confirmQuestion: 'Удалить все изменения?',
-    confirm: 'Сбросить',
+  // Свои категории доходов и расходов
+  categories: {
+    title: 'Категории',
+    tabs: [
+      { id: 'expense', label: 'Расходы' },
+      { id: 'income', label: 'Доходы' },
+    ],
+    add: 'Добавить',
+    edit: 'Изменить «{name}»',
+    delete: 'Удалить «{name}»',
+    deleteQuestion: 'Удалить «{name}»? Её операции перейдут в «{fallback}».',
+    deleteConfirm: 'Удалить',
     cancel: 'Отмена',
-    done: 'Демо-данные сброшены',
+    lastOne: 'Это последняя категория этого типа — её нельзя удалить',
+    added: 'Категория добавлена',
+    saved: 'Категория сохранена',
+    deleted: 'Категория удалена',
+    dialog: {
+      addTitle: 'Новая категория',
+      editTitle: 'Изменить категорию',
+      nameLabel: 'Название',
+      namePlaceholder: 'Например, «Спорт»',
+      iconLabel: 'Иконка',
+      colorLabel: 'Цвет',
+      create: 'Добавить',
+      save: 'Сохранить',
+      cancel: 'Отмена',
+    },
+  },
+  // Данные прототипа, сохранённые в браузере
+  demo: {
+    title: 'Данные',
+    description: 'Операции, накопления и цели хранятся только в этом браузере. Демо-история строится от сегодняшнего дня.',
+    action: 'Новые демо-данные',
+    confirmQuestion: 'Заменить все данные демо-историей?',
+    confirm: 'Заменить',
+    cancel: 'Отмена',
+    done: 'Демо-данные обновлены',
+    emptyAction: 'Начать с нуля',
+    emptyQuestion: 'Удалить все операции, накопления и цели?',
+    emptyConfirm: 'Удалить',
+    emptyDone: 'Все данные удалены',
+    about: 'О проекте и данных',
   },
 };
 
 // ───────────── Добавление операции (кнопки «+» и «Добавить операцию») ─────────────
 
-// Категории доходов (для расходов используются EXPENSE_CATEGORIES)
-export const INCOME_CATEGORIES = [
-  { id: 'salary', name: 'Зарплата', accent: 'brand', icon: Briefcase },
-  { id: 'freelance', name: 'Подработка', accent: 'blue', icon: Laptop },
-  { id: 'cashback', name: 'Кэшбэк', accent: 'green', icon: Percent },
-  { id: 'gift', name: 'Подарок', accent: 'pink', icon: Gift },
-];
-
 export const ADD_TRANSACTION = {
   title: 'Новая операция',
+  editTitle: 'Изменить операцию',
   types: [
     { id: 'expense', label: 'Расход' },
     { id: 'income', label: 'Доход' },
   ],
   amountLabel: 'Сумма',
   categoryLabel: 'Категория',
+  dateLabel: 'Дата',
+  futureDate: 'Дата не может быть в будущем',
   commentLabel: 'Комментарий',
   commentPlaceholder: 'Необязательно, например «Кофе с коллегами»',
-  quickAmounts: [500, 1000, 5000],
   confirm: 'Добавить',
+  save: 'Сохранить',
   cancel: 'Отмена',
+  delete: 'Удалить',
+  deleteQuestion: 'Удалить эту операцию?',
   success: 'Операция добавлена',
-  incomeCategoryLabel: 'Доход',
-  todayPrefix: 'Сегодня',
+  saved: 'Изменения сохранены',
+  deleted: 'Операция удалена',
+};
+
+// Карточка перевода (переводы нельзя изменить — только удалить вместе со второй стороной)
+export const TRANSFER_DETAILS = {
+  title: 'Перевод',
+  note: 'Переводы нельзя изменить. Если удалить перевод, деньги вернутся обратно.',
+  amountLabel: 'Сумма',
+  dateLabel: 'Дата',
+  delete: 'Удалить перевод',
+  deleteQuestion: 'Удалить перевод и вернуть деньги?',
+  close: 'Закрыть',
+  deleted: 'Перевод удалён',
 };
 
 // ───────────── Экран «Главная» ─────────────
 
 export const DASHBOARD = {
+  // Подзаголовок в шапке: «Добрый день! Вот ваши финансы за октябрь»
+  subtitle: '{greeting} Вот ваши финансы за {month}',
   hideBalanceLabel: 'Скрыть баланс',
   showBalanceLabel: 'Показать баланс',
-  hiddenAmount: '••• ••• ₽',
+  hiddenAmount: '••• •••',
   actions: { deposit: 'Пополнить', transfer: 'Перевести' },
-  goal: { title: 'Финансовая цель', goalId: 'laptop', allLink: 'Все цели', progressOf: 'из' },
+  goal: {
+    title: 'Финансовая цель',
+    allLink: 'Все цели',
+    progressOf: 'из',
+    empty: 'Поставьте первую цель — мы рассчитаем ежемесячный взнос',
+    create: 'Создать цель',
+  },
   savingsCard: { title: 'Накопительный счёт', caption: 'До 12% годовых' },
-  structure: { title: 'Структура расходов', caption: 'расходы', allLink: 'Все' },
-  transactions: { title: 'Последние операции', allLink: 'Все', limit: 6 },
+  structure: { title: 'Структура расходов', caption: 'расходы', allLink: 'Все', empty: 'В этом месяце расходов пока нет' },
+  transactions: { title: 'Последние операции', allLink: 'Все', limit: 6, empty: 'Операций пока нет', addFirst: 'Добавить первую' },
+  // «Перевести» — перевод на накопительный счёт
+  transferDialog: { title: 'Перевести на накопления', confirm: 'Перевести', done: 'Деньги переведены на накопления' },
 };
 
 // ───────────── Веб-лендинг (экран «Приветствие») ─────────────
@@ -630,11 +792,11 @@ export const LANDING = {
     action: 'Мои финансы',
   },
   footer: {
-    copyright: '© 2026 Fin Money. Все права защищены.',
+    copyright: '© 2026 Fin Money. Учебный проект, деньги виртуальные.',
+    // Открывают окно «О проекте» на нужном разделе (ABOUT_PROJECT.sections)
     links: [
-      // Страниц пока нет — в подвале это обычный текст, не ссылки
-      { id: 'privacy', label: 'Политика конфиденциальности' },
-      { id: 'terms', label: 'Условия использования' },
+      { id: 'about', label: 'О проекте' },
+      { id: 'privacy', label: 'Данные и конфиденциальность' },
     ],
   },
   // Пункты бокового меню в превью приложения на ноутбуке

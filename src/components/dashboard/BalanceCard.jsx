@@ -4,7 +4,7 @@ import { ArrowLeftRight, Eye, EyeOff, Plus } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import TrendBadge from '../ui/TrendBadge.jsx';
-import { formatMoney } from '../../utils/format.js';
+import { currencySymbol, formatMoney } from '../../utils/format.js';
 
 /**
  * Главная карточка «Общий баланс» с возможностью скрыть сумму
@@ -46,7 +46,7 @@ export default function BalanceCard({ balance, texts, hiddenByDefault = false, o
             transition={{ duration: 0.18 }}
             className="mt-2 text-4xl font-extrabold tracking-tight text-ink sm:text-5xl"
           >
-            {isHidden ? texts.hiddenAmount : formatMoney(balance.amount)}
+            {isHidden ? `${texts.hiddenAmount} ${currencySymbol()}` : formatMoney(balance.amount)}
           </motion.p>
         </AnimatePresence>
 

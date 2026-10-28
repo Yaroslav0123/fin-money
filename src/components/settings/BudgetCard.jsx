@@ -1,17 +1,16 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TriangleAlert, Wallet } from 'lucide-react';
 import Card from '../ui/Card.jsx';
-import { formatMoney, toPercent } from '../../utils/format.js';
+import { fillTemplate, formatMoney, toPercent } from '../../utils/format.js';
 
 const FULL = 100;
 
 /**
  * Месячный бюджет: ползунок лимита и шкала «потрачено из лимита».
  * Ближе к лимиту шкала и подсказка становятся красными.
+ * limit / onLimitChange — лимит хранится в настройках, month — название текущего месяца.
  */
-export default function BudgetCard({ spent, texts, className = '' }) {
-  const [limit, setLimit] = useState(texts.defaultLimit);
+export default function BudgetCard({ spent, limit, month, texts, onLimitChange, className = '' }) {
   const percent = toPercent(spent, limit);
   const isWarning = percent >= texts.warnAt;
   const left = limit - spent;
@@ -35,15 +34,16 @@ export default function BudgetCard({ spent, texts, className = '' }) {
         max={texts.range.max}
         step={texts.range.step}
         value={limit}
-        onChange={(e) => setLimit(Number(e.target.value))}
+        onChange={(e) => onLimitChange(Number(e.target.value))}
         aria-label={texts.title}
+        aria-valuetext={formatMoney(limit)}
         className="mt-4 w-full cursor-pointer accent-brand"
       />
 
       <div className="mt-auto pt-6">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-ink-muted">{texts.spentLabel}</span>
-          <span className="font-semibold text-ink">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <span className="text-ink-muted">{fillTemplate(texts.spentLabel, { month })}</span>
+          <span className="text-right font-semibold text-ink">
             {formatMoney(spent)} {texts.of} {formatMoney(limit)}
           </span>
         </div>

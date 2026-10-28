@@ -13,9 +13,10 @@ export default function GoalsListCard({ goals, texts, className = '' }) {
         <LinkArrow to="goals">{texts.allLink}</LinkArrow>
       </div>
 
+      {goals.length === 0 && <p className="py-8 text-center text-sm text-ink-muted">{texts.empty}</p>}
       <ul className="mt-5 space-y-5">
         {goals.map((goal) => {
-          const percent = toPercent(goal.saved, goal.target);
+          const percent = Math.min(100, toPercent(goal.saved, goal.target));
           return (
             <li key={goal.id}>
               <div className="flex items-center gap-3">

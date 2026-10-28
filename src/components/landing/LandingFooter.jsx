@@ -1,9 +1,11 @@
 import Container from './Container.jsx';
+import { useAppActions } from '../../context/AppActionsContext.jsx';
 import { LANDING } from '../../data/mockData.js';
 
-// Подвал: копирайт и юридические документы (пока без страниц — обычный текст)
+// Подвал: копирайт и ссылки на окно «О проекте» (учебный проект, данные не собираются)
 export default function LandingFooter() {
   const { footer } = LANDING;
+  const { openAbout } = useAppActions();
 
   return (
     <footer>
@@ -11,7 +13,14 @@ export default function LandingFooter() {
         <p>{footer.copyright}</p>
         <div className="flex gap-6">
           {footer.links.map((link) => (
-            <span key={link.id}>{link.label}</span>
+            <button
+              key={link.id}
+              type="button"
+              onClick={() => openAbout(link.id)}
+              className="transition-colors duration-200 hover:text-brand"
+            >
+              {link.label}
+            </button>
           ))}
         </div>
       </Container>

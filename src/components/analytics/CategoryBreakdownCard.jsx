@@ -7,28 +7,32 @@ import { ACCENTS } from '../../theme/accents.js';
 import { formatMoney } from '../../utils/format.js';
 
 // Список категорий как на мобильном макете + цветная полоска доли.
-// onCategoryClick — нажатие на строку категории.
+// onCategoryClick(category) — открыть операции этой категории.
 export default function CategoryBreakdownCard({ categories, texts, onCategoryClick, className = '' }) {
   return (
     <Card className={`p-6 ${className}`}>
       <div className="flex items-center justify-between">
         <h3 className="text-base font-bold text-ink">{texts.title}</h3>
-        <LinkArrow>{texts.allLink}</LinkArrow>
+        <LinkArrow to="transactions" params={{ type: 'expense' }}>
+          {texts.allLink}
+        </LinkArrow>
       </div>
+
+      {categories.length === 0 && <p className="py-10 text-center text-sm text-ink-muted">{texts.empty}</p>}
 
       <ul className="-mx-2 mt-3">
         {categories.map((c) => (
           <li key={c.id}>
             <button
               type="button"
-              onClick={onCategoryClick}
+              onClick={() => onCategoryClick(c)}
               className="group flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors duration-200 hover:bg-surface"
             >
               <IconTile icon={c.icon} accent={c.accent} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2 text-sm">
-                  <span className="font-semibold text-ink">{c.name}</span>
-                  <span className="font-semibold text-ink">{formatMoney(c.amount)}</span>
+                  <span className="truncate font-semibold text-ink">{c.name}</span>
+                  <span className="shrink-0 font-semibold text-ink">{formatMoney(c.amount)}</span>
                 </div>
                 <div className="mt-2 flex items-center gap-3">
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/5">

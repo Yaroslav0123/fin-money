@@ -46,7 +46,7 @@ export default function SavingsHistoryCard({ transactions, types, texts, classNa
                   <IconTile icon={type.icon} accent={type.accent} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-ink">{type.title}</p>
-                    <p className="text-xs text-ink-muted">{tx.date}</p>
+                    <p className="text-xs text-ink-muted">{tx.dateLabel}</p>
                   </div>
                   <span className={`text-sm font-bold ${isIncome ? 'text-positive' : 'text-ink'}`}>
                     {formatSignedMoney(tx.amount)}
@@ -58,7 +58,9 @@ export default function SavingsHistoryCard({ transactions, types, texts, classNa
         </AnimatePresence>
       </ul>
 
-      {visible.length === 0 && <p className="py-8 text-center text-sm text-ink-muted">{texts.empty}</p>}
+      {visible.length === 0 && (
+        <p className="py-8 text-center text-sm text-ink-muted">{transactions.length === 0 ? texts.emptyAll : texts.empty}</p>
+      )}
     </Card>
   );
 }

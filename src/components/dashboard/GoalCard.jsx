@@ -1,13 +1,30 @@
-import { Target } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import LinkArrow from '../ui/LinkArrow.jsx';
 import ProgressBar from '../ui/ProgressBar.jsx';
 import { formatMoney, toPercent } from '../../utils/format.js';
 
-// Карточка «Финансовая цель» с прогрессом накопления
-export default function GoalCard({ goal, texts }) {
-  const percent = toPercent(goal.saved, goal.target);
+// Карточка «Финансовая цель» с прогрессом накопления.
+// goal — null, если целей нет: тогда предлагаем создать первую (onCreate).
+export default function GoalCard({ goal, texts, onCreate }) {
+  if (!goal) {
+    return (
+      <Card className="flex h-full flex-col p-6">
+        <h3 className="text-base font-bold text-ink">{texts.title}</h3>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-6 text-center">
+          <p className="max-w-[16rem] text-sm text-ink-muted">{texts.empty}</p>
+          <Button size="sm" pill onClick={onCreate}>
+            <Plus className="h-4 w-4" />
+            {texts.create}
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  const percent = Math.min(100, toPercent(goal.saved, goal.target));
 
   return (
     <Card className="flex h-full flex-col p-6">
@@ -17,16 +34,16 @@ export default function GoalCard({ goal, texts }) {
       </div>
 
       <div className="mt-6 flex items-center gap-3">
-        <IconTile icon={Target} accent="brand" />
+        <IconTile icon={goal.icon} accent={goal.accent} />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink">{goal.name}</p>
-          <p className="text-xs text-ink-muted">{goal.deadline}</p>
+          <p className="text-xs text-ink-muted">{goal.deadlineLabel}</p>
         </div>
       </div>
 
       <div className="mt-auto pt-8">
-        <div className="flex items-end justify-between">
-          <p className="text-sm font-semibold text-brand">
+        <div className="flex items-end justify-between gap-3">
+          <p className="min-w-0 text-sm font-semibold text-brand">
             {formatMoney(goal.saved)}{' '}
             <span className="font-normal text-ink-muted">
               {texts.progressOf} {formatMoney(goal.target)}

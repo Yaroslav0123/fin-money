@@ -10,15 +10,14 @@ const BAR_RADIUS = [6, 6, 6, 6];
 
 /**
  * Столбчатая диаграмма расходов, как на мобильном макете:
- * светло-зелёные столбцы, последний (текущий день / месяц) — тёмный.
+ * светло-зелёные столбцы, текущий (highlightIndex: «сейчас» или последний) — тёмный.
  * Столбец под курсором подсвечивается.
  */
-export default function SpendingBarChart({ data, className = '' }) {
+export default function SpendingBarChart({ data, highlightIndex = data.length - 1, className = '' }) {
   const [hoverIndex, setHoverIndex] = useState(null);
-  const lastIndex = data.length - 1;
 
   const barColor = (index) => {
-    if (index === lastIndex) return colors.brand.DEFAULT;
+    if (index === highlightIndex) return colors.brand.DEFAULT;
     if (index === hoverIndex) return colors.brand.muted;
     return colors.brand.soft;
   };

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { CalendarDays, ChevronDown, Coins, Languages } from 'lucide-react';
 import Card from '../ui/Card.jsx';
 import SegmentedControl from '../ui/SegmentedControl.jsx';
@@ -6,35 +5,33 @@ import SettingRow from './SettingRow.jsx';
 
 /**
  * Карточка «Параметры»: валюта, начало недели и язык.
- * В прототипе выбор только запоминается, интерфейс не перестраивается.
+ * values — текущие настройки, onChange(key, value) — сохранить настройку.
+ * Валюта пересчитывает все суммы по условному курсу, начало недели меняет период «Неделя» в аналитике.
  */
-export default function PreferencesCard({ texts, className = '' }) {
+export default function PreferencesCard({ texts, values, onChange, className = '' }) {
   const { currency, weekStart, language } = texts;
-  const [currencyId, setCurrencyId] = useState(currency.default);
-  const [weekStartId, setWeekStartId] = useState(weekStart.default);
-  const [languageId, setLanguageId] = useState(language.default);
 
   return (
     <Card className={`p-6 ${className}`}>
       <h3 className="text-base font-bold text-ink">{texts.title}</h3>
       <div className="mt-2 divide-y divide-line">
-        <SettingRow icon={Coins} label={currency.label}>
-          <SegmentedControl id="pref-currency" options={currency.options} value={currencyId} onChange={setCurrencyId} />
+        <SettingRow icon={Coins} label={currency.label} hint={currency.hint}>
+          <SegmentedControl id="pref-currency" options={currency.options} value={values.currency} onChange={(v) => onChange('currency', v)} />
         </SettingRow>
         <SettingRow icon={CalendarDays} label={weekStart.label}>
-          <SegmentedControl id="pref-week" options={weekStart.options} value={weekStartId} onChange={setWeekStartId} />
+          <SegmentedControl id="pref-week" options={weekStart.options} value={values.weekStart} onChange={(v) => onChange('weekStart', v)} />
         </SettingRow>
         <SettingRow icon={Languages} label={language.label}>
           {/* Нативный select со своей стрелкой */}
           <div className="relative">
             <select
-              value={languageId}
-              onChange={(e) => setLanguageId(e.target.value)}
+              value={values.language}
+              onChange={(e) => onChange('language', e.target.value)}
               aria-label={language.label}
               className="h-9 cursor-pointer appearance-none rounded-full bg-black/[0.04] pl-4 pr-9 text-xs font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               {language.options.map((option) => (
-                <option key={option.id} value={option.id}>
+                <option key={option.id} value={option.id} disabled={option.disabled}>
                   {option.label}
                 </option>
               ))}

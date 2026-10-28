@@ -3,15 +3,15 @@ import { useAppActions } from '../../context/AppActionsContext.jsx';
 
 /**
  * Маленькая серая ссылка «Все ›» в заголовках блоков.
- * to — экран, на который ведёт ссылка; без него показываем «Скоро будет доступно».
+ * to — экран, на который ведёт ссылка; params — его параметры (например, { categoryId }).
  */
-export default function LinkArrow({ children, to, className = '' }) {
-  const { navigate, notifySoon } = useAppActions();
+export default function LinkArrow({ children, to, params, className = '' }) {
+  const { navigate } = useAppActions();
 
   return (
     <button
       type="button"
-      onClick={() => (to ? navigate(to) : notifySoon())}
+      onClick={() => navigate(to, params)}
       className={`inline-flex items-center gap-0.5 text-xs font-semibold text-ink-muted transition-colors duration-200 hover:text-brand ${className}`}
     >
       {children}
