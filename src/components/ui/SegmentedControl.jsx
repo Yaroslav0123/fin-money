@@ -25,7 +25,7 @@ export default function SegmentedControl({ id, options, value, onChange, classNa
               <IgnorePresence>
                 <motion.span
                   layoutId={`${id}-pill`}
-                  className="absolute inset-0 rounded-full bg-brand"
+                  className="absolute inset-0 rounded-full bg-brand-fill"
                   transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                 />
               </IgnorePresence>

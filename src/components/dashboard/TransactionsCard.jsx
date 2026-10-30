@@ -1,8 +1,9 @@
 import { forwardRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Plus, ReceiptText } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import LinkArrow from '../ui/LinkArrow.jsx';
 import { formatSignedMoney } from '../../utils/format.js';
@@ -54,13 +55,16 @@ export default function TransactionsCard({ transactions, texts, onSelect, onAdd,
       </div>
 
       {transactions.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 py-10 text-center">
-          <p className="text-sm text-ink-muted">{texts.empty}</p>
-          <Button size="sm" pill onClick={onAdd}>
-            <Plus className="h-4 w-4" />
-            {texts.addFirst}
-          </Button>
-        </div>
+        <EmptyState
+          icon={ReceiptText}
+          text={texts.empty}
+          action={
+            <Button size="sm" pill onClick={onAdd}>
+              <Plus className="h-4 w-4" />
+              {texts.addFirst}
+            </Button>
+          }
+        />
       ) : (
         // grid-cols-1: колонка не шире экрана, длинные названия обрезаются многоточием
         <ul className="-mx-2 mt-3 grid grid-cols-1 gap-x-6 md:grid-cols-2">

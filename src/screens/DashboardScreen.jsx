@@ -5,6 +5,7 @@ import BalanceCard from '../components/dashboard/BalanceCard.jsx';
 import BudgetsCard from '../components/dashboard/BudgetsCard.jsx';
 import GoalCard from '../components/dashboard/GoalCard.jsx';
 import SavingsPreviewCard from '../components/dashboard/SavingsPreviewCard.jsx';
+import StatementCard from '../components/dashboard/StatementCard.jsx';
 import TransactionsCard from '../components/dashboard/TransactionsCard.jsx';
 import AmountDialog from '../components/savings/AmountDialog.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
@@ -20,14 +21,16 @@ const featuredGoal = (goals) =>
 
 /**
  * Экран 2. Главная (веб-версия).
- * Сетка: баланс + цель → доходы, расходы, накопления → структура расходов + операции → лимиты категорий.
+ * Сетка: приглашение загрузить выписку (пока ни одной не загружали) → баланс + цель → доходы, расходы, накопления →
+ * самые заполненные лимиты категорий → структура расходов + операции. На телефоне три показателя листаются вбок,
+ * чтобы не занимать три экрана подряд.
  * Всё считается из истории операций за текущий месяц, поэтому сразу учитывает
  * новые, изменённые и удалённые операции, переводы на накопления и пополнения целей.
  * «Перевести» — перевод на накопительный счёт. Настройка «Скрывать баланс» прячет сумму при открытии.
  * onNavigate — переход на другие экраны (например, в «Накопления»).
  */
 export default function DashboardScreen({ onNavigate }) {
-  const { summary, accounts, monthCategories, budgets, transactions, goals, savings, hideBalance, moveSavings, today } = useFinance();
+  const { summary, accounts, monthCategories, budgets, transactions, goals, savings, imports, hideBalance, moveSavings, today } = useFinance();
   // Переводы в накопления идут с основного счёта
   const mainBalance = accounts[0].balance;
   const { openTransaction, openAddTransaction, notify } = useAppActions();
@@ -47,6 +50,11 @@ export default function DashboardScreen({ onNavigate }) {
   return (
     <>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+        {imports.length === 0 && (
+          <Reveal className="xl:col-span-3">
+            <StatementCard texts={DASHBOARD.statement} />
+          </Reveal>
+        )}
         <Reveal className="xl:col-span-2">
           <BalanceCard
             balance={summary.balance}
@@ -61,14 +69,15 @@ export default function DashboardScreen({ onNavigate }) {
           <GoalCard goal={goal} texts={DASHBOARD.goal} onCreate={() => onNavigate('goals')} />
         </Reveal>
 
-        <div className="grid gap-5 sm:grid-cols-3 xl:col-span-3">
-          <Reveal delay={0.1}>
+        {/* На телефоне — лента карточек во всю ширину экрана, начиная с края отступа */}
+        <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 xl:col-span-3">
+          <Reveal delay={0.1} className="w-[72%] shrink-0 snap-start sm:w-auto">
             <StatCard stat={summary.income} className="h-full" />
           </Reveal>
-          <Reveal delay={0.15}>
+          <Reveal delay={0.15} className="w-[72%] shrink-0 snap-start sm:w-auto">
             <StatCard stat={summary.expenses} className="h-full" />
           </Reveal>
-          <Reveal delay={0.2}>
+          <Reveal delay={0.2} className="w-[72%] shrink-0 snap-start sm:w-auto">
             <SavingsPreviewCard
               savings={{ balance: savings.balance, trend: { amount: savings.monthChange, suffix: SAVINGS_PAGE.trendSuffix } }}
               texts={DASHBOARD.savingsCard}
@@ -76,6 +85,15 @@ export default function DashboardScreen({ onNavigate }) {
             />
           </Reveal>
         </div>
+
+        <Reveal delay={0.1} className="xl:col-span-3">
+          <BudgetsCard
+            budgets={budgets}
+            month={monthName(today)}
+            texts={DASHBOARD.budgets}
+            onSetup={() => onNavigate('settings', { section: 'money' })}
+          />
+        </Reveal>
 
         <Reveal delay={0.1}>
           <ExpenseStructureCard
@@ -96,9 +114,6 @@ export default function DashboardScreen({ onNavigate }) {
             onAdd={openAddTransaction}
             className="h-full"
           />
-        </Reveal>
-        <Reveal delay={0.1} className="xl:col-span-3">
-          <BudgetsCard budgets={budgets} month={monthName(today)} texts={DASHBOARD.budgets} onSetup={() => onNavigate('settings')} />
         </Reveal>
       </div>
 

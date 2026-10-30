@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, PieChart } from 'lucide-react';
 import Card from '../ui/Card.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import LinkArrow from '../ui/LinkArrow.jsx';
 import { CATEGORY_BUDGETS } from '../../data/mockData.js';
@@ -27,7 +28,7 @@ export default function CategoryBreakdownCard({ categories, texts, budgetLimits 
         </LinkArrow>
       </div>
 
-      {categories.length === 0 && <p className="py-10 text-center text-sm text-ink-muted">{texts.empty}</p>}
+      {categories.length === 0 && <EmptyState icon={PieChart} text={texts.empty} />}
 
       <ul className="-mx-2 mt-3">
         {categories.map((c) => {

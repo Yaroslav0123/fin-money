@@ -13,7 +13,7 @@ export default function CtaBanner({ appName, onStart }) {
     <section id="about" className="scroll-mt-20">
       <Container className="pb-10">
         <Reveal>
-          <div className="relative flex flex-col items-start justify-between gap-6 overflow-hidden rounded-panel bg-gradient-to-br from-brand-dark to-brand px-8 py-10 sm:flex-row sm:items-center sm:px-10">
+          <div className="relative flex flex-col items-start justify-between gap-6 overflow-hidden rounded-panel bg-gradient-to-br from-brand-dark to-brand-fill px-8 py-10 sm:flex-row sm:items-center sm:px-10">
             {/* Декоративные полупрозрачные круги */}
             <span className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-white/5" />
             <span className="pointer-events-none absolute -bottom-32 right-48 h-72 w-72 rounded-full bg-white/5" />

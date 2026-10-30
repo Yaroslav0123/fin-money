@@ -4,6 +4,7 @@ import { rub } from './money.js';
 import {
   applyCategoryChoice,
   importKey,
+  importReport,
   merchantKey,
   rowsToDrafts,
   TRANSFER_CHOICE,
@@ -229,5 +230,55 @@ describe('автокатегории', () => {
       ['apteka moskva', false, ['a', 'b'], -174],
       ['перевод от и иван петрович', true, ['c'], 1500],
     ]);
+  });
+});
+
+describe('отчёт после импорта', () => {
+  const draft = (type, amount, categoryId, day, extra = {}) => ({
+    type,
+    amount: rub(amount),
+    incoming: type === 'income',
+    categoryId,
+    comment: '',
+    date: new Date(2026, 9, day, 12),
+    ...extra,
+  });
+
+  it('период, итоги, топ категорий без возвратов, крупные траты и «Другое»', () => {
+    const report = importReport(
+      [
+        draft('income', 85000, 'salary', 1),
+        draft('expense', 3000, 'food', 3),
+        draft('expense', 1000, 'food', 4),
+        draft('expense', 500, 'food', 5, { incoming: true }),
+        draft('expense', 2000, 'transport', 6),
+        draft('expense', 1500, 'other', 7),
+        draft('expense', 100, 'fun', 8),
+        draft('transfer', 10000, null, 9),
+      ],
+      DEFAULT_CATEGORIES,
+    );
+    expect(report.count).toBe(8);
+    expect(report.period.from.getDate()).toBe(1);
+    expect(report.period.to.getDate()).toBe(9);
+    expect(report.income).toBe(rub(85000));
+    expect(report.expenses).toBe(rub(7600));
+    expect(report.refunds).toBe(rub(500));
+    expect(report.transfers).toBe(1);
+    // Еда: 3 000 + 1 000 − 500 возврата
+    expect(report.topCategories.map((c) => [c.category.id, c.amount / 100, c.share])).toEqual([
+      ['food', 3500, 46],
+      ['transport', 2000, 26],
+      ['other', 1500, 20],
+    ]);
+    expect(report.largest.map((d) => d.amount / 100)).toEqual([3000, 2000, 1500]);
+    expect(report.otherCount).toBe(1);
+  });
+
+  it('пустой импорт — без периода и категорий', () => {
+    const report = importReport([], DEFAULT_CATEGORIES);
+    expect(report.period).toBeNull();
+    expect(report.topCategories).toEqual([]);
+    expect(report.expenses).toBe(0);
   });
 });

@@ -95,8 +95,14 @@ test('PDF-выписка Сбербанка (образец с вымышлен�
   await dialog.getByRole('button', { name: 'Импортировать' }).click();
   await expect(page.getByRole('status').getByText('Импортировано операций: 16')).toBeVisible();
 
-  // Остались без категории: перевод человеку, аптека и входящий перевод
-  await page.getByRole('button', { name: 'Разобрать «Другое» (3)' }).click();
+  // Отчёт «Что нашли в выписке»: период, главная категория и сколько осталось без категории
+  await expect(dialog.getByText('Что нашли в выписке')).toBeVisible();
+  await expect(dialog.getByText(/1 сентября — 20 октября 2026/)).toBeVisible();
+  await expect(dialog.getByText('Больше всего потратили')).toBeVisible();
+  await expect(dialog.getByText(/Без своей категории: 3 операции/)).toBeVisible();
+
+  // Остались без категории: перевод человеку, аптека и входящий перевод — разбираем прямо из отчёта
+  await dialog.getByRole('button', { name: 'Разобрать «Другое»' }).click();
   const sort = page.getByRole('dialog', { name: 'Разобрать «Другое»' });
   await sort.getByLabel(/APTEKA/).selectOption({ label: 'Развлечения' });
   await sort.getByLabel(/Перевод от/).selectOption({ label: 'Подарок' });
@@ -158,6 +164,7 @@ test('выписка банка: проверка строк, импорт и е
   await expect(dialog.getByText('К импорту: 2 из 3')).toBeVisible();
   await dialog.getByRole('button', { name: 'Импортировать' }).click();
   await expect(page.getByRole('status').getByText('Импортировано операций: 2')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Готово' }).click();
 
   // 142 560 − 350 − 5 000
   const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
@@ -165,6 +172,7 @@ test('выписка банка: проверка строк, импорт и е
   await expect(page.getByRole('main').getByText(money('137 210')).first()).toBeVisible();
 
   await nav.getByRole('button', { name: 'Настройки' }).click();
+  await page.getByRole('tab', { name: 'Данные' }).click();
   await page.getByRole('button', { name: 'Отменить импорт bank.csv' }).click();
   await page.getByRole('dialog', { name: 'Отменить импорт «bank.csv»?' }).getByRole('button', { name: 'Удалить операции' }).click();
   await expect(page.getByText('Выписок пока не загружали.')).toBeVisible();
@@ -204,6 +212,7 @@ test('несколько счетов: остаток с копейками, в�
   await importDialog.locator('input[type="file"]').setInputFiles({ name: 'cash.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
   await expect(importDialog.getByText('cash.csv · Счёт: Наличные')).toBeVisible();
   await importDialog.getByRole('button', { name: 'Импортировать' }).click();
+  await importDialog.getByRole('button', { name: 'Готово' }).click();
   await expect(page.getByText('Рынок').first()).toBeVisible();
   await expect(page.getByText(/· Наличные/).first()).toBeVisible();
 
@@ -260,4 +269,40 @@ test('бюджеты по категориям и сверка счёта с б�
 
   await nav.getByRole('button', { name: 'Главная' }).click();
   await expect(main.getByText(money('142 070,50')).first()).toBeVisible();
+});
+
+test('пример выписки с лендинга: чистый счёт, импорт и отчёт', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Попробовать на примере выписки' }).first().click();
+
+  // Первый визит: знакомство не показывается, сразу окно импорта с образцом
+  const dialog = page.getByRole('dialog', { name: 'Импорт выписки' });
+  await expect(dialog.getByText('К импорту: 16 из 16')).toBeVisible();
+  await expect(dialog.getByRole('list', { name: 'Шаги импорта' }).getByRole('listitem').nth(1)).toHaveAttribute('aria-current', 'step');
+  await dialog.getByRole('button', { name: 'Импортировать' }).click();
+  await expect(dialog.getByText('Что нашли в выписке')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Открыть аналитику' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Аналитика' })).toBeVisible();
+
+  // Счёт был пустым: на «Главной» только выписка (20 000 ₽ до неё не было — баланс без начального остатка)
+  const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
+  await nav.getByRole('button', { name: 'Главная' }).click();
+  await expect(page.getByRole('main').getByText(money('142 055,60')).first()).toBeVisible();
+  // Выписка загружена — приглашение загрузить её больше не показывается
+  await expect(page.getByRole('heading', { name: 'Загрузите выписку из банка' })).toHaveCount(0);
+});
+
+test('настройки разбиты на разделы, профиль в шапке открывает «Профиль»', async ({ page }) => {
+  await openAppWithDemo(page);
+  const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
+  await nav.getByRole('button', { name: 'Настройки' }).click();
+  await expect(page.getByRole('tab', { name: 'Деньги' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Счета' })).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Приложение' }).click();
+  await expect(page.getByRole('heading', { name: 'Параметры' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Счета' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Профиль', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'Профиль' })).toHaveAttribute('aria-selected', 'true');
 });

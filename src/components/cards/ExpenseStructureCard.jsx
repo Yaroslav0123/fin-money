@@ -1,6 +1,8 @@
 import DonutLegend from '../charts/DonutLegend.jsx';
 import { ExpenseDonut } from '../charts/lazy.jsx';
+import { PieChart } from 'lucide-react';
 import Card from '../ui/Card.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
 import LinkArrow from '../ui/LinkArrow.jsx';
 import { formatMoney } from '../../utils/format.js';
 
@@ -14,7 +16,7 @@ export default function ExpenseStructureCard({ title, caption, allLink, emptyTex
         <LinkArrow to="analytics">{allLink}</LinkArrow>
       </div>
       {categories.length === 0 && emptyText ? (
-        <p className="py-12 text-center text-sm text-ink-muted">{emptyText}</p>
+        <EmptyState icon={PieChart} text={emptyText} />
       ) : (
         <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row">
           <ExpenseDonut

@@ -1,17 +1,27 @@
-import { useRef, useState } from 'react';
-import { FileUp } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, FileUp } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import Modal from '../ui/Modal.jsx';
+import { useAppActions } from '../../context/AppActionsContext.jsx';
 import { useFinance } from '../../context/FinanceContext.jsx';
 import { CATEGORY_ICONS, IMPORT_DIALOG, IMPORT_TRANSFER } from '../../data/mockData.js';
 import { formatDay } from '../../utils/dates.js';
 import { sberLinesToRows } from '../../utils/bankPdf.js';
 import { decodeCsv, parseCsv } from '../../utils/csv.js';
 import { fillTemplate, formatMoney, formatSignedMoney } from '../../utils/format.js';
-import { applyCategoryChoice, categoryChoiceOf, rowsToDrafts, signedDraftAmount, withImportCategories } from '../../utils/statement.js';
+import { loadSampleStatement, SAMPLE_STATEMENT } from '../../utils/sample.js';
+import {
+  applyCategoryChoice,
+  categoryChoiceOf,
+  importReport,
+  rowsToDrafts,
+  signedDraftAmount,
+  withImportCategories,
+} from '../../utils/statement.js';
 import AccountSelect from './AccountSelect.jsx';
 import CategorySelect from './CategorySelect.jsx';
+import ImportReport from './ImportReport.jsx';
 
 // Сколько строк предпросмотра показывать за раз
 const PAGE_SIZE = 30;
@@ -26,16 +36,48 @@ const readRows = async (file) => {
   return sberLinesToRows(await pdfToLines(buffer));
 };
 
+// Шаги над содержимым окна: «Файл → Проверка → Итог»
+function ImportSteps({ current }) {
+  const t = IMPORT_DIALOG;
+  return (
+    <ol aria-label={t.stepsLabel} className="mb-5 flex items-center gap-2 text-xs font-semibold">
+      {t.steps.map((label, index) => {
+        const isDone = index < current;
+        const isCurrent = index === current;
+        return (
+          <li key={label} aria-current={isCurrent ? 'step' : undefined} className="flex min-w-0 flex-1 items-center gap-2 last:flex-none">
+            <span
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors duration-300 ${
+                isDone ? 'bg-brand-fill text-white' : isCurrent ? 'bg-brand-light text-brand ring-2 ring-brand' : 'bg-ink/5 text-ink-muted'
+              }`}
+            >
+              {isDone ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : index + 1}
+            </span>
+            <span className={isDone || isCurrent ? 'text-ink' : 'text-ink-muted'}>{label}</span>
+            {index < t.steps.length - 1 && <span className={`h-0.5 min-w-3 flex-1 rounded-full ${isDone ? 'bg-brand' : 'bg-ink/10'}`} />}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 /**
- * Импорт выписки (PDF Сбербанка или CSV): выбор или перетаскивание файла → проверка всех строк → подтверждение.
+ * Импорт выписки (PDF Сбербанка или CSV): выбор или перетаскивание файла → проверка всех строк → итог.
+ * Окно одно на всё приложение (AppActionsContext.openImport) и монтируется заново при каждом открытии.
+ * source — файл, который уже выбрали (перетащили на «Главную»), или функция, которая его загрузит (пример выписки);
+ * без source окно начинается с выбора файла.
  * В предпросмотре у каждой строки можно сменить категорию (или сделать её переводом между своими счетами)
  * и снять галочку. Новая категория сразу ставится похожим строкам (тот же магазин) и запоминается
  * правилом для следующих выписок. Строки, которые не попадут в импорт, перечислены с причиной.
  * Если счетов несколько, сначала выбирается счёт выписки: повторы ищутся среди его операций, туда же попадёт импорт.
- * Файл читается прямо в браузере и никуда не отправляется. onDone(count) — сколько операций добавлено.
+ * После импорта окно показывает отчёт «Что нашли в выписке»: период, итоги, главные категории, крупные траты
+ * и сколько осталось в «Другом» — с переходом к разбору и к аналитике.
+ * Файл читается прямо в браузере и никуда не отправляется. onImported(count) — сколько операций добавлено.
  */
-export default function ImportDialog({ isOpen, onClose, onDone }) {
+export default function ImportDialog({ isOpen, source = null, onClose, onImported }) {
   const { categories, rawTransactions, addTransactions, categoryRules, accounts } = useFinance();
+  const { navigate } = useAppActions();
   const [accountId, setAccountId] = useState(accounts[0].id);
   const account = accounts.find((a) => a.id === accountId) ?? accounts[0];
   // { fileName, error } или { fileName, items: [{ line, status, reason?, draft?, cells, key, include, touched }], rules: { [key]: rule } }
@@ -43,7 +85,10 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isDragging, setIsDragging] = useState(false);
   const [isReading, setIsReading] = useState(false);
+  // Итог импорта (importReport) — третий шаг окна
+  const [report, setReport] = useState(null);
   const inputRef = useRef(null);
+  const sourceRead = useRef(false);
   const t = IMPORT_DIALOG;
 
   // Свои категории + «Прочие доходы», если их ещё нет (добавятся при импорте)
@@ -54,6 +99,7 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
 
   const reset = () => {
     setResult(null);
+    setReport(null);
     setVisibleCount(PAGE_SIZE);
     setIsDragging(false);
     if (inputRef.current) inputRef.current.value = '';
@@ -64,10 +110,22 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
     onClose();
   };
 
-  const readFile = async (file) => {
-    if (!file) return;
+  // file — файл или функция, которая его загрузит (пример выписки)
+  const readFile = async (fileOrLoader) => {
+    if (!fileOrLoader) return;
     setIsReading(true);
+    let file = { name: SAMPLE_STATEMENT };
     try {
+      if (typeof fileOrLoader === 'function') {
+        try {
+          file = await fileOrLoader();
+        } catch {
+          setResult({ fileName: file.name, error: 'sampleError' });
+          return;
+        }
+      } else {
+        file = fileOrLoader;
+      }
       const rows = await readRows(file);
       const existing = rawTransactions.filter((tx) => tx.accountId === account.id);
       const parsed = rowsToDrafts(rows, { categories, existing, rules: categoryRules });
@@ -84,6 +142,14 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
       setIsReading(false);
     }
   };
+
+  // Файл, переданный при открытии, читаем сразу (один раз — в режиме разработки эффект запускается дважды)
+  useEffect(() => {
+    if (!source || sourceRead.current) return;
+    sourceRead.current = true;
+    readFile(source);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- только при открытии окна
+  }, []);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -117,9 +183,14 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
 
   const handleImport = () => {
     addTransactions(included, { fileName: result.fileName, rules: newRules, accountId: account.id });
-    const count = included.length;
-    reset();
-    onDone(count);
+    setReport(importReport(included, importCategories));
+    onImported(included.length);
+  };
+
+  // Из отчёта — к разбору «Другого» или в аналитику
+  const goTo = (screen, params) => {
+    handleClose();
+    navigate(screen, params);
   };
 
   // Итоги выбранных строк. Возвраты показываем отдельно (они уменьшат расходы), переводы не входят никуда.
@@ -144,8 +215,11 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
   };
 
   return (
-    <Modal isOpen={isOpen} title={t.title} onClose={handleClose} closeLabel={t.cancel} size={result?.items ? 'lg' : 'md'}>
-      {!result ? (
+    <Modal isOpen={isOpen} title={t.title} onClose={handleClose} closeLabel={t.cancel} size={result?.items && !report ? 'lg' : 'md'}>
+      <ImportSteps current={report ? 2 : result ? 1 : 0} />
+      {report ? (
+        <ImportReport report={report} onSort={() => goTo('transactions', { sort: true })} onAnalytics={() => goTo('analytics')} onFinish={handleClose} />
+      ) : !result ? (
         <>
           <p className="text-sm leading-relaxed text-ink-secondary">{t.hint}</p>
           {accounts.length > 1 && (
@@ -172,7 +246,7 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
             <span className="text-sm font-semibold text-ink" role="status">
               {isReading ? t.reading : isDragging ? t.dropActive : t.dropLabel}
             </span>
-            <span className="rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white">{t.chooseFile}</span>
+            <span className="rounded-full bg-brand-fill px-4 py-2 text-xs font-semibold text-white">{t.chooseFile}</span>
             <input
               ref={inputRef}
               type="file"
@@ -182,6 +256,12 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
               onChange={(e) => readFile(e.target.files[0])}
             />
           </label>
+          <p className="mt-3 text-center text-xs text-ink-muted">
+            {t.sampleHint}{' '}
+            <button type="button" disabled={isReading} onClick={() => readFile(loadSampleStatement)} className="font-semibold text-brand hover:underline">
+              {t.sampleAction}
+            </button>
+          </p>
         </>
       ) : (
         <>

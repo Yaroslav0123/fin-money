@@ -1,4 +1,6 @@
+import { Target } from 'lucide-react';
 import Card from '../ui/Card.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import LinkArrow from '../ui/LinkArrow.jsx';
 import ProgressBar from '../ui/ProgressBar.jsx';
@@ -13,7 +15,7 @@ export default function GoalsListCard({ goals, texts, className = '' }) {
         <LinkArrow to="goals">{texts.allLink}</LinkArrow>
       </div>
 
-      {goals.length === 0 && <p className="py-8 text-center text-sm text-ink-muted">{texts.empty}</p>}
+      {goals.length === 0 && <EmptyState icon={Target} text={texts.empty} />}
       <ul className="mt-5 space-y-5">
         {goals.map((goal) => {
           const percent = Math.min(100, toPercent(goal.saved, goal.target));

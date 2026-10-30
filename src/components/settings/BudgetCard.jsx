@@ -41,9 +41,10 @@ export default function BudgetCard({ spent, limit, month, texts, onLimitChange, 
       />
 
       <div className="mt-auto pt-6">
-        <div className="flex items-center justify-between gap-3 text-xs">
+        {/* В узкой колонке сумма уходит под подпись целиком, а не отрывает «₽» */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
           <span className="text-ink-muted">{fillTemplate(texts.spentLabel, { month })}</span>
-          <span className="text-right font-semibold text-ink">
+          <span className="whitespace-nowrap font-semibold text-ink">
             {formatMoney(spent)} {texts.of} {formatMoney(limit)}
           </span>
         </div>

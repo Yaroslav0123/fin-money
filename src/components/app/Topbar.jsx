@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Moon, Plus, Search, Sun, User } from 'lucide-react';
+import { Bell, Moon, Plus, Search, Sun, Upload, User } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import LeafMark from '../ui/LeafMark.jsx';
 import { APP_SHELL } from '../../data/mockData.js';
@@ -10,8 +10,9 @@ import { APP_SHELL } from '../../data/mockData.js';
  * onSearch(query) — поиск по операциям (открывает экран «Операции» с запросом).
  * hasNotifications — показать красную точку на колокольчике.
  * theme — { isDark, toggleLabel, onToggle }: быстрое переключение светлой и тёмной темы.
+ * onImport — загрузка выписки (на самых широких экранах — с подписью, иначе круглая кнопка).
  */
-export default function Topbar({ title, subtitle, onExit, onAdd, onProfile, onSearch, hasNotifications, onNotifications, theme }) {
+export default function Topbar({ title, subtitle, onExit, onAdd, onImport, onProfile, onSearch, hasNotifications, onNotifications, theme }) {
   const ThemeIcon = theme.isDark ? Sun : Moon;
   const [query, setQuery] = useState('');
 
@@ -57,6 +58,17 @@ export default function Topbar({ title, subtitle, onExit, onAdd, onProfile, onSe
             className="hidden h-11 w-11 items-center justify-center rounded-full bg-card text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light min-[400px]:flex"
           >
             <ThemeIcon className="h-5 w-5" />
+          </button>
+
+          <button
+            type="button"
+            aria-label={APP_SHELL.importAction}
+            title={APP_SHELL.importAction}
+            onClick={onImport}
+            className="flex h-11 w-11 items-center justify-center gap-2 rounded-full bg-card text-sm font-semibold text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light 2xl:w-auto 2xl:px-5"
+          >
+            <Upload className="h-5 w-5 shrink-0" />
+            <span className="hidden 2xl:inline">{APP_SHELL.importAction}</span>
           </button>
 
           <button

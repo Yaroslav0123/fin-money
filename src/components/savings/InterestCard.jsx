@@ -4,7 +4,7 @@ import { formatMoney } from '../../utils/format.js';
 // Тёмно-зелёная карточка «Доход по процентам»
 export default function InterestCard({ texts }) {
   return (
-    <div className="relative flex h-full flex-col overflow-hidden rounded-card bg-gradient-to-br from-brand-dark to-brand p-6 text-white sm:p-8">
+    <div className="relative flex h-full flex-col overflow-hidden rounded-card bg-gradient-to-br from-brand-dark to-brand-fill p-6 text-white sm:p-8">
       {/* Декоративный круг */}
       <span className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-white/5" />
 

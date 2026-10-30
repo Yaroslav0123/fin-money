@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pencil, Plus } from 'lucide-react';
+import { Gauge, Pencil, Plus } from 'lucide-react';
 import BudgetMeter from '../budgets/BudgetMeter.jsx';
 import CategoryBudgetDialog from '../budgets/CategoryBudgetDialog.jsx';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
 import { useAppActions } from '../../context/AppActionsContext.jsx';
 import { useFinance } from '../../context/FinanceContext.jsx';
 import { CATEGORY_BUDGETS } from '../../data/mockData.js';
@@ -56,7 +57,7 @@ export default function CategoryBudgetsCard({ className = '' }) {
       <p className="mt-1 text-xs leading-relaxed text-ink-muted">{t.description}</p>
 
       {budgets.length === 0 ? (
-        <p className="py-8 text-center text-sm text-ink-muted">{t.empty}</p>
+        <EmptyState icon={Gauge} text={t.empty} />
       ) : (
         <ul className="mt-3 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
           {budgets.map((budget) => (

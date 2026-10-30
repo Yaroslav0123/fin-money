@@ -53,7 +53,7 @@ export default function Sidebar({ activeScreen, onNavigate, onExit }) {
       </nav>
 
       {/* Промо-карточка накопительного счёта */}
-      <div className="mt-auto overflow-hidden rounded-card bg-gradient-to-br from-brand-dark to-brand p-5 text-white">
+      <div className="mt-auto overflow-hidden rounded-card bg-gradient-to-br from-brand-dark to-brand-fill p-5 text-white">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
           <PiggyBank className="h-5 w-5" />
         </span>

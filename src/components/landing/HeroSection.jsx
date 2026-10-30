@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Target } from 'lucide-react';
+import { ArrowRight, FileText, Target } from 'lucide-react';
 import Button3D from '../ui/Button3D.jsx';
 import Container from './Container.jsx';
 import LaptopMockup from './LaptopMockup.jsx';
@@ -32,9 +32,10 @@ function FloatingLeaf({ className, delay = 0 }) {
 }
 
 /**
- * Первый экран лендинга: заголовок, описание, кнопка и превью приложения на ноутбуке.
+ * Первый экран лендинга: заголовок, описание, кнопки и превью приложения на ноутбуке.
+ * onStart — «Мои финансы», onTrySample — открыть приложение и загрузить пример выписки.
  */
-export default function HeroSection({ appName, onStart }) {
+export default function HeroSection({ appName, onStart, onTrySample }) {
   const { hero } = LANDING;
 
   return (
@@ -78,11 +79,19 @@ export default function HeroSection({ appName, onStart }) {
           </motion.p>
 
           {/* Главное действие сайта — крупная объёмная кнопка */}
-          <motion.div variants={item} className="mt-10">
+          <motion.div variants={item} className="mt-10 flex flex-col items-start gap-4">
             <Button3D onClick={onStart} className="w-full sm:w-72">
               {hero.action}
               <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
             </Button3D>
+            <button
+              type="button"
+              onClick={onTrySample}
+              className="inline-flex items-center gap-2 rounded-full px-1 text-sm font-semibold text-brand transition-colors duration-200 hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <FileText className="h-4 w-4" />
+              {hero.sampleAction}
+            </button>
           </motion.div>
         </motion.div>
 

@@ -6,12 +6,13 @@
  *
  * Запуск: node scripts/make-sber-sample.js (PDF печатает Chromium из Playwright;
  * если скачанный Chromium не запускается, PW_CHANNEL=chrome — установленный Chrome).
- * Результат: samples/sber-vypiska-primer.pdf
+ * Результат: samples/sber-vypiska-primer.pdf и его копия в public/ (кнопки «Пример выписки» на сайте и в приложении)
  */
-import { mkdir } from 'node:fs/promises';
+import { copyFile, mkdir } from 'node:fs/promises';
 import { chromium } from '@playwright/test';
 
 const OUTPUT = 'samples/sber-vypiska-primer.pdf';
+const PUBLIC_COPY = 'public/sber-vypiska-primer.pdf';
 const OPENING_BALANCE = 20000;
 
 // [дата и время, категория, сумма со знаком, код авторизации, описание]
@@ -87,4 +88,5 @@ await page.setContent(html);
 await mkdir('samples', { recursive: true });
 await page.pdf({ path: OUTPUT, format: 'A4', margin: { top: '15mm', bottom: '15mm', left: '12mm', right: '12mm' } });
 await browser.close();
+await copyFile(OUTPUT, PUBLIC_COPY);
 console.log(`Готово: ${OUTPUT}, операций: ${OPERATIONS.length}`);

@@ -9,6 +9,8 @@
 export const palettes = {
   light: {
     brand: '#1A5D46',
+    // Заливка под белым текстом (кнопки, активные вкладки); в светлой теме совпадает с brand
+    'brand-fill': '#1A5D46',
     'brand-dark': '#134634',
     'brand-light': '#E7F1EC',
     'brand-soft': '#CFE3D8',
@@ -27,8 +29,11 @@ export const palettes = {
     overlay: '#14201B', // затемнение под окнами
   },
   dark: {
-    brand: '#2E9470',
-    'brand-dark': '#237A5B',
+    // brand — для текста и графиков (контраст 4.5:1 на card и brand-light),
+    // brand-fill — под белым текстом (5:1); на brand белый текст читался бы плохо
+    brand: '#38A880',
+    'brand-fill': '#237A5B',
+    'brand-dark': '#1D6A4F',
     'brand-light': '#1C2E27',
     'brand-soft': '#24443A',
     'brand-muted': '#4E8C72',
@@ -65,6 +70,7 @@ const themed = (token) => `rgb(var(--c-${token}) / <alpha-value>)`;
 export const tailwindColors = {
   brand: {
     DEFAULT: themed('brand'),
+    fill: themed('brand-fill'),
     dark: themed('brand-dark'),
     light: themed('brand-light'),
     soft: themed('brand-soft'),

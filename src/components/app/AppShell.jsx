@@ -21,12 +21,12 @@ const greetingFor = (date) => {
 /**
  * Каркас веб-приложения: боковое меню (десктоп), верхняя панель,
  * область контента и нижняя навигация (мобильные).
- * «Добавить операцию» открывает общий диалог (AppActionsContext) — и кнопкой в шапке,
+ * «Загрузить выписку» и «Добавить операцию» открывают общие диалоги (AppActionsContext). Операцию — и кнопкой в шапке,
  * и круглой «+» в нижней панели. При первом входе показывается знакомство с приложением.
  * onExit — возврат на лендинг.
  */
 export default function AppShell({ activeScreen, onNavigate, onExit, children }) {
-  const { openAddTransaction } = useAppActions();
+  const { openAddTransaction, openImport } = useAppActions();
   const { today, rawTransactions, goals, summary, budgets, settings, onboardingDone, isDark, setSetting } = useFinance();
   const themeTexts = SETTINGS_PAGE.preferences.theme;
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -53,7 +53,7 @@ export default function AppShell({ activeScreen, onNavigate, onExit, children })
       {/* Для клавиатуры: первая же клавиша Tab предлагает пропустить меню */}
       <a
         href="#main"
-        className="sr-only z-[80] rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        className="sr-only z-[80] rounded-full bg-brand-fill px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
         {APP_SHELL.skipLink}
       </a>
@@ -65,7 +65,8 @@ export default function AppShell({ activeScreen, onNavigate, onExit, children })
           subtitle={subtitle}
           onExit={onExit}
           onAdd={openAddTransaction}
-          onProfile={() => onNavigate('settings')}
+          onImport={() => openImport()}
+          onProfile={() => onNavigate('settings', { section: 'profile' })}
           onSearch={(query) => onNavigate('transactions', { query })}
           hasNotifications={notifications.length > 0}
           onNotifications={() => setIsNotificationsOpen(true)}

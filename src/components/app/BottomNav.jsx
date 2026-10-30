@@ -20,7 +20,7 @@ export default function BottomNav({ activeScreen, onNavigate, onAdd }) {
                   whileTap={{ scale: 0.92 }}
                   aria-label={item.label}
                   onClick={onAdd}
-                  className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-button ring-4 ring-surface"
+                  className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-brand-fill text-white shadow-button ring-4 ring-surface"
                 >
                   <Plus className="h-6 w-6" strokeWidth={2.5} />
                 </motion.button>

@@ -74,7 +74,7 @@ export default function App() {
       case 'goals':
         return <GoalsScreen />;
       case 'settings':
-        return <SettingsScreen onLogout={exitToLanding} />;
+        return <SettingsScreen params={route.params} onLogout={exitToLanding} />;
       case 'transactions':
         return <TransactionsScreen params={route.params} />;
       default:

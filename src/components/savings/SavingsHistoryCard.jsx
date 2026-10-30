@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { History } from 'lucide-react';
 import Card from '../ui/Card.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import SegmentedControl from '../ui/SegmentedControl.jsx';
 import { formatSignedMoney } from '../../utils/format.js';
@@ -59,7 +61,7 @@ export default function SavingsHistoryCard({ transactions, types, texts, classNa
       </ul>
 
       {visible.length === 0 && (
-        <p className="py-8 text-center text-sm text-ink-muted">{transactions.length === 0 ? texts.emptyAll : texts.empty}</p>
+        <EmptyState icon={History} text={transactions.length === 0 ? texts.emptyAll : texts.empty} />
       )}
     </Card>
   );

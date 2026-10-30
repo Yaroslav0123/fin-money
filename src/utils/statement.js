@@ -233,3 +233,45 @@ export function uncategorizedGroups(transactions, categories) {
   }
   return [...groups.values()].sort((a, b) => b.ids.length - a.ids.length || Math.abs(b.total) - Math.abs(a.total));
 }
+
+// Сколько категорий и крупных трат показывать в отчёте после импорта
+const REPORT_TOP = 3;
+
+/**
+ * Отчёт «Что нашли в выписке» по импортированным черновикам (см. rowsToDrafts).
+ * Возвращает { count, period: { from, to } | null, income, expenses, refunds, transfers,
+ * topCategories: [{ category, amount, share }], largest: [draft], otherCount }.
+ * expenses — списания по покупкам без возвратов; в категориях возвраты уже вычтены.
+ * otherCount — сколько операций попало в «Другое» или «Прочие доходы» (их стоит разобрать).
+ */
+export function importReport(drafts, categories) {
+  const byId = Object.fromEntries(categories.map((c) => [c.id, c]));
+  const times = drafts.map((d) => d.date.getTime());
+  const sum = (list) => list.reduce((total, d) => total + d.amount, 0);
+  const purchases = drafts.filter((d) => d.type === 'expense' && !d.incoming);
+  const refundList = drafts.filter((d) => d.type === 'expense' && d.incoming);
+  const expenses = sum(purchases);
+
+  // Траты по категориям за вычетом возвратов
+  const byCategory = new Map();
+  for (const d of [...purchases, ...refundList]) {
+    byCategory.set(d.categoryId, (byCategory.get(d.categoryId) ?? 0) + (d.incoming ? -d.amount : d.amount));
+  }
+  const topCategories = [...byCategory.entries()]
+    .filter(([id, amount]) => amount > 0 && byId[id])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, REPORT_TOP)
+    .map(([id, amount]) => ({ category: byId[id], amount, share: expenses > 0 ? Math.round((amount / expenses) * 100) : 0 }));
+
+  return {
+    count: drafts.length,
+    period: drafts.length ? { from: new Date(Math.min(...times)), to: new Date(Math.max(...times)) } : null,
+    income: sum(drafts.filter((d) => d.type === 'income')),
+    expenses,
+    refunds: sum(refundList),
+    transfers: drafts.filter((d) => d.type === 'transfer').length,
+    topCategories,
+    largest: [...purchases].sort((a, b) => b.amount - a.amount).slice(0, REPORT_TOP),
+    otherCount: drafts.filter((d) => d.type !== 'transfer' && (byId[d.categoryId]?.iconId ?? 'other') === 'other').length,
+  };
+}

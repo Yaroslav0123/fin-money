@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 
 // Варианты оформления кнопки
 const VARIANTS = {
-  primary: 'bg-brand text-white shadow-button hover:bg-brand-dark',
+  primary: 'bg-brand-fill text-white shadow-button hover:bg-brand-dark',
   secondary: 'bg-ink/5 text-ink hover:bg-ink/10',
   ghost: 'bg-transparent text-brand hover:bg-brand-light',
   // Контурная светлая — для тёмных фонов (баннер внизу лендинга)

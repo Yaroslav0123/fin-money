@@ -14,8 +14,10 @@
     scroll-behavior: smooth;
   }
 
+  /* Цифры одинаковой ширины: суммы в списках и таблицах стоят ровно, не «прыгают» при изменении */
   body {
     @apply bg-canvas font-sans text-ink antialiased;
+    font-variant-numeric: tabular-nums;
     -webkit-tap-highlight-color: transparent;
   }
 }
@@ -120,7 +122,7 @@
   }
 
   .twist-btn__strips .twist-btn__face--front {
-    @apply bg-brand;
+    @apply bg-brand-fill;
   }
   .twist-btn__strips .twist-btn__face--back {
     @apply bg-brand-soft;
@@ -130,6 +132,10 @@
   }
   .twist-btn__label .twist-btn__face--back {
     @apply text-brand-dark;
+  }
+  /* В тёмной теме тёмно-зелёный на brand-soft не читается — светлый текст */
+  .dark .twist-btn__label .twist-btn__face--back {
+    @apply text-ink;
   }
 
   /* Скругляем только внешние края крайних полос */

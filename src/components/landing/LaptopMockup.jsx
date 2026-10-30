@@ -98,7 +98,7 @@ function PreviewSavings({ savings, savingsIcon }) {
         <p className="text-[1.6em] font-bold">{formatMoney(savings.balance)}</p>
         <TrendBadge trend={savings.trend} size="em" />
       </div>
-      <div className="rounded-[0.7em] bg-brand py-[0.7em] text-center font-semibold text-white">
+      <div className="rounded-[0.7em] bg-brand-fill py-[0.7em] text-center font-semibold text-white">
         {savings.depositAction}
       </div>
     </div>

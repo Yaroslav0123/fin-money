@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { ChevronDown, Download, Plus, Search, Sparkles, Upload, X } from 'lucide-react';
+import { ChevronDown, Download, Plus, ReceiptText, Search, SearchX, Sparkles, Upload, X } from 'lucide-react';
 import AccountSelect from '../components/app/AccountSelect.jsx';
-import ImportDialog from '../components/app/ImportDialog.jsx';
 import SortOtherDialog from '../components/app/SortOtherDialog.jsx';
 import { TransactionRow } from '../components/dashboard/TransactionsCard.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
 import SegmentedControl from '../components/ui/SegmentedControl.jsx';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
-import { CSV_TEXTS, IMPORT_DIALOG, SORT_OTHER_DIALOG, TRANSACTIONS_PAGE } from '../data/mockData.js';
+import { CSV_TEXTS, SORT_OTHER_DIALOG, TRANSACTIONS_PAGE } from '../data/mockData.js';
 import { toCsv } from '../utils/csv.js';
 import { formatGroupDate, startOfDay, toDateInputValue } from '../utils/dates.js';
 import { downloadFile } from '../utils/download.js';
@@ -28,13 +28,12 @@ const matchesQuery = (tx, query) =>
  * Экран «Операции»: вся история счетов с поиском и фильтрами (по счёту — если счетов несколько).
  * Операции сгруппированы по дням; по нажатию открываются на изменение или удаление.
  * params — начальные условия: { query } из поиска в шапке, { categoryId } или { type }
- * из «Аналитики».
+ * из «Аналитики», { sort: true } — сразу открыть разбор «Другого» (из отчёта после импорта).
  */
 export default function TransactionsScreen({ params = {} }) {
   const { transactions, categories, accounts, today } = useFinance();
-  const { openTransaction, openAddTransaction, notify } = useAppActions();
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [isSortOpen, setIsSortOpen] = useState(false);
+  const { openTransaction, openAddTransaction, openImport, notify } = useAppActions();
+  const [isSortOpen, setIsSortOpen] = useState(Boolean(params.sort));
   const t = TRANSACTIONS_PAGE;
 
   // Импортированные операции без своей категории — для «Разобрать „Другое“»
@@ -104,7 +103,7 @@ export default function TransactionsScreen({ params = {} }) {
             {t.sortAction} ({otherCount})
           </Button>
         )}
-        <Button size="sm" pill variant="secondary" onClick={() => setIsImportOpen(true)}>
+        <Button size="sm" pill variant="secondary" onClick={() => openImport()}>
           <Upload className="h-4 w-4" />
           {t.importAction}
         </Button>
@@ -190,15 +189,25 @@ export default function TransactionsScreen({ params = {} }) {
       <Reveal delay={0.1}>
         <Card className="p-4 sm:p-6">
           {transactions.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-12 text-center">
-              <p className="text-sm text-ink-muted">{t.emptyAll}</p>
-              <Button size="sm" pill onClick={openAddTransaction}>
-                <Plus className="h-4 w-4" />
-                {t.addFirst}
-              </Button>
-            </div>
+            <EmptyState
+              icon={ReceiptText}
+              text={t.emptyAll}
+              className="py-12"
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button size="sm" pill onClick={() => openImport()}>
+                    <Upload className="h-4 w-4" />
+                    {t.importAction}
+                  </Button>
+                  <Button size="sm" pill variant="secondary" onClick={openAddTransaction}>
+                    <Plus className="h-4 w-4" />
+                    {t.addFirst}
+                  </Button>
+                </div>
+              }
+            />
           ) : filtered.length === 0 ? (
-            <p className="py-12 text-center text-sm text-ink-muted">{t.empty}</p>
+            <EmptyState icon={SearchX} text={t.empty} className="py-12" />
           ) : (
             <div className="space-y-5">
               {groups.map((group) => (
@@ -223,14 +232,6 @@ export default function TransactionsScreen({ params = {} }) {
         </Card>
       </Reveal>
 
-      <ImportDialog
-        isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
-        onDone={(count) => {
-          setIsImportOpen(false);
-          notify(fillTemplate(IMPORT_DIALOG.done, { count }));
-        }}
-      />
       <SortOtherDialog
         isOpen={isSortOpen}
         groups={otherGroups}
