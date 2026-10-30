@@ -4,6 +4,8 @@ import {
   CATEGORY_ICONS,
   GOAL_TRANSFER,
   GOALS_PAGE,
+  IMPORT_FALLBACK_INCOME,
+  IMPORT_TRANSFER,
   SAVINGS_PAGE,
   SAVINGS_TRANSFER,
   SAVINGS_TX_TYPES,
@@ -13,6 +15,7 @@ import {
 import { formatDay, formatFullDate, formatTransactionDate } from '../utils/dates.js';
 import { categoryBreakdown, goalMonthsLeft, isGoalDone, monthSummary, savingsStats } from '../utils/finance.js';
 import { setDisplayCurrency } from '../utils/format.js';
+import { signedDraftAmount } from '../utils/statement.js';
 import { clearFinanceState, loadFinanceState, saveFinanceState } from './financeStorage.js';
 
 /*
@@ -39,9 +42,11 @@ const DEFAULT_SETTINGS = {
   hideBalance: security.toggles.find((t) => t.id === 'hideBalance').defaultOn,
 };
 
-// Новое состояние: данные (демо или пустые) + настройки
+// Новое состояние: данные (демо или пустые) + настройки.
+// imports — история загруженных выписок: { id, fileName, date (ISO), count }.
 const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) => ({
   ...data,
+  imports: [],
   settings,
   onboardingDone,
   nextId: FIRST_ID,
@@ -51,7 +56,7 @@ const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) =
 const restoreState = () => {
   const saved = loadFinanceState();
   if (!saved) return buildState(createDemoData());
-  return { ...saved, settings: { ...DEFAULT_SETTINGS, ...saved.settings } };
+  return { imports: [], ...saved, settings: { ...DEFAULT_SETTINGS, ...saved.settings } };
 };
 
 const byDateDesc = (a, b) => new Date(b.date) - new Date(a.date);
@@ -122,24 +127,52 @@ export function FinanceProvider({ children }) {
     [update],
   );
 
-  // Много операций сразу (импорт выписки): drafts — как у addTransaction, дата обязательна
+  /*
+   * Импорт выписки одним пакетом: drafts — из rowsToDrafts (тип, сумма, incoming, категория, дата, importKey).
+   * Каждая операция помнит id пакета, поэтому импорт можно отменить целиком.
+   * Переводы между своими счетами — type 'transfer', kind 'import': меняют баланс, но не доходы и расходы.
+   */
   const addTransactions = useCallback(
-    (drafts) =>
+    (drafts, { fileName = '' } = {}) =>
       update((prev, newId) => {
-        const added = drafts.map((draft) => ({
-          id: newId('tx'),
-          type: draft.type,
-          categoryId: draft.categoryId,
-          comment: draft.comment ?? '',
-          amount: draft.type === 'income' ? draft.amount : -draft.amount,
-          date: draft.date.toISOString(),
-        }));
-        return { ...prev, transactions: [...added, ...prev.transactions].sort(byDateDesc) };
+        const importId = newId('import');
+        const added = drafts.map((draft) => {
+          const base = {
+            id: newId('tx'),
+            importId,
+            importKey: draft.importKey,
+            comment: draft.comment ?? '',
+            amount: signedDraftAmount(draft),
+            date: draft.date.toISOString(),
+          };
+          return draft.type === 'transfer' ? { ...base, type: 'transfer', kind: 'import' } : { ...base, type: draft.type, categoryId: draft.categoryId };
+        });
+        // «Прочие доходы» появляются, только если пригодились
+        const needsFallback =
+          added.some((tx) => tx.categoryId === IMPORT_FALLBACK_INCOME.id) && !prev.categories.some((c) => c.id === IMPORT_FALLBACK_INCOME.id);
+        return {
+          ...prev,
+          categories: needsFallback ? [...prev.categories, IMPORT_FALLBACK_INCOME] : prev.categories,
+          transactions: [...added, ...prev.transactions].sort(byDateDesc),
+          imports: [{ id: importId, fileName, date: new Date().toISOString(), count: added.length }, ...prev.imports],
+        };
       }),
     [update],
   );
 
-  // Изменение дохода или расхода (переводы не редактируются — их можно только удалить)
+  // Отмена импорта: удаляются все операции пакета, в том числе изменённые после загрузки
+  const undoImport = useCallback(
+    (importId) =>
+      update((prev) => ({
+        ...prev,
+        transactions: prev.transactions.filter((tx) => tx.importId !== importId),
+        imports: prev.imports.filter((item) => item.id !== importId),
+      })),
+    [update],
+  );
+
+  // Изменение дохода или расхода (переводы не редактируются — их можно только удалить).
+  // Возврат покупки (расход с плюсом) остаётся возвратом, пока операция — расход.
   const updateTransaction = useCallback(
     (id, draft) =>
       update((prev) => ({
@@ -152,7 +185,10 @@ export function FinanceProvider({ children }) {
                   type: draft.type,
                   categoryId: draft.categoryId,
                   comment: draft.comment ?? '',
-                  amount: draft.type === 'income' ? draft.amount : -draft.amount,
+                  amount: signedDraftAmount({
+                    amount: draft.amount,
+                    incoming: draft.type === 'income' || (draft.type === 'expense' && tx.type === 'expense' && tx.amount > 0),
+                  }),
                   date: (draft.date ?? new Date(tx.date)).toISOString(),
                 }
               : tx,
@@ -336,6 +372,10 @@ export function FinanceProvider({ children }) {
     const describe = (tx) => {
       const date = new Date(tx.date);
       const dateLabel = formatTransactionDate(date, today);
+      if (tx.type === 'transfer' && tx.kind === 'import') {
+        const { category, icon, accent } = IMPORT_TRANSFER;
+        return { ...tx, title: tx.comment || IMPORT_TRANSFER.title, category, icon, accent, dateLabel, editable: false };
+      }
       if (tx.type === 'transfer') {
         const isGoal = tx.kind === 'goal';
         const title = isGoal
@@ -401,6 +441,11 @@ export function FinanceProvider({ children }) {
       savingsBalance: savings.balance,
       savings,
       savingsTransactions,
+      // История импорта: сколько операций пакета осталось сейчас (часть могли удалить вручную)
+      imports: state.imports.map((item) => ({
+        ...item,
+        count: state.transactions.filter((tx) => tx.importId === item.id).length,
+      })),
       settings: state.settings,
       isDark,
       hideBalance: state.settings.hideBalance,
@@ -409,6 +454,7 @@ export function FinanceProvider({ children }) {
       // Действия
       addTransaction,
       addTransactions,
+      undoImport,
       updateTransaction,
       deleteTransaction,
       moveSavings,
@@ -430,6 +476,7 @@ export function FinanceProvider({ children }) {
     isDark,
     addTransaction,
     addTransactions,
+    undoImport,
     updateTransaction,
     deleteTransaction,
     moveSavings,

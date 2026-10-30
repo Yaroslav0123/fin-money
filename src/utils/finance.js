@@ -35,6 +35,10 @@ const incomeOf = (items) => items.filter((tx) => tx.type === 'income');
 // Сумма расходов положительным числом. «0 −», а не унарный минус: иначе без трат получится −0
 const spent = (items) => 0 - sum(expensesOf(items));
 
+// Конец «того же отрезка» прошлого периода: столько же времени от его начала, но не дальше его конца.
+// Без ограничения 31 октября «те же дни сентября» захватили бы 1 октября.
+const sameElapsedEnd = (start, elapsedMs, limit) => new Date(Math.min(start.getTime() + elapsedMs, limit.getTime()));
+
 // ───── Периоды аналитики ─────
 
 /**
@@ -96,7 +100,7 @@ export function periodExpenses(transactions, periodId, today, offset = 0, weekSt
   const items = inRange(transactions, range.start, range.end);
   const total = spent(items);
   const elapsedMs = isCurrent ? today - range.start : range.end - range.start;
-  const previousTotal = spent(inRange(transactions, previous.start, new Date(previous.start.getTime() + elapsedMs)));
+  const previousTotal = spent(inRange(transactions, previous.start, sameElapsedEnd(previous.start, elapsedMs, previous.end)));
 
   const bars = range.buckets.map((bucket) => ({
     label: bucket.label,
@@ -157,7 +161,7 @@ export function incomeVsExpenses(transactions, today, months = 6) {
 export function monthSummary(transactions, openingBalance, today) {
   const monthStart = startOfMonth(today);
   const previousStart = addMonths(monthStart, -1);
-  const previousEnd = new Date(previousStart.getTime() + (today - monthStart));
+  const previousEnd = sameElapsedEnd(previousStart, today - monthStart, monthStart);
 
   const month = inRange(transactions, monthStart, addDays(startOfDay(today), 1));
   const previous = inRange(transactions, previousStart, previousEnd);
@@ -190,7 +194,7 @@ const WEEKEND_RATIO_THRESHOLD = 1.15;
 export function insightData(transactions, categories, goals, today) {
   const summary = monthSummary(transactions, 0, today);
   const monthStart = startOfMonth(today);
-  const previousEnd = new Date(addMonths(monthStart, -1).getTime() + (today - monthStart));
+  const previousEnd = sameElapsedEnd(addMonths(monthStart, -1), today - monthStart, monthStart);
   const previousSpent = spent(inRange(transactions, addMonths(monthStart, -1), previousEnd));
 
   const top = categoryBreakdown(summary.monthTransactions, categories)[0] ?? null;

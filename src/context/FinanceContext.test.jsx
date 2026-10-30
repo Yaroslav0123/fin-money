@@ -126,6 +126,37 @@ describe('FinanceContext', () => {
     expect(result.current.transactions[0]).toMatchObject({ categoryId: 'other', category: 'Другое' });
   });
 
+  it('импорт выписки: возврат уменьшает расходы, перевод между счетами не входит в них, импорт можно отменить', () => {
+    const { result } = renderFinance();
+    const before = result.current.summary;
+    const date = new Date();
+    const drafts = [
+      { type: 'expense', amount: 1000, incoming: false, categoryId: 'food', comment: 'Магазин', date, importKey: 'a' },
+      { type: 'expense', amount: 300, incoming: true, categoryId: 'food', comment: 'Возврат', date, importKey: 'b' },
+      { type: 'transfer', amount: 5000, incoming: false, categoryId: null, comment: 'На вклад', date, importKey: 'c' },
+      { type: 'income', amount: 2000, incoming: true, categoryId: 'other-income', comment: 'Анна', date, importKey: 'd' },
+    ];
+    act(() => result.current.addTransactions(drafts, { fileName: 'bank.csv' }));
+
+    expect(result.current.summary.balance.amount).toBe(before.balance.amount - 1000 + 300 - 5000 + 2000);
+    expect(result.current.summary.expenses.amount).toBe(before.expenses.amount + 700);
+    expect(result.current.summary.income.amount).toBe(before.income.amount + 2000);
+    // «Прочие доходы» добавились, потому что пригодились
+    expect(result.current.categories.find((c) => c.id === 'other-income')).toBeDefined();
+    expect(result.current.transactions.find((tx) => tx.importKey === 'c')).toMatchObject({ type: 'transfer', category: 'Переводы', title: 'На вклад' });
+    expect(result.current.imports).toEqual([expect.objectContaining({ fileName: 'bank.csv', count: 4 })]);
+
+    // Возврат при правке остаётся возвратом
+    const refund = result.current.transactions.find((tx) => tx.importKey === 'b');
+    act(() => result.current.updateTransaction(refund.id, { type: 'expense', amount: 400, categoryId: 'food', comment: 'Возврат' }));
+    expect(result.current.transactions.find((tx) => tx.id === refund.id).amount).toBe(400);
+
+    act(() => result.current.undoImport(result.current.imports[0].id));
+    expect(result.current.imports).toHaveLength(0);
+    expect(result.current.summary.balance.amount).toBe(before.balance.amount);
+    expect(result.current.summary.expenses.amount).toBe(before.expenses.amount);
+  });
+
   it('восстанавливает данные и настройки после перезагрузки', () => {
     const first = renderFinance();
     const goal = first.result.current.goals[0];

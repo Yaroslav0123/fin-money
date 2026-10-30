@@ -19,6 +19,15 @@ const escapeCell = (value, delimiter) => {
 export const toCsv = (rows, delimiter = ';') =>
   BOM + rows.map((row) => row.map((cell) => escapeCell(cell, delimiter)).join(delimiter)).join('\r\n');
 
+// Байты файла → текст. Сначала UTF-8; если файл в нём не читается — Windows-1251 (так выгружают многие банки)
+export const decodeCsv = (buffer) => {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+  } catch {
+    return new TextDecoder('windows-1251').decode(buffer);
+  }
+};
+
 // Разделитель — тот, которого больше всего в первой строке
 const detectDelimiter = (text) => {
   const firstLine = text.split(/\r?\n/, 1)[0];
@@ -63,12 +72,16 @@ export const parseCsv = (input) => {
 
 // ───── Разбор значений из выписок ─────
 
-// «1 234,56», «-500.00», «−1 200 ₽» → число (null, если не число)
+// «1 234,56», «-500.00», «−1 200 ₽», «1,234.56» → число (null, если не число).
+// \s ловит и неразрывные пробелы, которыми банки разделяют тысячи.
 export const parseAmount = (value) => {
-  const cleaned = String(value)
-    .replace(/[\s\u00A0₽$€]|руб\.?|RUB/gi, '')
-    .replace('−', '-')
-    .replace(',', '.');
+  let cleaned = String(value)
+    .replace(/[\s'₽$€]|руб\.?|RUB|USD|EUR/gi, '')
+    .replace(/[−–]/g, '-');
+  // Есть и запятая, и точка: дробная часть — после последнего из них, другой знак разделяет тысячи
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    cleaned = cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.') ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned.replace(/,/g, '');
+  } else cleaned = cleaned.replace(',', '.');
   if (!/^[+-]?\d+(\.\d+)?$/.test(cleaned)) return null;
   return Number(cleaned);
 };
@@ -102,15 +115,18 @@ const normalize = (text) =>
     .trim();
 
 /**
- * Номера столбцов по заголовкам. columnNames — { date: ['дата', …], amount: […], … }.
+ * Номера столбцов по заголовкам (-1 — столбца нет). columnNames — { date: ['дата', …], amount: […], … };
+ * варианты идут по приоритету: если в файле есть оба, берётся тот, что раньше в списке.
  * Сначала ищем точное совпадение, потом — заголовок, который начинается с варианта.
+ * exactOnly — столбцы только с точным совпадением («Тип счёта» не должен стать «Типом»).
  */
-export const detectColumns = (header, columnNames) => {
+export const detectColumns = (header, columnNames, { exactOnly = [] } = {}) => {
   const normalized = header.map(normalize);
+  const firstFound = (indexes) => indexes.find((i) => i >= 0) ?? -1;
   const result = {};
   for (const [key, variants] of Object.entries(columnNames)) {
-    const exact = normalized.findIndex((h) => variants.includes(h));
-    const partial = normalized.findIndex((h) => variants.some((v) => h.startsWith(v)));
+    const exact = firstFound(variants.map((v) => normalized.indexOf(v)));
+    const partial = exactOnly.includes(key) ? -1 : firstFound(variants.map((v) => normalized.findIndex((h) => h.startsWith(v))));
     result[key] = exact >= 0 ? exact : partial;
   }
   return result;

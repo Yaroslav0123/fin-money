@@ -69,6 +69,14 @@ describe('monthSummary', () => {
     const summary = monthSummary([income(1000, TODAY), expense(400, TODAY)], 500, TODAY);
     expect(summary).toMatchObject({ balance: 1100, income: 1000, expenses: 400, monthChange: 600 });
   });
+
+  it('«те же дни прошлого месяца» не заходят в текущий', () => {
+    // 31 октября: в сентябре 30 дней, трата 1 октября не должна попасть в «прошлый месяц»
+    const lastDay = new Date(2026, 9, 31, 20, 0);
+    const items = [expense(1000, new Date(2026, 8, 15)), expense(500, new Date(2026, 9, 1, 10, 0)), expense(1500, new Date(2026, 9, 20))];
+    expect(monthSummary(items, 0, lastDay)).toMatchObject({ expenses: 2000, expensesTrend: 100 });
+    expect(periodExpenses(items, 'month', lastDay).trend.percent).toBe(100);
+  });
 });
 
 describe('demo data', () => {

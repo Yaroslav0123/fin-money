@@ -72,3 +72,55 @@ test('экспорт CSV и повторный импорт того же фай
   await dialog.locator('input[type="file"]').setInputFiles(await download.path());
   await expect(dialog.getByRole('alert')).toHaveText('В файле нет операций, которые можно добавить.');
 });
+
+// Текст → байты Windows-1251: так выгружают выписки многие банки
+const encode1251 = (text) =>
+  Buffer.from([...text].map((ch) => {
+    const code = ch.charCodeAt(0);
+    if (code === 0x451) return 0xb8; // ё
+    return code >= 0x410 && code <= 0x44f ? code - 0x350 : code;
+  }));
+
+test('выписка банка: проверка строк, импорт и его отмена', async ({ page }) => {
+  await openAppWithDemo(page);
+  await page.getByRole('searchbox', { name: 'Поиск операций' }).press('Enter');
+
+  // Вымышленная выписка за позавчера: покупка, перевод между своими счетами, возврат и неудачная операция
+  const day = new Date(Date.now() - 2 * 24 * 3600 * 1000);
+  const date = `${String(day.getDate()).padStart(2, '0')}.${String(day.getMonth() + 1).padStart(2, '0')}.${day.getFullYear()}`;
+  const csv = [
+    'Дата операции;Статус;Сумма платежа;Категория;Описание',
+    `${date} 10:00:00;OK;-350,00;Рестораны;Кофейня у дома`,
+    `${date} 11:00:00;OK;-5 000,00;Переводы;Между своими счетами`,
+    `${date} 12:00:00;OK;990,00;Одежда;Возврат покупки`,
+    `${date} 13:00:00;FAILED;-700,00;Такси;Поездка`,
+  ].join('\r\n');
+
+  await page.getByRole('button', { name: 'Импорт CSV' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Импорт выписки' });
+  await dialog.locator('input[type="file"]').setInputFiles({ name: 'bank.csv', mimeType: 'text/csv', buffer: encode1251(csv) });
+
+  await expect(dialog.getByText('К импорту: 3 из 3')).toBeVisible();
+  await expect(dialog.getByText('Кофейня у дома')).toBeVisible();
+  await expect(dialog.getByText(/Не импортируется строк: 1/)).toBeVisible();
+
+  // Покупку — в «Еду», возврат не берём
+  await dialog.getByLabel('Категория строки 2').selectOption({ label: 'Еда' });
+  await dialog.getByLabel('Импортировать строку 4').uncheck();
+  await expect(dialog.getByText('К импорту: 2 из 3')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Импортировать' }).click();
+  await expect(page.getByRole('status').getByText('Импортировано операций: 2')).toBeVisible();
+
+  // 142 560 − 350 − 5 000
+  const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
+  await nav.getByRole('button', { name: 'Главная' }).click();
+  await expect(page.getByRole('main').getByText(money('137 210')).first()).toBeVisible();
+
+  await nav.getByRole('button', { name: 'Настройки' }).click();
+  await page.getByRole('button', { name: 'Отменить импорт bank.csv' }).click();
+  await page.getByRole('dialog', { name: 'Отменить импорт «bank.csv»?' }).getByRole('button', { name: 'Удалить операции' }).click();
+  await expect(page.getByText('Выписок пока не загружали.')).toBeVisible();
+
+  await nav.getByRole('button', { name: 'Главная' }).click();
+  await expect(page.getByRole('main').getByText(money('142 560')).first()).toBeVisible();
+});

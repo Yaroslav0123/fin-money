@@ -15,6 +15,9 @@ export default function TransferDialog({ transaction, onClose, onDone }) {
   const { deleteTransaction } = useFinance();
   const [isConfirming, setIsConfirming] = useState(false);
   const t = TRANSFER_DETAILS;
+  // Перевод из выписки ни с чем в Fin Money не связан: удаляется без возврата денег
+  const isImported = transaction?.kind === 'import';
+  const deleteQuestion = isImported ? t.importDeleteQuestion : t.deleteQuestion;
 
   const handleClose = () => {
     setIsConfirming(false);
@@ -39,11 +42,11 @@ export default function TransferDialog({ transaction, onClose, onDone }) {
             </div>
             <span className="shrink-0 text-base font-bold text-ink">{formatSignedMoney(transaction.amount)}</span>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-ink-muted">{t.note}</p>
+          <p className="mt-4 text-xs leading-relaxed text-ink-muted">{isImported ? t.importNote : t.note}</p>
 
           {isConfirming ? (
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-negative-bg px-4 py-3" role="group" aria-label={t.deleteQuestion}>
-              <span className="text-sm font-semibold text-negative">{t.deleteQuestion}</span>
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-negative-bg px-4 py-3" role="group" aria-label={deleteQuestion}>
+              <span className="text-sm font-semibold text-negative">{deleteQuestion}</span>
               <div className="flex gap-2">
                 <Button size="sm" pill variant="secondary" onClick={() => setIsConfirming(false)}>
                   {t.close}

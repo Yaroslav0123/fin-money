@@ -1,6 +1,7 @@
 import BudgetCard from '../components/settings/BudgetCard.jsx';
 import CategoriesCard from '../components/settings/CategoriesCard.jsx';
 import DemoDataCard from '../components/settings/DemoDataCard.jsx';
+import ImportsCard from '../components/settings/ImportsCard.jsx';
 import PreferencesCard from '../components/settings/PreferencesCard.jsx';
 import ProfileCard from '../components/settings/ProfileCard.jsx';
 import SecurityCard from '../components/settings/SecurityCard.jsx';
@@ -15,11 +16,11 @@ import { monthName } from '../utils/dates.js';
  * Экран «Настройки» (веб-версия).
  * onLogout — «выход из аккаунта» (в прототипе возвращает на лендинг).
  * Параметры, бюджет и «Скрывать баланс» хранятся в общем состоянии и действуют на всех экранах.
- * Категории можно добавлять, менять и удалять. Внизу — управление данными в браузере.
+ * Категории можно добавлять, менять и удалять. Внизу — управление данными в браузере и история импорта выписок.
  */
 export default function SettingsScreen({ onLogout }) {
-  const { summary, settings, setSetting, hideBalance, setHideBalance, resetDemo, startFromScratch, today } = useFinance();
-  const { notify, openAbout } = useAppActions();
+  const { summary, settings, setSetting, hideBalance, setHideBalance, resetDemo, startFromScratch, today, imports, undoImport } = useFinance();
+  const { notify, openAbout, navigate } = useAppActions();
   const { demo } = SETTINGS_PAGE;
 
   return (
@@ -69,6 +70,18 @@ export default function SettingsScreen({ onLogout }) {
           }}
           onAbout={() => openAbout('about')}
           className="h-full"
+        />
+      </Reveal>
+
+      <Reveal delay={0.1} className="xl:col-span-3">
+        <ImportsCard
+          texts={SETTINGS_PAGE.imports}
+          imports={imports}
+          onUndo={(id) => {
+            undoImport(id);
+            notify(SETTINGS_PAGE.imports.undone);
+          }}
+          onUpload={() => navigate('transactions')}
         />
       </Reveal>
     </div>

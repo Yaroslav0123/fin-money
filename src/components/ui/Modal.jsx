@@ -13,7 +13,10 @@ const FOCUSABLE =
  * Пока окно открыто: фокус не уходит за его пределы, страница под ним не прокручивается,
  * а после закрытия фокус возвращается на кнопку, которая окно открыла.
  */
-export default function Modal({ isOpen, title, onClose, closeLabel, children }) {
+// Ширина окна на десктопе: обычная и широкая (для таблиц, например предпросмотра импорта)
+const WIDTHS = { md: 'sm:max-w-md', lg: 'sm:max-w-2xl' };
+
+export default function Modal({ isOpen, title, onClose, closeLabel, size = 'md', children }) {
   const dialogRef = useRef(null);
   const titleId = useId();
 
@@ -81,7 +84,7 @@ export default function Modal({ isOpen, title, onClose, closeLabel, children }) 
             aria-modal="true"
             aria-labelledby={titleId}
             tabIndex={-1}
-            className="max-h-[92vh] w-full overflow-y-auto rounded-t-panel bg-card p-6 shadow-lifted focus:outline-none sm:max-w-md sm:rounded-panel sm:p-8"
+            className={`max-h-[92vh] w-full overflow-y-auto rounded-t-panel bg-card p-6 shadow-lifted focus:outline-none ${WIDTHS[size]} sm:rounded-panel sm:p-8`}
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
