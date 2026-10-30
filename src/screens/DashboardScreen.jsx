@@ -25,7 +25,9 @@ const featuredGoal = (goals) =>
  * onNavigate — переход на другие экраны (например, в «Накопления»).
  */
 export default function DashboardScreen({ onNavigate }) {
-  const { summary, monthCategories, transactions, goals, savings, hideBalance, moveSavings } = useFinance();
+  const { summary, accounts, monthCategories, transactions, goals, savings, hideBalance, moveSavings } = useFinance();
+  // Переводы в накопления идут с основного счёта
+  const mainBalance = accounts[0].balance;
   const { openTransaction, openAddTransaction, notify } = useAppActions();
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const openSavings = () => onNavigate('savings');
@@ -46,6 +48,7 @@ export default function DashboardScreen({ onNavigate }) {
         <Reveal className="xl:col-span-2">
           <BalanceCard
             balance={summary.balance}
+            accounts={accounts}
             texts={DASHBOARD}
             hiddenByDefault={hideBalance}
             onDeposit={openSavings}
@@ -96,8 +99,8 @@ export default function DashboardScreen({ onNavigate }) {
 
       <AmountDialog
         mode={isTransferOpen ? 'deposit' : null}
-        hint={{ label: dialog.availableMain, amount: summary.balance.amount }}
-        limits={[{ max: summary.balance.amount, error: dialog.errorNoFunds }]}
+        hint={{ label: dialog.availableMain, amount: mainBalance }}
+        limits={[{ max: mainBalance, error: dialog.errorNoFunds }]}
         texts={transferTexts}
         onClose={() => setIsTransferOpen(false)}
         onConfirm={handleTransfer}

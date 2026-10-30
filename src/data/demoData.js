@@ -2,10 +2,12 @@
  * Генератор демо-данных: история операций за последние 12 месяцев до сегодняшнего дня.
  * Даты всегда «живые» — история строится от текущей даты при первом запуске и при сбросе.
  * Случайность детерминированная (фиксированное зерно), поэтому суммы правдоподобные и
- * повторяются от запуска к запуску. Все деньги виртуальные и хранятся в рублях.
+ * повторяются от запуска к запуску. Все деньги виртуальные. Константы ниже — в рублях,
+ * а в результат суммы попадают в копейках, как и всё состояние (utils/money.js).
  */
-import { DEFAULT_CATEGORIES } from './mockData.js';
+import { DEFAULT_ACCOUNT, DEFAULT_CATEGORIES } from './mockData.js';
 import { addDays, addMonths, startOfMonth } from '../utils/dates.js';
+import { rub } from '../utils/money.js';
 
 const SEED = 20260528;
 const HISTORY_MONTHS = 12;
@@ -90,8 +92,8 @@ const isWeekend = (date) => date.getDay() === 0 || date.getDay() === 6;
 
 /**
  * Демо-данные на дату today.
- * Возвращает { openingBalance, transactions, savingsTransactions, goals, categories }.
- * Операции отсортированы от новых к старым, суммы основного счёта со знаком.
+ * Возвращает { accounts, savingsOpeningBalance, transactions, savingsTransactions, goals, categories }.
+ * Операции отсортированы от новых к старым, суммы со знаком и в копейках. Демо-счёт один — основной.
  */
 export function createDemoData(today = new Date()) {
   const random = createRandom(SEED);
@@ -192,16 +194,20 @@ export function createDemoData(today = new Date()) {
   // Начальный остаток так, чтобы сегодня баланс был ровно TARGET_BALANCE
   const net = transactions.reduce((sum, tx) => sum + tx.amount, 0);
 
-  const goals = DEMO_GOALS.map(({ monthsFromNow, ...goal }) => ({
+  const goals = DEMO_GOALS.map(({ monthsFromNow, target, saved, ...goal }) => ({
     ...goal,
+    target: rub(target),
+    saved: rub(saved),
     deadline: addMonths(today, monthsFromNow).toISOString(),
   }));
 
+  // Рубли → копейки
+  const inKopecks = (tx) => ({ ...tx, amount: rub(tx.amount) });
   return {
-    openingBalance: TARGET_BALANCE - net,
-    savingsOpeningBalance: SAVINGS_START,
-    transactions,
-    savingsTransactions,
+    accounts: [{ ...DEFAULT_ACCOUNT, openingBalance: rub(TARGET_BALANCE - net) }],
+    savingsOpeningBalance: rub(SAVINGS_START),
+    transactions: transactions.map((tx) => ({ ...inKopecks(tx), accountId: DEFAULT_ACCOUNT.id })),
+    savingsTransactions: savingsTransactions.map(inKopecks),
     goals,
     categories: DEFAULT_CATEGORIES,
   };
@@ -210,7 +216,7 @@ export function createDemoData(today = new Date()) {
 // Пустые данные для режима «Начать с нуля»
 export function createEmptyData() {
   return {
-    openingBalance: 0,
+    accounts: [{ ...DEFAULT_ACCOUNT, openingBalance: 0 }],
     savingsOpeningBalance: 0,
     transactions: [],
     savingsTransactions: [],

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ChevronDown, Download, Plus, Search, Sparkles, Upload, X } from 'lucide-react';
+import AccountSelect from '../components/app/AccountSelect.jsx';
 import ImportDialog from '../components/app/ImportDialog.jsx';
 import SortOtherDialog from '../components/app/SortOtherDialog.jsx';
 import { TransactionRow } from '../components/dashboard/TransactionsCard.jsx';
@@ -24,13 +25,13 @@ const matchesQuery = (tx, query) =>
   !query || [tx.title, tx.category, tx.comment].some((field) => field?.toLowerCase().includes(query));
 
 /**
- * Экран «Операции»: вся история основного счёта с поиском и фильтрами.
+ * Экран «Операции»: вся история счетов с поиском и фильтрами (по счёту — если счетов несколько).
  * Операции сгруппированы по дням; по нажатию открываются на изменение или удаление.
  * params — начальные условия: { query } из поиска в шапке, { categoryId } или { type }
  * из «Аналитики».
  */
 export default function TransactionsScreen({ params = {} }) {
-  const { transactions, categories, today } = useFinance();
+  const { transactions, categories, accounts, today } = useFinance();
   const { openTransaction, openAddTransaction, notify } = useAppActions();
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -43,6 +44,8 @@ export default function TransactionsScreen({ params = {} }) {
   const [query, setQuery] = useState(params.query ?? '');
   const [type, setType] = useState(params.type ?? (params.categoryId ? 'expense' : ALL));
   const [categoryId, setCategoryId] = useState(params.categoryId ?? ALL);
+  // '' — все счета
+  const [accountId, setAccountId] = useState('');
   const [visibleCount, setVisibleCount] = useState(t.pageSize);
 
   // Категории для выпадающего списка — того же типа, что выбран фильтром
@@ -54,9 +57,10 @@ export default function TransactionsScreen({ params = {} }) {
       (tx) =>
         (type === ALL || tx.type === type) &&
         (categoryId === ALL || tx.categoryId === categoryId) &&
+        (!accountId || tx.accountId === accountId) &&
         matchesQuery(tx, normalized),
     );
-  }, [transactions, query, type, categoryId]);
+  }, [transactions, query, type, categoryId, accountId]);
 
   const income = filtered.filter((tx) => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
   const expenses = filtered.filter((tx) => tx.type === 'expense').reduce((sum, tx) => sum - tx.amount, 0);
@@ -70,11 +74,12 @@ export default function TransactionsScreen({ params = {} }) {
     else groups.push({ day, label: formatGroupDate(new Date(day), today), items: [tx] });
   });
 
-  const hasFilters = query || type !== ALL || categoryId !== ALL;
+  const hasFilters = query || type !== ALL || categoryId !== ALL || accountId;
   const resetFilters = () => {
     setQuery('');
     setType(ALL);
     setCategoryId(ALL);
+    setAccountId('');
   };
 
   // Выгрузка найденных операций (с учётом поиска и фильтров) в CSV для Excel
@@ -141,6 +146,18 @@ export default function TransactionsScreen({ params = {} }) {
               </select>
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
             </div>
+            {accounts.length > 1 && (
+              <div className="relative">
+                <AccountSelect
+                  accounts={accounts}
+                  value={accountId}
+                  onChange={setAccountId}
+                  withAll
+                  className="h-10 max-w-[12rem] appearance-none rounded-full pl-4 pr-9 text-xs"
+                />
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+              </div>
+            )}
             {hasFilters && (
               <button
                 type="button"

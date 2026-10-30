@@ -32,6 +32,7 @@ export const TransactionRow = forwardRef(function TransactionRow({ tx, onSelect,
           <p className="truncate text-sm font-semibold text-ink">{tx.title}</p>
           <p className="truncate text-xs text-ink-muted">
             {tx.category}
+            {tx.accountBadge && ` · ${tx.accountBadge}`}
             {showDate && ` · ${tx.dateLabel}`}
           </p>
         </div>

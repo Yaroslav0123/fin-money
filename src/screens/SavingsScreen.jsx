@@ -28,7 +28,7 @@ export default function SavingsScreen() {
     savingsOpeningBalance,
     moveSavings,
     goals,
-    summary,
+    accounts,
     today,
   } = useFinance();
   const { notify } = useAppActions();
@@ -37,7 +37,7 @@ export default function SavingsScreen() {
 
   // Пополнение ограничено деньгами на основном счёте, снятие — балансом накоплений
   const { dialog } = SAVINGS_PAGE;
-  const mainBalance = summary.balance.amount;
+  const mainBalance = accounts[0].balance;
   const dialogRules = {
     deposit: {
       hint: { label: dialog.availableMain, amount: mainBalance },

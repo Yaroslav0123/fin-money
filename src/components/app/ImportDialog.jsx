@@ -10,6 +10,7 @@ import { sberLinesToRows } from '../../utils/bankPdf.js';
 import { decodeCsv, parseCsv } from '../../utils/csv.js';
 import { fillTemplate, formatMoney, formatSignedMoney } from '../../utils/format.js';
 import { applyCategoryChoice, categoryChoiceOf, rowsToDrafts, signedDraftAmount, withImportCategories } from '../../utils/statement.js';
+import AccountSelect from './AccountSelect.jsx';
 import CategorySelect from './CategorySelect.jsx';
 
 // Сколько строк предпросмотра показывать за раз
@@ -30,10 +31,13 @@ const readRows = async (file) => {
  * В предпросмотре у каждой строки можно сменить категорию (или сделать её переводом между своими счетами)
  * и снять галочку. Новая категория сразу ставится похожим строкам (тот же магазин) и запоминается
  * правилом для следующих выписок. Строки, которые не попадут в импорт, перечислены с причиной.
+ * Если счетов несколько, сначала выбирается счёт выписки: повторы ищутся среди его операций, туда же попадёт импорт.
  * Файл читается прямо в браузере и никуда не отправляется. onDone(count) — сколько операций добавлено.
  */
 export default function ImportDialog({ isOpen, onClose, onDone }) {
-  const { categories, rawTransactions, addTransactions, categoryRules } = useFinance();
+  const { categories, rawTransactions, addTransactions, categoryRules, accounts } = useFinance();
+  const [accountId, setAccountId] = useState(accounts[0].id);
+  const account = accounts.find((a) => a.id === accountId) ?? accounts[0];
   // { fileName, error } или { fileName, items: [{ line, status, reason?, draft?, cells, key, include, touched }], rules: { [key]: rule } }
   const [result, setResult] = useState(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -65,7 +69,8 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
     setIsReading(true);
     try {
       const rows = await readRows(file);
-      const parsed = rowsToDrafts(rows, { categories, existing: rawTransactions, rules: categoryRules });
+      const existing = rawTransactions.filter((tx) => tx.accountId === account.id);
+      const parsed = rowsToDrafts(rows, { categories, existing, rules: categoryRules });
       // В PDF без операций нет и «столбцов» — объясняем, какие PDF подходят
       const error = parsed.error && isPdfFile(file) ? 'pdfUnknown' : parsed.error;
       setResult(
@@ -111,7 +116,7 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
   const included = newItems.filter((item) => item.include).map((item) => item.draft);
 
   const handleImport = () => {
-    addTransactions(included, { fileName: result.fileName, rules: newRules });
+    addTransactions(included, { fileName: result.fileName, rules: newRules, accountId: account.id });
     const count = included.length;
     reset();
     onDone(count);
@@ -143,6 +148,14 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
       {!result ? (
         <>
           <p className="text-sm leading-relaxed text-ink-secondary">{t.hint}</p>
+          {accounts.length > 1 && (
+            <div className="mt-4">
+              <label htmlFor="import-account" className="text-xs font-medium text-ink-muted">
+                {t.accountLabel}
+              </label>
+              <AccountSelect id="import-account" accounts={accounts} value={account.id} onChange={setAccountId} className="mt-2 h-12 w-full" />
+            </div>
+          )}
           {/* Зона выбора файла: клик или перетаскивание */}
           <label
             onDragOver={(e) => {
@@ -172,7 +185,10 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
         </>
       ) : (
         <>
-          <p className="truncate text-xs text-ink-muted">{result.fileName}</p>
+          <p className="truncate text-xs text-ink-muted">
+            {result.fileName}
+            {accounts.length > 1 && ` · ${fillTemplate(t.accountNote, { name: account.name })}`}
+          </p>
           {errorText ? (
             <p className="mt-3 rounded-2xl bg-negative-bg px-4 py-3 text-sm text-negative" role="alert">
               {errorText}

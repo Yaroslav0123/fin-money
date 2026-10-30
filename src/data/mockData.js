@@ -1,5 +1,5 @@
 // Моковые данные приложения. Все тексты и числа живут здесь,
-// компоненты только отображают их.
+// компоненты только отображают их. Денежные суммы — в копейках: rub(5000) — это 5 000 ₽.
 import {
   ArrowDown,
   ArrowDownLeft,
@@ -42,6 +42,7 @@ import {
   Utensils,
   Wallet,
 } from 'lucide-react';
+import { rub } from '../utils/money.js';
 
 export const APP_NAME = 'Fin Money';
 
@@ -86,8 +87,8 @@ export const APP_SHELL = {
     goal: 'До срока цели «{name}» осталось {days} дн.',
     goalToday: 'Сегодня срок цели «{name}»',
     large: 'Крупная трата: {title} — {amount}',
-    // Порог «крупной траты» в рублях
-    largeAmount: 5000,
+    // Порог «крупной траты»
+    largeAmount: rub(5000),
     close: 'Закрыть',
   },
 };
@@ -272,22 +273,29 @@ export const DEFAULT_CATEGORIES = [
 export const SUMMARY = {
   balance: {
     label: 'Общий баланс',
-    amount: 142560,
-    trend: { amount: 12340, suffix: 'за месяц' },
+    amount: rub(142560),
+    trend: { amount: rub(12340), suffix: 'за месяц' },
     icon: Wallet,
     accent: 'green',
   },
-  income: { label: 'Доходы', amount: 86400, trend: { percent: 18 }, icon: ArrowUp, accent: 'green' },
-  expenses: { label: 'Расходы', amount: 63200, trend: { percent: 6 }, icon: ArrowDown, accent: 'pink' },
+  income: { label: 'Доходы', amount: rub(86400), trend: { percent: 18 }, icon: ArrowUp, accent: 'green' },
+  expenses: { label: 'Расходы', amount: rub(63200), trend: { percent: 6 }, icon: ArrowDown, accent: 'pink' },
 };
+
+// Счёт, который есть всегда: на нём переводы в накопления и цели. Сюда же переносятся данные,
+// сохранённые до появления нескольких счетов.
+export const DEFAULT_ACCOUNT = { id: 'main', name: 'Основной счёт' };
+
+// Общий список счетов: подпись выбора и вариант «все счета» (фильтр на экране «Операции»)
+export const ACCOUNT_SELECT = { label: 'Счёт', all: 'Все счета' };
 
 // Категории расходов (сумма = SUMMARY.expenses.amount, доли = 100%)
 export const EXPENSE_CATEGORIES = [
-  { id: 'food', name: 'Еда', amount: 20200, share: 32, accent: 'green', icon: Utensils },
-  { id: 'transport', name: 'Транспорт', amount: 11400, share: 18, accent: 'blue', icon: Car },
-  { id: 'fun', name: 'Развлечения', amount: 9500, share: 15, accent: 'purple', icon: Star },
-  { id: 'housing', name: 'Жильё', amount: 7600, share: 12, accent: 'orange', icon: House },
-  { id: 'other', name: 'Другое', amount: 14500, share: 23, accent: 'gray', icon: Ellipsis },
+  { id: 'food', name: 'Еда', amount: rub(20200), share: 32, accent: 'green', icon: Utensils },
+  { id: 'transport', name: 'Транспорт', amount: rub(11400), share: 18, accent: 'blue', icon: Car },
+  { id: 'fun', name: 'Развлечения', amount: rub(9500), share: 15, accent: 'purple', icon: Star },
+  { id: 'housing', name: 'Жильё', amount: rub(7600), share: 12, accent: 'orange', icon: House },
+  { id: 'other', name: 'Другое', amount: rub(14500), share: 23, accent: 'gray', icon: Ellipsis },
 ];
 
 // Накопительный счёт
@@ -300,8 +308,8 @@ export const SAVINGS = {
     { id: 'fee', icon: ShieldCheck, title: 'Без', caption: 'комиссий' },
   ],
   balanceLabel: 'Текущий баланс',
-  balance: 52000,
-  trend: { amount: 4200, suffix: 'за месяц' },
+  balance: rub(52000),
+  trend: { amount: rub(4200), suffix: 'за месяц' },
   depositAction: 'Пополнить',
   withdrawAction: 'Снять',
 };
@@ -315,45 +323,45 @@ export const SAVINGS_PERIODS = [
 
 export const SAVINGS_HISTORY = {
   week: [
-    { label: 'Пн', value: 50900 },
-    { label: 'Вт', value: 51050 },
-    { label: 'Ср', value: 51020 },
-    { label: 'Чт', value: 51400 },
-    { label: 'Пт', value: 51380 },
-    { label: 'Сб', value: 51760 },
-    { label: 'Вс', value: 52000 },
+    { label: 'Пн', value: rub(50900) },
+    { label: 'Вт', value: rub(51050) },
+    { label: 'Ср', value: rub(51020) },
+    { label: 'Чт', value: rub(51400) },
+    { label: 'Пт', value: rub(51380) },
+    { label: 'Сб', value: rub(51760) },
+    { label: 'Вс', value: rub(52000) },
   ],
   month: [
-    { label: '1 мая', value: 47800 },
-    { label: '3 мая', value: 48150 },
-    { label: '5 мая', value: 47950 },
-    { label: '7 мая', value: 48400 },
-    { label: '9 мая', value: 48300 },
-    { label: '11 мая', value: 48900 },
-    { label: '12 мая', value: 49300 },
-    { label: '14 мая', value: 49100 },
-    { label: '16 мая', value: 49700 },
-    { label: '18 мая', value: 49550 },
-    { label: '20 мая', value: 50200 },
-    { label: '22 мая', value: 50050 },
-    { label: '24 мая', value: 50700 },
-    { label: '26 мая', value: 50900 },
-    { label: '28 мая', value: 51500 },
-    { label: '31 мая', value: 52000 },
+    { label: '1 мая', value: rub(47800) },
+    { label: '3 мая', value: rub(48150) },
+    { label: '5 мая', value: rub(47950) },
+    { label: '7 мая', value: rub(48400) },
+    { label: '9 мая', value: rub(48300) },
+    { label: '11 мая', value: rub(48900) },
+    { label: '12 мая', value: rub(49300) },
+    { label: '14 мая', value: rub(49100) },
+    { label: '16 мая', value: rub(49700) },
+    { label: '18 мая', value: rub(49550) },
+    { label: '20 мая', value: rub(50200) },
+    { label: '22 мая', value: rub(50050) },
+    { label: '24 мая', value: rub(50700) },
+    { label: '26 мая', value: rub(50900) },
+    { label: '28 мая', value: rub(51500) },
+    { label: '31 мая', value: rub(52000) },
   ],
   year: [
-    { label: 'Июн', value: 8000 },
-    { label: 'Июл', value: 11500 },
-    { label: 'Авг', value: 14200 },
-    { label: 'Сен', value: 18900 },
-    { label: 'Окт', value: 21300 },
-    { label: 'Ноя', value: 25800 },
-    { label: 'Дек', value: 31000 },
-    { label: 'Янв', value: 33400 },
-    { label: 'Фев', value: 37900 },
-    { label: 'Мар', value: 42100 },
-    { label: 'Апр', value: 47800 },
-    { label: 'Май', value: 52000 },
+    { label: 'Июн', value: rub(8000) },
+    { label: 'Июл', value: rub(11500) },
+    { label: 'Авг', value: rub(14200) },
+    { label: 'Сен', value: rub(18900) },
+    { label: 'Окт', value: rub(21300) },
+    { label: 'Ноя', value: rub(25800) },
+    { label: 'Дек', value: rub(31000) },
+    { label: 'Янв', value: rub(33400) },
+    { label: 'Фев', value: rub(37900) },
+    { label: 'Мар', value: rub(42100) },
+    { label: 'Апр', value: rub(47800) },
+    { label: 'Май', value: rub(52000) },
   ],
 };
 
@@ -377,7 +385,7 @@ export const GOAL_TRANSFER = {
 
 // Общий потолок суммы одной операции во всех диалогах
 export const AMOUNT_LIMIT = {
-  max: 10000000,
+  max: rub(10000000),
   error: 'Максимальная сумма одной операции',
 };
 
@@ -414,9 +422,9 @@ export const SAVINGS_PAGE = {
     resultSuffix: 'на счёте будет',
     interestLabel: 'Из них проценты',
     note: 'Расчёт с ежемесячной капитализацией, ставка 12% годовых.',
-    defaults: { monthly: 5000, term: 12 },
+    defaults: { monthly: rub(5000), term: 12 },
     ranges: {
-      monthly: { min: 0, max: 50000, step: 1000 },
+      monthly: { min: 0, max: rub(50000), step: rub(1000) },
       term: { min: 1, max: 36, step: 1 },
     },
   },
@@ -508,7 +516,7 @@ export const TRANSACTIONS_PAGE = {
 export const CSV_TEXTS = {
   fileName: 'fin-money-operations',
   // Заголовки выгрузки (в этом же формате файл можно загрузить обратно)
-  header: ['Дата', 'Тип', 'Категория', 'Комментарий', 'Сумма, ₽'],
+  header: ['Дата', 'Тип', 'Категория', 'Комментарий', 'Сумма, ₽', 'Счёт'],
   types: { income: 'Доход', expense: 'Расход', transfer: 'Перевод' },
   // Как могут называться столбцы в выписках банков (после приведения к нижнему регистру).
   // Порядок — приоритет: из «Суммы платежа» (в валюте счёта) и «Суммы операции» (в валюте покупки) берём первую.
@@ -627,6 +635,9 @@ export const IMPORT_DIALOG = {
   dropLabel: 'Выберите файл или перетащите его сюда',
   dropActive: 'Отпустите, чтобы загрузить',
   chooseFile: 'Выбрать файл',
+  // Выбор счёта (если счетов несколько): повторы ищутся среди операций этого счёта
+  accountLabel: 'Чья это выписка',
+  accountNote: 'Счёт: {name}',
   found: 'К импорту: {count} из {total}',
   income: 'Доходы',
   expenses: 'Расходы',
@@ -779,8 +790,8 @@ export const SETTINGS_PAGE = {
     left: 'Осталось',
     over: 'Превышение',
     warning: 'Вы почти исчерпали бюджет',
-    defaultLimit: 80000,
-    range: { min: 20000, max: 200000, step: 5000 },
+    defaultLimit: rub(80000),
+    range: { min: rub(20000), max: rub(200000), step: rub(5000) },
     // Порог (в процентах), после которого бюджет подсвечивается красным
     warnAt: 90,
   },
@@ -883,6 +894,36 @@ export const SETTINGS_PAGE = {
     cancel: 'Отмена',
     undone: 'Импорт отменён',
   },
+  // Счета: карты, наличные, вклады. Общий баланс — их сумма.
+  accounts: {
+    title: 'Счета',
+    description: 'Карты, наличные и другие счета. Общий баланс — их сумма, у каждой выписки — свой счёт.',
+    add: 'Добавить',
+    primary: 'основной',
+    primaryHint: 'С основного счёта пополняются накопления и цели, его нельзя удалить',
+    count: ['операция', 'операции', 'операций'],
+    edit: 'Изменить счёт {name}',
+    delete: 'Удалить счёт {name}',
+    deleteQuestion: 'Удалить счёт «{name}»?',
+    deleteText: 'Вместе со счётом удалятся его операции: {count}. Это нельзя отменить.',
+    deleteConfirm: 'Удалить счёт',
+    cancel: 'Отмена',
+    added: 'Счёт добавлен',
+    saved: 'Счёт сохранён',
+    deleted: 'Счёт удалён',
+    dialog: {
+      addTitle: 'Новый счёт',
+      editTitle: 'Изменить счёт',
+      nameLabel: 'Название',
+      namePlaceholder: 'Например, «Карта Сбера» или «Наличные»',
+      openingLabel: 'Начальный остаток',
+      openingHint: 'Сколько было на счёте до первой операции в Fin Money. Для кредитной карты — со знаком минус.',
+      openingError: 'Введите сумму, например 1500,50',
+      create: 'Добавить',
+      save: 'Сохранить',
+      cancel: 'Отмена',
+    },
+  },
   rules: {
     title: 'Правила категорий',
     description: 'Что запомнено при импорте выписок: операции этих магазинов сразу получат свою категорию.',
@@ -903,6 +944,7 @@ export const ADD_TRANSACTION = {
   ],
   amountLabel: 'Сумма',
   categoryLabel: 'Категория',
+  accountLabel: 'Счёт',
   dateLabel: 'Дата',
   futureDate: 'Дата не может быть в будущем',
   commentLabel: 'Комментарий',
@@ -941,6 +983,8 @@ export const DASHBOARD = {
   showBalanceLabel: 'Показать баланс',
   hiddenAmount: '••• •••',
   actions: { deposit: 'Пополнить', transfer: 'Перевести' },
+  // Список счетов под балансом (если счетов больше одного)
+  accountsLabel: 'По счетам',
   goal: {
     title: 'Финансовая цель',
     allLink: 'Все цели',

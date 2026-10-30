@@ -1,6 +1,6 @@
 /*
  * Расчёты по истории операций: всё, что показывают экраны, считается отсюда.
- * Операция основного счёта: { id, type: 'income' | 'expense' | 'transfer', amount (со знаком), date (ISO), ... }.
+ * Суммы — в копейках. Операция счёта: { id, accountId, type: 'income' | 'expense' | 'transfer', amount (со знаком), date (ISO), ... }.
  * Операция накопительного счёта: { id, type: 'deposit' | 'interest' | 'withdraw', amount (со знаком), date }.
  * Функции чистые: получают данные и «сегодня», ничего не меняют.
  */
@@ -20,6 +20,7 @@ import {
   weekdayShort,
 } from './dates.js';
 import { toPercent } from './format.js';
+import { KOPECKS_IN_RUBLE } from './money.js';
 
 const HOURS_PER_DAY_BAR = 2;
 const HOURS_IN_DAY = 24;
@@ -116,7 +117,8 @@ export function periodExpenses(transactions, periodId, today, offset = 0, weekSt
     total,
     trend: { percent: previousTotal > 0 ? Math.round((total / previousTotal - 1) * 100) : 0 },
     hasPrevious: previousTotal > 0,
-    perDay: Math.round(total / elapsedDays),
+    // Среднее — до рубля: копейки в нём ничего не говорят
+    perDay: Math.round(total / elapsedDays / KOPECKS_IN_RUBLE) * KOPECKS_IN_RUBLE,
     bars,
     highlightIndex,
     transactions: items,

@@ -9,7 +9,8 @@ import { fillTemplate, plural } from '../../utils/format.js';
 
 /**
  * Карточка «История импорта»: загруженные выписки, у каждой — «Отменить» с подтверждением.
- * imports — [{ id, fileName, date, count }] (count — сколько операций пакета осталось сейчас);
+ * imports — [{ id, fileName, date, count, accountBadge }] (count — сколько операций пакета осталось сейчас,
+ * accountBadge — счёт выписки, если счетов несколько);
  * onUndo(id) — отменить импорт; onUpload — перейти к загрузке выписки.
  */
 export default function ImportsCard({ texts, imports, onUndo, onUpload, className = '' }) {
@@ -43,6 +44,7 @@ export default function ImportsCard({ texts, imports, onUndo, onUpload, classNam
                 <p className="truncate text-sm font-semibold text-ink">{item.fileName}</p>
                 <p className="text-xs text-ink-muted">
                   {formatFullDate(new Date(item.date))} · {item.count} {plural(item.count, texts.count)}
+                  {item.accountBadge && ` · ${item.accountBadge}`}
                 </p>
               </div>
               <Button

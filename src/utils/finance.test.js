@@ -1,6 +1,7 @@
 import { createDemoData } from '../data/demoData.js';
 import { DEFAULT_CATEGORIES } from '../data/mockData.js';
 import { categoryBreakdown, monthSummary, periodExpenses, periodRange, savingsSeries } from './finance.js';
+import { rub } from './money.js';
 
 // Фиксированное «сегодня»: среда, 28 октября 2026, 15:30
 const TODAY = new Date(2026, 9, 28, 15, 30);
@@ -84,8 +85,9 @@ describe('demo data', () => {
     const a = createDemoData(TODAY);
     const b = createDemoData(TODAY);
     expect(a.transactions).toEqual(b.transactions);
-    const balance = a.openingBalance + a.transactions.reduce((s, tx) => s + tx.amount, 0);
-    expect(balance).toBe(142560);
+    const balance = a.accounts[0].openingBalance + a.transactions.reduce((s, tx) => s + tx.amount, 0);
+    expect(balance).toBe(rub(142560));
+    expect(a.transactions.every((tx) => Number.isInteger(tx.amount) && tx.accountId === a.accounts[0].id)).toBe(true);
     expect(a.transactions.every((tx) => new Date(tx.date) <= TODAY)).toBe(true);
   });
 

@@ -17,6 +17,7 @@ import { categoryBreakdown, goalMonthsLeft, isGoalDone, monthSummary, savingsSta
 import { setDisplayCurrency } from '../utils/format.js';
 import { applyCategoryChoice, signedDraftAmount, TRANSFER_CHOICE } from '../utils/statement.js';
 import { clearFinanceState, loadFinanceState, saveFinanceState } from './financeStorage.js';
+import { CURRENT_VERSION } from './migrations.js';
 
 /*
  * Общее состояние финансов для всего приложения.
@@ -24,6 +25,8 @@ import { clearFinanceState, loadFinanceState, saveFinanceState } from './finance
  * за месяц, категории, графики), считается из неё — см. utils/finance.js.
  * Это прототип без сервера: данные сохраняются в localStorage этого браузера,
  * resetDemo() заново строит демо-историю от сегодняшнего дня, startFromScratch() — очищает всё.
+ * Все суммы — целые копейки (utils/money.js). Счетов может быть несколько: у каждой операции есть accountId,
+ * общий баланс — сумма счетов. Первый счёт основной: с него пополняются накопления и цели, его нельзя удалить.
  */
 
 const FinanceContext = createContext(null);
@@ -46,6 +49,7 @@ const DEFAULT_SETTINGS = {
 // imports — история загруженных выписок: { id, fileName, date (ISO), count };
 // categoryRules — «запомнить для похожих»: { key (ключ магазина), value (id категории или 'transfer'), label (пример описания) }.
 const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) => ({
+  version: CURRENT_VERSION,
   ...data,
   imports: [],
   categoryRules: [],
@@ -54,7 +58,7 @@ const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) =
   nextId: FIRST_ID,
 });
 
-// Сохранённое состояние дополняем настройками, появившимися в новых версиях
+// Сохранённое состояние (уже в текущем формате, см. migrations.js) дополняем настройками, появившимися в новых версиях
 const restoreState = () => {
   const saved = loadFinanceState();
   if (!saved) return buildState(createDemoData());
@@ -62,6 +66,11 @@ const restoreState = () => {
 };
 
 const byDateDesc = (a, b) => new Date(b.date) - new Date(a.date);
+const sumAmounts = (items) => items.reduce((total, item) => total + item.amount, 0);
+// Основной счёт — первый в списке
+const primaryAccountId = (state) => state.accounts[0].id;
+// Счёт из черновика, если он есть, иначе основной
+const accountOf = (state, accountId) => (state.accounts.some((a) => a.id === accountId) ? accountId : primaryAccountId(state));
 
 // Нужна ли тёмная тема: явный выбор или (для «Авто») настройка устройства с подпиской на её смену
 const DARK_QUERY = '(prefers-color-scheme: dark)';
@@ -115,12 +124,13 @@ export function FinanceProvider({ children }) {
 
   // ───── Операции основного счёта ─────
 
-  // draft — { type: 'income' | 'expense', amount (положительное), categoryId, comment, date? }
+  // draft — { type: 'income' | 'expense', amount (положительное, в копейках), categoryId, comment, date?, accountId? }
   const addTransaction = useCallback(
     (draft) =>
       update((prev, newId) => {
         const tx = {
           id: newId('tx'),
+          accountId: accountOf(prev, draft.accountId),
           type: draft.type,
           categoryId: draft.categoryId,
           comment: draft.comment ?? '',
@@ -136,15 +146,17 @@ export function FinanceProvider({ children }) {
    * Импорт выписки одним пакетом: drafts — из rowsToDrafts (тип, сумма, incoming, категория, дата, importKey).
    * Каждая операция помнит id пакета, поэтому импорт можно отменить целиком.
    * Переводы между своими счетами — type 'transfer', kind 'import': меняют баланс, но не доходы и расходы.
-   * rules — правила «запомнить для похожих», выбранные в предпросмотре.
+   * rules — правила «запомнить для похожих», выбранные в предпросмотре; accountId — счёт, чья это выписка.
    */
   const addTransactions = useCallback(
-    (drafts, { fileName = '', rules = [] } = {}) =>
+    (drafts, { fileName = '', rules = [], accountId } = {}) =>
       update((prev, newId) => {
         const importId = newId('import');
+        const account = accountOf(prev, accountId);
         const added = drafts.map((draft) => {
           const base = {
             id: newId('tx'),
+            accountId: account,
             importId,
             importKey: draft.importKey,
             comment: draft.comment ?? '',
@@ -160,7 +172,7 @@ export function FinanceProvider({ children }) {
           ...prev,
           categories: needsFallback ? [...prev.categories, IMPORT_FALLBACK_INCOME] : prev.categories,
           transactions: [...added, ...prev.transactions].sort(byDateDesc),
-          imports: [{ id: importId, fileName, date: new Date().toISOString(), count: added.length }, ...prev.imports],
+          imports: [{ id: importId, accountId: account, fileName, date: new Date().toISOString(), count: added.length }, ...prev.imports],
           categoryRules: mergeRules(prev.categoryRules, rules),
         };
       }),
@@ -221,6 +233,7 @@ export function FinanceProvider({ children }) {
             tx.id === id
               ? {
                   ...tx,
+                  accountId: accountOf(prev, draft.accountId ?? tx.accountId),
                   type: draft.type,
                   categoryId: draft.categoryId,
                   comment: draft.comment ?? '',
@@ -272,7 +285,7 @@ export function FinanceProvider({ children }) {
           ...prev,
           savingsTransactions: [{ id: savingsTxId, type: mode, amount: toSavings, date }, ...prev.savingsTransactions],
           transactions: [
-            { id: newId('transfer'), type: 'transfer', kind: 'savings', mode, savingsTxId, amount: -toSavings, date },
+            { id: newId('transfer'), accountId: primaryAccountId(prev), type: 'transfer', kind: 'savings', mode, savingsTxId, amount: -toSavings, date },
             ...prev.transactions,
           ],
         };
@@ -289,6 +302,7 @@ export function FinanceProvider({ children }) {
         transactions: [
           {
             id: newId('goal-transfer'),
+            accountId: primaryAccountId(prev),
             type: 'transfer',
             kind: 'goal',
             goalId: goal.id,
@@ -332,6 +346,7 @@ export function FinanceProvider({ children }) {
             ? [
                 {
                   id: newId('goal-transfer'),
+                  accountId: primaryAccountId(prev),
                   type: 'transfer',
                   kind: 'goal',
                   mode: 'return',
@@ -343,6 +358,35 @@ export function FinanceProvider({ children }) {
               ]
             : [];
         return { ...prev, goals: prev.goals.filter((g) => g.id !== id), transactions: [...refund, ...prev.transactions] };
+      }),
+    [update],
+  );
+
+  // ───── Счета ─────
+
+  // draft — { name, openingBalance (копейки, может быть отрицательным — кредитная карта) }
+  const addAccount = useCallback(
+    (draft) => update((prev, newId) => ({ ...prev, accounts: [...prev.accounts, { ...draft, id: newId('account') }] })),
+    [update],
+  );
+
+  const updateAccount = useCallback(
+    (id, draft) => update((prev) => ({ ...prev, accounts: prev.accounts.map((a) => (a.id === id ? { ...a, ...draft } : a)) })),
+    [update],
+  );
+
+  // Удаление счёта вместе с его операциями и историей импорта. Основной счёт не удаляется:
+  // на нём переводы в накопления и цели, связанные с другими данными.
+  const deleteAccount = useCallback(
+    (id) =>
+      update((prev) => {
+        if (id === primaryAccountId(prev) || !prev.accounts.some((a) => a.id === id)) return prev;
+        return {
+          ...prev,
+          accounts: prev.accounts.filter((a) => a.id !== id),
+          transactions: prev.transactions.filter((tx) => tx.accountId !== id),
+          imports: prev.imports.filter((item) => item.accountId !== id),
+        };
       }),
     [update],
   );
@@ -408,8 +452,16 @@ export function FinanceProvider({ children }) {
     const categories = state.categories.map((c) => ({ ...c, icon: CATEGORY_ICONS[c.iconId] ?? CATEGORY_ICONS.other }));
     const categoryById = Object.fromEntries(categories.map((c) => [c.id, c]));
 
+    // Счета с текущим балансом: начальный остаток + все операции счёта
+    const accounts = state.accounts.map((account, index) => {
+      const own = state.transactions.filter((tx) => tx.accountId === account.id);
+      return { ...account, isPrimary: index === 0, balance: account.openingBalance + sumAmounts(own), count: own.length };
+    });
+    const accountName = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
+    const openingBalance = state.accounts.reduce((total, a) => total + a.openingBalance, 0);
+
     // Операция в виде для списков: иконка, цвет, заголовок, подпись категории и даты
-    const describe = (tx) => {
+    const describeTx = (tx) => {
       const date = new Date(tx.date);
       const dateLabel = formatTransactionDate(date, today);
       if (tx.type === 'transfer' && tx.kind === 'import') {
@@ -435,9 +487,14 @@ export function FinanceProvider({ children }) {
         editable: true,
       };
     };
+    // …и название счёта: accountName — для выгрузки, accountBadge — для списков, когда счетов больше одного
+    const describe = (tx) => {
+      const name = accountName[tx.accountId] ?? '';
+      return { ...describeTx(tx), accountName: name, accountBadge: accounts.length > 1 ? name : '' };
+    };
 
     const transactions = state.transactions.map(describe);
-    const month = monthSummary(state.transactions, state.openingBalance, today);
+    const month = monthSummary(state.transactions, openingBalance, today);
 
     const summary = {
       balance: { ...SUMMARY.balance, amount: month.balance, trend: { ...SUMMARY.balance.trend, amount: month.monthChange } },
@@ -473,6 +530,7 @@ export function FinanceProvider({ children }) {
       transactions,
       describe,
       categories,
+      accounts,
       expenseCategories: categories.filter((c) => c.type === 'expense'),
       incomeCategories: categories.filter((c) => c.type === 'income'),
       monthCategories: categoryBreakdown(month.monthTransactions, categories),
@@ -485,6 +543,7 @@ export function FinanceProvider({ children }) {
       imports: state.imports.map((item) => ({
         ...item,
         count: state.transactions.filter((tx) => tx.importId === item.id).length,
+        accountBadge: accounts.length > 1 ? accountName[item.accountId] ?? '' : '',
       })),
       // Правила «запомнить для похожих» с названием категории для показа
       categoryRules: state.categoryRules.map((rule) => ({
@@ -509,6 +568,9 @@ export function FinanceProvider({ children }) {
       createGoal,
       updateGoal,
       deleteGoal,
+      addAccount,
+      updateAccount,
+      deleteAccount,
       addCategory,
       updateCategory,
       deleteCategory,
@@ -533,6 +595,9 @@ export function FinanceProvider({ children }) {
     createGoal,
     updateGoal,
     deleteGoal,
+    addAccount,
+    updateAccount,
+    deleteAccount,
     addCategory,
     updateCategory,
     deleteCategory,

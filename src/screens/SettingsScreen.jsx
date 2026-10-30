@@ -1,3 +1,4 @@
+import AccountsCard from '../components/settings/AccountsCard.jsx';
 import BudgetCard from '../components/settings/BudgetCard.jsx';
 import CategoriesCard from '../components/settings/CategoriesCard.jsx';
 import CategoryRulesCard from '../components/settings/CategoryRulesCard.jsx';
@@ -17,7 +18,7 @@ import { monthName } from '../utils/dates.js';
  * Экран «Настройки» (веб-версия).
  * onLogout — «выход из аккаунта» (в прототипе возвращает на лендинг).
  * Параметры, бюджет и «Скрывать баланс» хранятся в общем состоянии и действуют на всех экранах.
- * Категории можно добавлять, менять и удалять. Внизу — управление данными в браузере и история импорта выписок.
+ * Категории и счета можно добавлять, менять и удалять. Внизу — управление данными в браузере и история импорта выписок.
  */
 export default function SettingsScreen({ onLogout }) {
   const {
@@ -88,16 +89,7 @@ export default function SettingsScreen({ onLogout }) {
       </Reveal>
 
       <Reveal delay={0.1} className="xl:col-span-2">
-        <ImportsCard
-          texts={SETTINGS_PAGE.imports}
-          imports={imports}
-          onUndo={(id) => {
-            undoImport(id);
-            notify(SETTINGS_PAGE.imports.undone);
-          }}
-          onUpload={() => navigate('transactions')}
-          className="h-full"
-        />
+        <AccountsCard texts={SETTINGS_PAGE.accounts} className="h-full" />
       </Reveal>
       <Reveal delay={0.15}>
         <CategoryRulesCard
@@ -107,6 +99,19 @@ export default function SettingsScreen({ onLogout }) {
             deleteCategoryRule(key);
             notify(SETTINGS_PAGE.rules.deleted);
           }}
+          className="h-full"
+        />
+      </Reveal>
+
+      <Reveal delay={0.1} className="xl:col-span-3">
+        <ImportsCard
+          texts={SETTINGS_PAGE.imports}
+          imports={imports}
+          onUndo={(id) => {
+            undoImport(id);
+            notify(SETTINGS_PAGE.imports.undone);
+          }}
+          onUpload={() => navigate('transactions')}
           className="h-full"
         />
       </Reveal>

@@ -1,13 +1,15 @@
 import { act, renderHook } from '@testing-library/react';
 import { FinanceProvider, useFinance } from './FinanceContext.jsx';
-import { STORAGE_KEY } from './financeStorage.js';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY } from './financeStorage.js';
+import { CURRENT_VERSION } from './migrations.js';
 import { DEFAULT_CATEGORIES } from '../data/mockData.js';
+import { rub } from '../utils/money.js';
 
 // Общее состояние финансов: история операций, накопления, цели, категории
 const renderFinance = () => renderHook(() => useFinance(), { wrapper: FinanceProvider });
 
-// Баланс демо-данных на момент генерации (см. demoData.js)
-const DEMO_BALANCE = 142560;
+// Баланс демо-данных на момент генерации (см. demoData.js), в копейках, как все суммы
+const DEMO_BALANCE = rub(142560);
 
 describe('FinanceContext', () => {
   it('начинает с демо-истории от сегодняшнего дня', () => {
@@ -227,6 +229,81 @@ describe('FinanceContext', () => {
     expect(result.current.summary.balance.amount).toBe(0);
     expect(result.current.monthCategories).toHaveLength(0);
     expect(result.current.isEmpty).toBe(true);
+  });
+
+  it('счета: свой баланс у каждого, общий — их сумма; удаление счёта убирает его операции', () => {
+    const { result } = renderFinance();
+    const total = result.current.summary.balance.amount;
+    const main = result.current.accounts[0];
+    expect(result.current.accounts).toHaveLength(1);
+    expect(main).toMatchObject({ isPrimary: true, balance: total });
+
+    act(() => result.current.addAccount({ name: 'Наличные', openingBalance: rub(1500.5) }));
+    const cash = result.current.accounts[1];
+    expect(cash).toMatchObject({ name: 'Наличные', balance: 150050, isPrimary: false, count: 0 });
+    expect(result.current.summary.balance.amount).toBe(total + 150050);
+
+    act(() => result.current.addTransaction({ type: 'expense', amount: rub(200.25), categoryId: 'food', accountId: cash.id }));
+    expect(result.current.accounts[1].balance).toBe(150050 - 20025);
+    expect(result.current.accounts[0].balance).toBe(main.balance);
+    expect(result.current.transactions[0]).toMatchObject({ accountId: cash.id, accountBadge: 'Наличные' });
+
+    // Выписка — на выбранный счёт, в истории импорта виден счёт
+    act(() =>
+      result.current.addTransactions([{ type: 'expense', amount: 1000, incoming: false, categoryId: 'food', comment: 'Магазин', date: new Date(), importKey: 'k' }], {
+        fileName: 'cash.csv',
+        accountId: cash.id,
+      }),
+    );
+    expect(result.current.accounts[1].count).toBe(2);
+    expect(result.current.imports[0]).toMatchObject({ accountId: cash.id, accountBadge: 'Наличные' });
+
+    // Переводы в накопления — всегда с основного счёта
+    act(() => result.current.moveSavings('deposit', 500));
+    expect(result.current.transactions[0].accountId).toBe(main.id);
+
+    // Основной счёт не удаляется, другой — вместе с операциями и историей импорта
+    act(() => result.current.deleteAccount(main.id));
+    expect(result.current.accounts).toHaveLength(2);
+    act(() => result.current.deleteAccount(cash.id));
+    expect(result.current.accounts).toHaveLength(1);
+    expect(result.current.imports).toHaveLength(0);
+    expect(result.current.summary.balance.amount).toBe(total - 500);
+  });
+
+  it('данные старой версии (рубли, один счёт) переносятся без потерь', () => {
+    const date = new Date().toISOString();
+    const legacy = {
+      openingBalance: 1000,
+      savingsOpeningBalance: 200,
+      transactions: [
+        { id: 'tx-1', type: 'expense', categoryId: 'food', comment: 'Кофе', amount: -150, date },
+        { id: 'tx-2', type: 'income', categoryId: 'salary', comment: '', amount: 5000, date, importId: 'import-1', importKey: '28.10.2026 10:00|5000|' },
+      ],
+      savingsTransactions: [{ id: 'saving-1', type: 'deposit', amount: 300, date }],
+      goals: [{ id: 'trip', name: 'Путешествие', iconId: 'plane', accent: 'green', target: 100000, saved: 2500, deadline: date }],
+      categories: DEFAULT_CATEGORIES,
+      imports: [{ id: 'import-1', fileName: 'bank.csv', date, count: 1 }],
+      settings: { budgetLimit: 50000, currency: 'rub' },
+      onboardingDone: true,
+      nextId: 5,
+    };
+    window.localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(legacy));
+
+    const { result } = renderFinance();
+    expect(result.current.summary.balance.amount).toBe(rub(1000 - 150 + 5000));
+    expect(result.current.accounts).toEqual([expect.objectContaining({ id: 'main', openingBalance: rub(1000), count: 2 })]);
+    expect(result.current.savingsBalance).toBe(rub(500));
+    expect(result.current.goals[0]).toMatchObject({ target: rub(100000), saved: rub(2500) });
+    expect(result.current.settings.budgetLimit).toBe(rub(50000));
+    expect(result.current.rawTransactions[1].importKey).toBe('28.10.2026 10:00|500000|');
+    expect(result.current.imports[0]).toMatchObject({ accountId: 'main', count: 1 });
+    expect(result.current.onboardingDone).toBe(true);
+
+    // Сохраняется уже в новом формате, старая копия остаётся нетронутой
+    const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
+    expect(saved.version).toBe(CURRENT_VERSION);
+    expect(JSON.parse(window.localStorage.getItem(LEGACY_STORAGE_KEY))).toEqual(legacy);
   });
 
   it('игнорирует повреждённое сохранение', () => {

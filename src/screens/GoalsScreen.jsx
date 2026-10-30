@@ -31,7 +31,7 @@ const FILTERS = {
  * При удалении накопленное на цели возвращается на основной счёт.
  */
 export default function GoalsScreen() {
-  const { goals, depositToGoal, createGoal, updateGoal, deleteGoal, summary } = useFinance();
+  const { goals, depositToGoal, createGoal, updateGoal, deleteGoal, accounts } = useFinance();
   const { notify } = useAppActions();
   const [filter, setFilter] = useState('all');
   const [depositGoal, setDepositGoal] = useState(null);
@@ -73,7 +73,7 @@ export default function GoalsScreen() {
   const goalLeft = depositGoal ? depositGoal.target - depositGoal.saved : 0;
   const depositLimits = [
     { max: goalLeft, error: GOALS_PAGE.depositDialog.errorTooMuch },
-    { max: summary.balance.amount, error: GOALS_PAGE.depositDialog.errorNoFunds },
+    { max: accounts[0].balance, error: GOALS_PAGE.depositDialog.errorNoFunds },
   ];
 
   // Тексты диалога пополнения с названием выбранной цели

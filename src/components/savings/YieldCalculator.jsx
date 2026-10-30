@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Calculator } from 'lucide-react';
 import Card from '../ui/Card.jsx';
 import { formatMoney } from '../../utils/format.js';
+import { KOPECKS_IN_RUBLE } from '../../utils/money.js';
 
 const MONTHS_IN_YEAR = 12;
 const PERCENT = 100;
@@ -17,7 +18,9 @@ function calculateYield({ startBalance, monthly, months, annualRate }) {
     total = total * (1 + monthlyRate) + monthly;
   }
   const interest = total - startBalance - monthly * months;
-  return { total: Math.round(total), interest: Math.round(interest) };
+  // Прогноз — до рубля
+  const toRuble = (kopecks) => Math.round(kopecks / KOPECKS_IN_RUBLE) * KOPECKS_IN_RUBLE;
+  return { total: toRuble(total), interest: toRuble(interest) };
 }
 
 // Слайдер с подписью и текущим значением

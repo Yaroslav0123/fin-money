@@ -104,10 +104,10 @@ test('PDF-выписка Сбербанка (образец с вымышлен�
   await expect(page.getByRole('status').getByText('Категории обновлены: 2')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Разобрать «Другое» (1)' })).toBeVisible();
 
-  // 142 560 + поступления 176 490 − списания 34 435 (копейки округлены по каждой операции)
+  // 142 560 + поступления 176 490 − списания 34 434,40 — до копейки, как в выписке
   const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
   await nav.getByRole('button', { name: 'Главная' }).click();
-  await expect(page.getByRole('main').getByText(money('284 615')).first()).toBeVisible();
+  await expect(page.getByRole('main').getByText(money('284 615,60')).first()).toBeVisible();
 
   // Запомненные правила видны в «Настройках»
   await nav.getByRole('button', { name: 'Настройки' }).click();
@@ -171,4 +171,49 @@ test('выписка банка: проверка строк, импорт и е
 
   await nav.getByRole('button', { name: 'Главная' }).click();
   await expect(page.getByRole('main').getByText(money('142 560')).first()).toBeVisible();
+});
+
+test('несколько счетов: остаток с копейками, выписка на свой счёт, удаление счёта', async ({ page }) => {
+  await openAppWithDemo(page);
+  const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
+  const main = page.getByRole('main');
+
+  // Новый счёт с начальным остатком
+  await nav.getByRole('button', { name: 'Настройки' }).click();
+  await page.getByRole('heading', { name: 'Счета' }).locator('..').getByRole('button', { name: 'Добавить' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Новый счёт' });
+  await dialog.getByLabel('Название').fill('Наличные');
+  await dialog.getByLabel(/Начальный остаток/).fill('1500,50');
+  await dialog.getByRole('button', { name: 'Добавить' }).click();
+  await expect(page.getByRole('status').getByText('Счёт добавлен')).toBeVisible();
+
+  // На «Главной» — общий баланс и сколько на каждом счёте
+  await nav.getByRole('button', { name: 'Главная' }).click();
+  await expect(main.getByText(money('144 060,50')).first()).toBeVisible();
+  const byAccount = main.getByRole('definition').filter({ hasText: /1\s500,50/ });
+  await expect(byAccount).toBeVisible();
+
+  // Выписка — на счёт «Наличные»
+  await page.getByRole('searchbox', { name: 'Поиск операций' }).press('Enter');
+  await page.getByRole('button', { name: 'Импорт выписки' }).click();
+  const importDialog = page.getByRole('dialog', { name: 'Импорт выписки' });
+  await importDialog.getByLabel('Чья это выписка').selectOption({ label: 'Наличные' });
+  const day = new Date(Date.now() - 24 * 3600 * 1000);
+  const date = `${String(day.getDate()).padStart(2, '0')}.${String(day.getMonth() + 1).padStart(2, '0')}.${day.getFullYear()}`;
+  const csv = `Дата;Сумма;Описание\r\n${date} 09:00;-200,25;Рынок`;
+  await importDialog.locator('input[type="file"]').setInputFiles({ name: 'cash.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await expect(importDialog.getByText('cash.csv · Счёт: Наличные')).toBeVisible();
+  await importDialog.getByRole('button', { name: 'Импортировать' }).click();
+  await expect(page.getByText('Рынок').first()).toBeVisible();
+  await expect(page.getByText(/· Наличные/).first()).toBeVisible();
+
+  await nav.getByRole('button', { name: 'Главная' }).click();
+  await expect(main.getByText(money('143 860,25')).first()).toBeVisible();
+
+  // Удаление счёта убирает и его операции
+  await nav.getByRole('button', { name: 'Настройки' }).click();
+  await page.getByRole('button', { name: 'Удалить счёт Наличные' }).click();
+  await page.getByRole('dialog', { name: 'Удалить счёт «Наличные»?' }).getByRole('button', { name: 'Удалить счёт' }).click();
+  await nav.getByRole('button', { name: 'Главная' }).click();
+  await expect(main.getByText(money('142 560')).first()).toBeVisible();
 });

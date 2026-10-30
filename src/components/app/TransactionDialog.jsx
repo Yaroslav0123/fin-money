@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
 import SegmentedControl from '../ui/SegmentedControl.jsx';
+import AccountSelect from './AccountSelect.jsx';
 import { useFinance } from '../../context/FinanceContext.jsx';
 import { ADD_TRANSACTION, AMOUNT_LIMIT } from '../../data/mockData.js';
 import { ACCENTS } from '../../theme/accents.js';
@@ -20,15 +21,23 @@ const DEFAULT_TYPE = 'expense';
 const DISPLAY_PRECISION = 100;
 
 // Начальные значения формы: пустые для новой операции или из редактируемой
-const initialForm = (transaction, categoriesByType) => {
+const initialForm = (transaction, categoriesByType, accountId) => {
   if (!transaction) {
-    return { type: DEFAULT_TYPE, rawAmount: '', categoryId: categoriesByType[DEFAULT_TYPE][0]?.id, comment: '', date: toDateInputValue(new Date()) };
+    return {
+      type: DEFAULT_TYPE,
+      rawAmount: '',
+      categoryId: categoriesByType[DEFAULT_TYPE][0]?.id,
+      accountId,
+      comment: '',
+      date: toDateInputValue(new Date()),
+    };
   }
   const display = Math.round(toDisplayAmount(Math.abs(transaction.amount)) * DISPLAY_PRECISION) / DISPLAY_PRECISION;
   return {
     type: transaction.type,
     rawAmount: String(display),
     categoryId: transaction.categoryId,
+    accountId: transaction.accountId ?? accountId,
     comment: transaction.comment ?? '',
     date: toDateInputValue(new Date(transaction.date)),
   };
@@ -36,16 +45,16 @@ const initialForm = (transaction, categoriesByType) => {
 
 /**
  * Диалог операции: добавление новой или изменение существующей (transaction).
- * Тип (расход / доход), сумма в валюте отображения, категория, дата и комментарий.
+ * Тип (расход / доход), сумма в валюте отображения, категория, счёт (если их несколько), дата и комментарий.
  * У существующей операции есть удаление с подтверждением.
  * onDone(message) — операция сохранена или удалена (текст для уведомления).
  * Компонент монтируется заново для каждой операции (key у родителя), поэтому форма
  * сразу заполнена её значениями.
  */
 export default function TransactionDialog({ isOpen, transaction = null, onClose, onDone }) {
-  const { addTransaction, updateTransaction, deleteTransaction, expenseCategories, incomeCategories } = useFinance();
+  const { addTransaction, updateTransaction, deleteTransaction, expenseCategories, incomeCategories, accounts } = useFinance();
   const categoriesByType = { expense: expenseCategories, income: incomeCategories };
-  const [form, setForm] = useState(() => initialForm(transaction, categoriesByType));
+  const [form, setForm] = useState(() => initialForm(transaction, categoriesByType, accounts[0].id));
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const isEdit = Boolean(transaction);
   const t = ADD_TRANSACTION;
@@ -59,7 +68,7 @@ export default function TransactionDialog({ isOpen, transaction = null, onClose,
   const canSubmit = amount > 0 && !isTooMuch && !isFuture && Boolean(form.date) && Boolean(form.categoryId);
 
   const reset = () => {
-    setForm(initialForm(null, categoriesByType));
+    setForm(initialForm(null, categoriesByType, accounts[0].id));
     setIsConfirmingDelete(false);
   };
 
@@ -80,6 +89,7 @@ export default function TransactionDialog({ isOpen, transaction = null, onClose,
       type: form.type,
       amount,
       categoryId: form.categoryId,
+      accountId: form.accountId,
       comment: form.comment.trim(),
       date: fromDateInputValue(form.date, timeSource),
     };
@@ -181,6 +191,21 @@ export default function TransactionDialog({ isOpen, transaction = null, onClose,
             })}
           </div>
         </div>
+
+        {accounts.length > 1 && (
+          <div>
+            <label htmlFor="add-tx-account" className="text-xs font-medium text-ink-muted">
+              {t.accountLabel}
+            </label>
+            <AccountSelect
+              id="add-tx-account"
+              accounts={accounts}
+              value={form.accountId}
+              onChange={(accountId) => set({ accountId })}
+              className="mt-2 h-12 w-full"
+            />
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
           <div>

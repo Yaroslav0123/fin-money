@@ -1,5 +1,6 @@
 import { DEFAULT_CATEGORIES } from '../data/mockData.js';
 import { decodeCsv, parseAmount, parseCsv, parseDate, toCsv } from './csv.js';
+import { rub } from './money.js';
 import {
   applyCategoryChoice,
   importKey,
@@ -13,7 +14,8 @@ import {
 const TODAY = new Date(2026, 9, 28, 18, 0);
 const options = { categories: DEFAULT_CATEGORIES, existing: [], today: TODAY };
 const parse = (lines) => rowsToDrafts(parseCsv(lines.join('\n')), options);
-const short = (drafts) => drafts.map((d) => [d.type, d.amount, d.incoming, d.categoryId]);
+// Суммы черновиков — в копейках, в ожиданиях пишем рубли
+const short = (drafts) => drafts.map((d) => [d.type, d.amount / 100, d.incoming, d.categoryId]);
 
 // Текст → байты Windows-1251 (кириллица А–я сдвинута на 0x350, остальное — ASCII)
 const encode1251 = (text) =>
@@ -70,12 +72,13 @@ describe('выписка → операции', () => {
     expect(skipped).toBe(1);
     expect(items.at(-1)).toMatchObject({ line: 6, status: 'skipped', reason: 'future' });
     expect(drafts.map((d) => [d.type, d.amount, d.categoryId, d.comment])).toEqual([
-      ['expense', 450, 'food', 'Кофейня'],
-      ['expense', 1201, 'other', 'Аптека'],
+      ['expense', rub(450), 'food', 'Кофейня'],
+      // Копейки сохраняются точно
+      ['expense', 120050, 'other', 'Аптека'],
       // Описание совпало с категорией дохода
-      ['income', 50000, 'salary', ''],
+      ['income', rub(50000), 'salary', ''],
       // Нераспознанное поступление — не «Зарплата», а «Прочие доходы»
-      ['income', 3000, 'other-income', 'Анна К.'],
+      ['income', rub(3000), 'other-income', 'Анна К.'],
     ]);
   });
 
@@ -108,7 +111,7 @@ describe('выписка → операции', () => {
       'Текущий счёт;40817;RUR;26.10.26;Зарплата за октябрь;85 000,00;0',
     ]);
     expect(short(drafts)).toEqual([
-      ['expense', 812, false, 'other'],
+      ['expense', 812.4, false, 'other'],
       // «Зарплата за октябрь» — по словарю
       ['income', 85000, true, 'salary'],
     ]);
@@ -120,21 +123,23 @@ describe('выписка → операции', () => {
 
     // Одна поездка уже есть (её комментарий потом поменяли — ключ импорта сохранился)
     const date = new Date(2026, 9, 27, 12, 0);
-    const existing = [{ type: 'expense', amount: -54, comment: 'Метро до работы', date: date.toISOString(), importKey: importKey(date, -54, 'Метро') }];
+    const existing = [{ type: 'expense', amount: rub(-54), comment: 'Метро до работы', date: date.toISOString(), importKey: importKey(date, rub(-54), 'Метро') }];
     const { items } = rowsToDrafts(parseCsv(lines.join('\n')), { ...options, existing });
     expect(items.map((i) => i.status)).toEqual(['duplicate', 'new']);
   });
 
   it('своя выгрузка загружается обратно без повторов', () => {
     const transactions = [
-      { type: 'expense', category: 'Еда', comment: 'Обед', amount: -700, date: new Date(2026, 9, 27, 13, 0).toISOString() },
-      { type: 'expense', category: 'Еда', comment: 'Возврат', amount: 300, date: new Date(2026, 9, 27, 14, 0).toISOString() },
-      { type: 'transfer', category: 'Накопления', title: 'Пополнение накоплений', amount: -3000, date: new Date(2026, 9, 26).toISOString() },
+      { type: 'expense', category: 'Еда', comment: 'Обед', amount: rub(-700.5), date: new Date(2026, 9, 27, 13, 0).toISOString(), accountName: 'Карта' },
+      { type: 'expense', category: 'Еда', comment: 'Возврат', amount: rub(300), date: new Date(2026, 9, 27, 14, 0).toISOString() },
+      { type: 'transfer', category: 'Накопления', title: 'Пополнение накоплений', amount: rub(-3000), date: new Date(2026, 9, 26).toISOString() },
     ];
     const rows = parseCsv(toCsv(transactionsToRows(transactions)));
+    // Сумма — рубли с копейками, как в банковских выписках; последний столбец — счёт
+    expect(rows[1].slice(-2)).toEqual(['-700,50', 'Карта']);
     const first = rowsToDrafts(rows, options);
     expect(short(first.drafts)).toEqual([
-      ['expense', 700, false, 'food'],
+      ['expense', 700.5, false, 'food'],
       ['expense', 300, true, 'food'],
       ['transfer', 3000, false, null],
     ]);

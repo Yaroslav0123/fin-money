@@ -12,8 +12,9 @@ import { currencySymbol, formatMoney } from '../../utils/format.js';
  * hiddenByDefault — сумма скрыта при открытии (настройка «Скрывать баланс»),
  * глазом её можно показать до ухода с экрана.
  * onDeposit / onTransfer — нажатия на кнопки быстрых действий.
+ * accounts — счета с балансами: если их больше одного, под суммой видно, сколько на каждом.
  */
-export default function BalanceCard({ balance, texts, hiddenByDefault = false, onDeposit, onTransfer }) {
+export default function BalanceCard({ balance, accounts = [], texts, hiddenByDefault = false, onDeposit, onTransfer }) {
   const [isHidden, setIsHidden] = useState(hiddenByDefault);
   const EyeIcon = isHidden ? EyeOff : Eye;
 
@@ -51,6 +52,19 @@ export default function BalanceCard({ balance, texts, hiddenByDefault = false, o
         </AnimatePresence>
 
         <TrendBadge trend={balance.trend} className="mt-4" />
+
+        {accounts.length > 1 && (
+          <dl aria-label={texts.accountsLabel} className="mt-5 grid max-w-sm gap-1.5 text-sm">
+            {accounts.map((account) => (
+              <div key={account.id} className="flex items-baseline justify-between gap-3">
+                <dt className="truncate text-ink-muted">{account.name}</dt>
+                <dd className="shrink-0 font-semibold text-ink">
+                  {isHidden ? `${texts.hiddenAmount} ${currencySymbol()}` : formatMoney(account.balance)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
 
       <div className="relative flex flex-wrap gap-3">
