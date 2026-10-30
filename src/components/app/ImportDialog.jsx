@@ -9,7 +9,8 @@ import { formatDay } from '../../utils/dates.js';
 import { sberLinesToRows } from '../../utils/bankPdf.js';
 import { decodeCsv, parseCsv } from '../../utils/csv.js';
 import { fillTemplate, formatMoney, formatSignedMoney } from '../../utils/format.js';
-import { applyCategoryChoice, rowsToDrafts, signedDraftAmount, TRANSFER_CHOICE, withImportCategories } from '../../utils/statement.js';
+import { applyCategoryChoice, categoryChoiceOf, rowsToDrafts, signedDraftAmount, withImportCategories } from '../../utils/statement.js';
+import CategorySelect from './CategorySelect.jsx';
 
 // Сколько строк предпросмотра показывать за раз
 const PAGE_SIZE = 30;
@@ -27,12 +28,13 @@ const readRows = async (file) => {
 /**
  * Импорт выписки (PDF Сбербанка или CSV): выбор или перетаскивание файла → проверка всех строк → подтверждение.
  * В предпросмотре у каждой строки можно сменить категорию (или сделать её переводом между своими счетами)
- * и снять галочку. Строки, которые не попадут в импорт, перечислены с причиной.
+ * и снять галочку. Новая категория сразу ставится похожим строкам (тот же магазин) и запоминается
+ * правилом для следующих выписок. Строки, которые не попадут в импорт, перечислены с причиной.
  * Файл читается прямо в браузере и никуда не отправляется. onDone(count) — сколько операций добавлено.
  */
 export default function ImportDialog({ isOpen, onClose, onDone }) {
-  const { categories, rawTransactions, addTransactions } = useFinance();
-  // { fileName, error } или { fileName, items: [{ line, status, reason?, draft?, cells, include }] }
+  const { categories, rawTransactions, addTransactions, categoryRules } = useFinance();
+  // { fileName, error } или { fileName, items: [{ line, status, reason?, draft?, cells, key, include, touched }], rules: { [key]: rule } }
   const [result, setResult] = useState(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isDragging, setIsDragging] = useState(false);
@@ -63,13 +65,13 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
     setIsReading(true);
     try {
       const rows = await readRows(file);
-      const parsed = rowsToDrafts(rows, { categories, existing: rawTransactions });
+      const parsed = rowsToDrafts(rows, { categories, existing: rawTransactions, rules: categoryRules });
       // В PDF без операций нет и «столбцов» — объясняем, какие PDF подходят
       const error = parsed.error && isPdfFile(file) ? 'pdfUnknown' : parsed.error;
       setResult(
         error
           ? { fileName: file.name, error }
-          : { fileName: file.name, items: parsed.items.map((item) => ({ ...item, include: item.status === 'new' })) },
+          : { fileName: file.name, items: parsed.items.map((item) => ({ ...item, include: item.status === 'new' })), rules: {} },
       );
     } catch {
       setResult({ fileName: file.name, error: 'readError' });
@@ -88,12 +90,28 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
   const changeItem = (line, change) =>
     setResult((prev) => ({ ...prev, items: prev.items.map((item) => (item.line === line ? { ...item, ...change(item) } : item)) }));
 
+  // Смена категории строки: то же ставим похожим строкам (тот же магазин), которые ещё не меняли вручную,
+  // и запоминаем выбор, чтобы применить его к следующим выпискам
+  const changeCategory = (line, value) =>
+    setResult((prev) => {
+      const target = prev.items.find((item) => item.line === line);
+      const items = prev.items.map((item) => {
+        const isTarget = item.line === line;
+        const isSimilar = !isTarget && target.key && item.key === target.key && item.status === 'new' && !item.touched;
+        if (!isTarget && !isSimilar) return item;
+        return { ...item, touched: item.touched || isTarget, draft: applyCategoryChoice(item.draft, value, importCategories) };
+      });
+      const rules = target.key ? { ...prev.rules, [target.key]: { key: target.key, value, label: target.cells.description } } : prev.rules;
+      return { ...prev, items, rules };
+    });
+
   const newItems = result?.items?.filter((item) => item.status === 'new') ?? [];
+  const newRules = Object.values(result?.rules ?? {});
   const skippedItems = result?.items?.filter((item) => item.status !== 'new') ?? [];
   const included = newItems.filter((item) => item.include).map((item) => item.draft);
 
   const handleImport = () => {
-    addTransactions(included, { fileName: result.fileName });
+    addTransactions(included, { fileName: result.fileName, rules: newRules });
     const count = included.length;
     reset();
     onDone(count);
@@ -177,12 +195,16 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
 
               <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-ink-muted">{t.preview}</p>
               <p className="mt-1 text-xs text-ink-muted">{t.previewHint}</p>
+              {newRules.length > 0 && (
+                <p className="mt-1 text-xs font-semibold text-brand" role="status">
+                  {fillTemplate(t.rulesNote, { count: newRules.length })}
+                </p>
+              )}
               <ul className="mt-2 divide-y divide-line">
                 {newItems.slice(0, visibleCount).map(({ line, draft, cells, include }) => {
                   const view = describeDraft(draft);
                   const signed = signedDraftAmount(draft);
                   const isRefund = draft.type === 'expense' && draft.incoming;
-                  const choice = draft.type === 'transfer' ? TRANSFER_CHOICE : draft.categoryId;
                   return (
                     <li key={line} className={`flex items-start gap-3 py-3 transition-opacity duration-200 ${include ? '' : 'opacity-50'}`}>
                       <input
@@ -202,41 +224,17 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
                           {formatDay(draft.date)}
                           {isRefund && ` · ${t.refundBadge}`}
                         </p>
-                        <select
-                          value={choice}
-                          disabled={!include}
-                          onChange={(e) => changeItem(line, (item) => ({ draft: applyCategoryChoice(item.draft, e.target.value, importCategories) }))}
-                          aria-label={fillTemplate(t.categoryLabel, { line })}
-                          className="mt-2 h-9 w-full max-w-xs cursor-pointer truncate rounded-full bg-surface px-3 text-xs font-semibold text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-default"
-                        >
-                          {draft.incoming ? (
-                            <>
-                              <optgroup label={t.incomeGroup}>
-                                {incomeCategories.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.name}
-                                  </option>
-                                ))}
-                              </optgroup>
-                              <optgroup label={t.refundGroup}>
-                                {expenseCategories.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.name}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            </>
-                          ) : (
-                            <optgroup label={t.expenseGroup}>
-                              {expenseCategories.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {c.name}
-                                </option>
-                              ))}
-                            </optgroup>
-                          )}
-                          <option value={TRANSFER_CHOICE}>{t.transferOption}</option>
-                        </select>
+                        <div className="mt-2">
+                          <CategorySelect
+                            incoming={draft.incoming}
+                            value={categoryChoiceOf(draft)}
+                            disabled={!include}
+                            onChange={(value) => changeCategory(line, value)}
+                            incomeCategories={incomeCategories}
+                            expenseCategories={expenseCategories}
+                            label={fillTemplate(t.categoryLabel, { line })}
+                          />
+                        </div>
                       </div>
                     </li>
                   );

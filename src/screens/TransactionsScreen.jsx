@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { ChevronDown, Download, Plus, Search, Upload, X } from 'lucide-react';
+import { ChevronDown, Download, Plus, Search, Sparkles, Upload, X } from 'lucide-react';
 import ImportDialog from '../components/app/ImportDialog.jsx';
+import SortOtherDialog from '../components/app/SortOtherDialog.jsx';
 import { TransactionRow } from '../components/dashboard/TransactionsCard.jsx';
 import Button from '../components/ui/Button.jsx';
 import Card from '../components/ui/Card.jsx';
@@ -9,12 +10,12 @@ import Reveal from '../components/ui/Reveal.jsx';
 import SegmentedControl from '../components/ui/SegmentedControl.jsx';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
-import { CSV_TEXTS, IMPORT_DIALOG, TRANSACTIONS_PAGE } from '../data/mockData.js';
+import { CSV_TEXTS, IMPORT_DIALOG, SORT_OTHER_DIALOG, TRANSACTIONS_PAGE } from '../data/mockData.js';
 import { toCsv } from '../utils/csv.js';
 import { formatGroupDate, startOfDay, toDateInputValue } from '../utils/dates.js';
 import { downloadFile } from '../utils/download.js';
 import { fillTemplate, formatMoney } from '../utils/format.js';
-import { transactionsToRows } from '../utils/statement.js';
+import { transactionsToRows, uncategorizedGroups } from '../utils/statement.js';
 
 const ALL = 'all';
 
@@ -32,7 +33,12 @@ export default function TransactionsScreen({ params = {} }) {
   const { transactions, categories, today } = useFinance();
   const { openTransaction, openAddTransaction, notify } = useAppActions();
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const t = TRANSACTIONS_PAGE;
+
+  // Импортированные операции без своей категории — для «Разобрать „Другое“»
+  const otherGroups = useMemo(() => uncategorizedGroups(transactions, categories), [transactions, categories]);
+  const otherCount = otherGroups.reduce((sum, group) => sum + group.ids.length, 0);
 
   const [query, setQuery] = useState(params.query ?? '');
   const [type, setType] = useState(params.type ?? (params.categoryId ? 'expense' : ALL));
@@ -87,6 +93,12 @@ export default function TransactionsScreen({ params = {} }) {
     <div className="grid grid-cols-1 gap-5">
       {/* Импорт выписки и выгрузка */}
       <Reveal className="flex flex-wrap justify-end gap-2">
+        {otherCount > 0 && (
+          <Button size="sm" pill variant="secondary" onClick={() => setIsSortOpen(true)}>
+            <Sparkles className="h-4 w-4" />
+            {t.sortAction} ({otherCount})
+          </Button>
+        )}
         <Button size="sm" pill variant="secondary" onClick={() => setIsImportOpen(true)}>
           <Upload className="h-4 w-4" />
           {t.importAction}
@@ -200,6 +212,15 @@ export default function TransactionsScreen({ params = {} }) {
         onDone={(count) => {
           setIsImportOpen(false);
           notify(fillTemplate(IMPORT_DIALOG.done, { count }));
+        }}
+      />
+      <SortOtherDialog
+        isOpen={isSortOpen}
+        groups={otherGroups}
+        onClose={() => setIsSortOpen(false)}
+        onDone={(count) => {
+          setIsSortOpen(false);
+          notify(fillTemplate(SORT_OTHER_DIALOG.done, { count }));
         }}
       />
     </div>

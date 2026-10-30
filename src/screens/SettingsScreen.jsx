@@ -1,5 +1,6 @@
 import BudgetCard from '../components/settings/BudgetCard.jsx';
 import CategoriesCard from '../components/settings/CategoriesCard.jsx';
+import CategoryRulesCard from '../components/settings/CategoryRulesCard.jsx';
 import DemoDataCard from '../components/settings/DemoDataCard.jsx';
 import ImportsCard from '../components/settings/ImportsCard.jsx';
 import PreferencesCard from '../components/settings/PreferencesCard.jsx';
@@ -19,7 +20,20 @@ import { monthName } from '../utils/dates.js';
  * Категории можно добавлять, менять и удалять. Внизу — управление данными в браузере и история импорта выписок.
  */
 export default function SettingsScreen({ onLogout }) {
-  const { summary, settings, setSetting, hideBalance, setHideBalance, resetDemo, startFromScratch, today, imports, undoImport } = useFinance();
+  const {
+    summary,
+    settings,
+    setSetting,
+    hideBalance,
+    setHideBalance,
+    resetDemo,
+    startFromScratch,
+    today,
+    imports,
+    undoImport,
+    categoryRules,
+    deleteCategoryRule,
+  } = useFinance();
   const { notify, openAbout, navigate } = useAppActions();
   const { demo } = SETTINGS_PAGE;
 
@@ -73,7 +87,7 @@ export default function SettingsScreen({ onLogout }) {
         />
       </Reveal>
 
-      <Reveal delay={0.1} className="xl:col-span-3">
+      <Reveal delay={0.1} className="xl:col-span-2">
         <ImportsCard
           texts={SETTINGS_PAGE.imports}
           imports={imports}
@@ -82,6 +96,18 @@ export default function SettingsScreen({ onLogout }) {
             notify(SETTINGS_PAGE.imports.undone);
           }}
           onUpload={() => navigate('transactions')}
+          className="h-full"
+        />
+      </Reveal>
+      <Reveal delay={0.15}>
+        <CategoryRulesCard
+          texts={SETTINGS_PAGE.rules}
+          rules={categoryRules}
+          onDelete={(key) => {
+            deleteCategoryRule(key);
+            notify(SETTINGS_PAGE.rules.deleted);
+          }}
+          className="h-full"
         />
       </Reveal>
     </div>

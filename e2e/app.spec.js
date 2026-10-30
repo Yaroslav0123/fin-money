@@ -84,13 +84,35 @@ test('PDF-выписка Сбербанка (образец с вымышлен�
   await expect(dialog.getByText('К импорту: 16 из 16')).toBeVisible();
   await expect(dialog.getByText('Переводов между своими счетами: 1 — в доходы и расходы не входят')).toBeVisible();
   await expect(dialog.getByText('Возвраты покупок: 4 990 ₽ — уменьшат расходы')).toBeVisible();
+
+  // Автокатегории: «Супермаркеты» → «Еда», «Коммунальные платежи» → «Жильё»
+  await expect(dialog.getByLabel('Категория строки 3')).toHaveValue('food');
+  await expect(dialog.getByLabel('Категория строки 12')).toHaveValue('housing');
+  // Покупка одежды → «Развлечения»: возврат того же магазина меняется следом, выбор запоминается
+  await dialog.getByLabel('Категория строки 9').selectOption({ label: 'Развлечения' });
+  await expect(dialog.getByLabel('Категория строки 10')).toHaveValue('fun');
+  await expect(dialog.getByText('Запомним для похожих операций в следующих выписках: 1')).toBeVisible();
   await dialog.getByRole('button', { name: 'Импортировать' }).click();
   await expect(page.getByRole('status').getByText('Импортировано операций: 16')).toBeVisible();
+
+  // Остались без категории: перевод человеку, аптека и входящий перевод
+  await page.getByRole('button', { name: 'Разобрать «Другое» (3)' }).click();
+  const sort = page.getByRole('dialog', { name: 'Разобрать «Другое»' });
+  await sort.getByLabel(/APTEKA/).selectOption({ label: 'Развлечения' });
+  await sort.getByLabel(/Перевод от/).selectOption({ label: 'Подарок' });
+  await sort.getByRole('button', { name: 'Сохранить' }).click();
+  await expect(page.getByRole('status').getByText('Категории обновлены: 2')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Разобрать «Другое» (1)' })).toBeVisible();
 
   // 142 560 + поступления 176 490 − списания 34 435 (копейки округлены по каждой операции)
   const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
   await nav.getByRole('button', { name: 'Главная' }).click();
   await expect(page.getByRole('main').getByText(money('284 615')).first()).toBeVisible();
+
+  // Запомненные правила видны в «Настройках»
+  await nav.getByRole('button', { name: 'Настройки' }).click();
+  await expect(page.getByText('→ Подарок')).toBeVisible();
+  await expect(page.getByText('→ Развлечения')).toHaveCount(2);
 
   // Тот же файл ещё раз — всё уже есть
   await page.getByRole('searchbox', { name: 'Поиск операций' }).press('Enter');

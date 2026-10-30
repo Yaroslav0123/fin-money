@@ -157,6 +157,30 @@ describe('FinanceContext', () => {
     expect(result.current.summary.expenses.amount).toBe(before.expenses.amount);
   });
 
+  it('разбор «Другого» меняет категории, запоминает правила; удаление категории удаляет её правила', () => {
+    const { result } = renderFinance();
+    const date = new Date();
+    const drafts = [
+      { type: 'expense', amount: 400, incoming: false, categoryId: 'other', comment: 'APTEKA', date, importKey: 'x1' },
+      { type: 'expense', amount: 600, incoming: false, categoryId: 'other', comment: 'APTEKA', date, importKey: 'x2' },
+    ];
+    act(() => result.current.addTransactions(drafts, { fileName: 'bank.csv', rules: [{ key: 'kofe', value: 'food', label: 'KOFE' }] }));
+    const ids = result.current.transactions.filter((tx) => tx.comment === 'APTEKA').map((tx) => tx.id);
+    const fun = () => result.current.monthCategories.find((c) => c.id === 'fun')?.amount ?? 0;
+    const funBefore = fun();
+
+    act(() => result.current.recategorize([{ ids, value: 'fun' }], [{ key: 'apteka', value: 'fun', label: 'APTEKA' }]));
+    expect(fun()).toBe(funBefore + 1000);
+    expect(result.current.categoryRules.map((r) => [r.key, r.categoryName])).toEqual([
+      ['apteka', 'Развлечения'],
+      ['kofe', 'Еда'],
+    ]);
+
+    act(() => result.current.deleteCategoryRule('kofe'));
+    act(() => result.current.deleteCategory('fun'));
+    expect(result.current.categoryRules).toEqual([]);
+  });
+
   it('восстанавливает данные и настройки после перезагрузки', () => {
     const first = renderFinance();
     const goal = first.result.current.goals[0];

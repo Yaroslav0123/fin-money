@@ -39,14 +39,15 @@ describe('PDF-выписка Сбербанка', () => {
 
   it('общий разбор: зарплата, две одинаковые поездки, перевод между своими счетами и возврат', () => {
     const { drafts } = rowsToDrafts(sberLinesToRows(LINES), { categories: DEFAULT_CATEGORIES, existing: [], today: new Date(2026, 9, 28) });
+    // Категории Сбербанка разносятся словарём: «Супермаркеты» → «Еда», «Коммунальные платежи…» → «Жильё»
     expect(drafts.map((d) => [d.type, d.amount, d.incoming, d.categoryId])).toEqual([
       ['income', 85000, true, 'salary'],
-      ['expense', 2341, false, 'other'],
+      ['expense', 2341, false, 'food'],
       ['expense', 54, false, 'transport'],
       ['expense', 54, false, 'transport'],
       ['transfer', 10000, false, null],
       ['expense', 4990, true, 'other'],
-      ['expense', 1006200, false, 'other'],
+      ['expense', 1006200, false, 'housing'],
     ]);
   });
 

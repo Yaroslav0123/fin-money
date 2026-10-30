@@ -15,7 +15,7 @@ import {
 import { formatDay, formatFullDate, formatTransactionDate } from '../utils/dates.js';
 import { categoryBreakdown, goalMonthsLeft, isGoalDone, monthSummary, savingsStats } from '../utils/finance.js';
 import { setDisplayCurrency } from '../utils/format.js';
-import { signedDraftAmount } from '../utils/statement.js';
+import { applyCategoryChoice, signedDraftAmount, TRANSFER_CHOICE } from '../utils/statement.js';
 import { clearFinanceState, loadFinanceState, saveFinanceState } from './financeStorage.js';
 
 /*
@@ -43,10 +43,12 @@ const DEFAULT_SETTINGS = {
 };
 
 // Новое состояние: данные (демо или пустые) + настройки.
-// imports — история загруженных выписок: { id, fileName, date (ISO), count }.
+// imports — история загруженных выписок: { id, fileName, date (ISO), count };
+// categoryRules — «запомнить для похожих»: { key (ключ магазина), value (id категории или 'transfer'), label (пример описания) }.
 const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) => ({
   ...data,
   imports: [],
+  categoryRules: [],
   settings,
   onboardingDone,
   nextId: FIRST_ID,
@@ -56,7 +58,7 @@ const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) =
 const restoreState = () => {
   const saved = loadFinanceState();
   if (!saved) return buildState(createDemoData());
-  return { imports: [], ...saved, settings: { ...DEFAULT_SETTINGS, ...saved.settings } };
+  return { imports: [], categoryRules: [], ...saved, settings: { ...DEFAULT_SETTINGS, ...saved.settings } };
 };
 
 const byDateDesc = (a, b) => new Date(b.date) - new Date(a.date);
@@ -74,6 +76,9 @@ function useSystemDark(theme) {
   }, []);
   return theme === 'dark' || (theme === 'system' && systemDark);
 }
+
+// Новые правила заменяют старые для тех же магазинов
+const mergeRules = (rules, added) => [...added, ...rules.filter((rule) => !added.some((a) => a.key === rule.key))];
 
 // Запасная категория при удалении: «Другое» того же типа или первая оставшаяся
 const fallbackCategory = (categories, removed) => {
@@ -131,9 +136,10 @@ export function FinanceProvider({ children }) {
    * Импорт выписки одним пакетом: drafts — из rowsToDrafts (тип, сумма, incoming, категория, дата, importKey).
    * Каждая операция помнит id пакета, поэтому импорт можно отменить целиком.
    * Переводы между своими счетами — type 'transfer', kind 'import': меняют баланс, но не доходы и расходы.
+   * rules — правила «запомнить для похожих», выбранные в предпросмотре.
    */
   const addTransactions = useCallback(
-    (drafts, { fileName = '' } = {}) =>
+    (drafts, { fileName = '', rules = [] } = {}) =>
       update((prev, newId) => {
         const importId = newId('import');
         const added = drafts.map((draft) => {
@@ -155,8 +161,41 @@ export function FinanceProvider({ children }) {
           categories: needsFallback ? [...prev.categories, IMPORT_FALLBACK_INCOME] : prev.categories,
           transactions: [...added, ...prev.transactions].sort(byDateDesc),
           imports: [{ id: importId, fileName, date: new Date().toISOString(), count: added.length }, ...prev.imports],
+          categoryRules: mergeRules(prev.categoryRules, rules),
         };
       }),
+    [update],
+  );
+
+  /*
+   * Разбор «Другого»: changes — [{ ids, value }] (value — id категории или 'transfer'), rules — что запомнить.
+   * Поступление в категории расходов становится возвратом, перевод — переводом между своими счетами.
+   */
+  const recategorize = useCallback(
+    (changes, rules = []) =>
+      update((prev) => {
+        const valueById = new Map(changes.flatMap(({ ids, value }) => ids.map((id) => [id, value])));
+        const hasFallback = prev.categories.some((c) => c.id === IMPORT_FALLBACK_INCOME.id);
+        const categories = hasFallback ? prev.categories : [...prev.categories, IMPORT_FALLBACK_INCOME];
+        const needsFallback = !hasFallback && changes.some((change) => change.value === IMPORT_FALLBACK_INCOME.id);
+        return {
+          ...prev,
+          categories: needsFallback ? categories : prev.categories,
+          transactions: prev.transactions.map((tx) => {
+            if (!valueById.has(tx.id) || tx.type === 'transfer') return tx;
+            const value = valueById.get(tx.id);
+            if (value === TRANSFER_CHOICE) return { ...tx, type: 'transfer', kind: 'import', categoryId: undefined };
+            const { type, categoryId } = applyCategoryChoice({ type: tx.type, categoryId: tx.categoryId, incoming: tx.amount > 0 }, value, categories);
+            return { ...tx, type, categoryId };
+          }),
+          categoryRules: mergeRules(prev.categoryRules, rules),
+        };
+      }),
+    [update],
+  );
+
+  const deleteCategoryRule = useCallback(
+    (key) => update((prev) => ({ ...prev, categoryRules: prev.categoryRules.filter((rule) => rule.key !== key) })),
     [update],
   );
 
@@ -322,7 +361,7 @@ export function FinanceProvider({ children }) {
     [update],
   );
 
-  // Удаление категории: её операции переходят в запасную категорию того же типа
+  // Удаление категории: её операции переходят в запасную категорию того же типа, правила на неё удаляются
   const deleteCategory = useCallback(
     (id) =>
       update((prev) => {
@@ -333,6 +372,7 @@ export function FinanceProvider({ children }) {
           ...prev,
           categories: prev.categories.filter((c) => c.id !== id),
           transactions: prev.transactions.map((tx) => (tx.categoryId === id ? { ...tx, categoryId: fallback.id } : tx)),
+          categoryRules: prev.categoryRules.filter((rule) => rule.value !== id),
         };
       }),
     [update],
@@ -446,6 +486,11 @@ export function FinanceProvider({ children }) {
         ...item,
         count: state.transactions.filter((tx) => tx.importId === item.id).length,
       })),
+      // Правила «запомнить для похожих» с названием категории для показа
+      categoryRules: state.categoryRules.map((rule) => ({
+        ...rule,
+        categoryName: rule.value === TRANSFER_CHOICE ? IMPORT_TRANSFER.title : categoryById[rule.value]?.name ?? '',
+      })),
       settings: state.settings,
       isDark,
       hideBalance: state.settings.hideBalance,
@@ -455,6 +500,8 @@ export function FinanceProvider({ children }) {
       addTransaction,
       addTransactions,
       undoImport,
+      recategorize,
+      deleteCategoryRule,
       updateTransaction,
       deleteTransaction,
       moveSavings,
@@ -477,6 +524,8 @@ export function FinanceProvider({ children }) {
     addTransaction,
     addTransactions,
     undoImport,
+    recategorize,
+    deleteCategoryRule,
     updateTransaction,
     deleteTransaction,
     moveSavings,

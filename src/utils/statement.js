@@ -2,7 +2,7 @@
  * Операции ↔ строки выписки. Сам CSV — в utils/csv.js, здесь смысл столбцов:
  * какие поля выгружать и как превратить строки банковской выписки в операции Fin Money.
  */
-import { AMOUNT_LIMIT, CSV_TEXTS, IMPORT_FALLBACK_INCOME } from '../data/mockData.js';
+import { AMOUNT_LIMIT, AUTO_CATEGORIES, CSV_TEXTS, IMPORT_FALLBACK_INCOME, MERCHANT_KEY_NOISE } from '../data/mockData.js';
 import { detectColumns, normalizeHeader, parseAmount, parseDate } from './csv.js';
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -50,17 +50,51 @@ export const signedDraftAmount = (draft) => (draft.incoming ? draft.amount : -dr
 
 const hasWord = (text, words) => words.some((w) => text.includes(w));
 
+const KEY_NOISE = new Set(MERCHANT_KEY_NOISE);
+
+/**
+ * Ключ «магазина» для правил и группировки: описание без цифр (номера карт, коды, даты)
+ * и без слов, общих для всех операций. «KOFEYNYA ZERNO Moskva RUS. Операция по карте ****0000» → «kofeynya zerno moskva rus».
+ * Пустая строка — описание ничего не говорит о магазине.
+ */
+export const merchantKey = (description) =>
+  normalizeHeader(description ?? '')
+    .split(' ')
+    .filter((word) => word && !/\d/.test(word) && !KEY_NOISE.has(word))
+    .join(' ');
+
+/**
+ * Категория по словарю AUTO_CATEGORIES: сначала по категории банка, потом по описанию.
+ * Ищем стандартную категорию по id, а если её нет (удалили или пересоздали) — по значку.
+ */
+export function autoCategory(bankCategory, description, type, categories) {
+  const find = (rule) =>
+    categories.find((c) => c.id === rule.categoryId && c.type === type) ?? categories.find((c) => c.iconId === rule.iconId && c.type === type);
+  const rules = AUTO_CATEGORIES.filter((rule) => rule.type === type);
+  for (const text of [normalizeHeader(bankCategory ?? ''), normalizeHeader(description ?? '')]) {
+    if (!text) continue;
+    for (const rule of rules) {
+      const category = hasWord(text, rule.words) && find(rule);
+      if (category) return category;
+    }
+  }
+  return null;
+}
+
 /**
  * Разбор строк выписки для окна импорта.
- * rows — результат parseCsv; categories — текущие категории; existing — уже сохранённые операции.
+ * rows — результат parseCsv; categories — текущие категории; existing — уже сохранённые операции;
+ * rules — правила пользователя [{ key, value }] (value — id категории или 'transfer'), они важнее всего остального.
+ * Категория без правила: то же название, что у категории банка или описания → словарь AUTO_CATEGORIES → «Другое».
  * Возвращает { items, drafts, skipped } или { error: 'noColumns' }.
- * items — все строки файла по порядку: { line, status: 'new' | 'duplicate' | 'skipped', reason?, draft?, cells }.
+ * items — все строки файла по порядку: { line, status: 'new' | 'duplicate' | 'skipped', reason?, draft?, cells, key }
+ * (key — ключ магазина для правил «запомнить для похожих»).
  * draft — черновик для addTransactions: { type: 'income' | 'expense' | 'transfer', amount (положительное),
  * incoming (деньги пришли), categoryId, comment, date, importKey }. Расход с incoming — возврат покупки.
  * Повторы считаются по количеству: две одинаковые поездки в метро за день — две операции,
  * а повтором будет только то, что уже есть в Fin Money.
  */
-export function rowsToDrafts(rows, { categories, existing, today = new Date() }) {
+export function rowsToDrafts(rows, { categories, existing, rules = [], today = new Date() }) {
   if (rows.length < 2) return { error: 'noColumns' };
   const columns = detectColumns(rows[0], CSV_TEXTS.columns, { exactOnly: CSV_TEXTS.exactColumns });
   const hasAmount = columns.amount >= 0 || columns.credit >= 0 || columns.debit >= 0;
@@ -74,6 +108,8 @@ export function rowsToDrafts(rows, { categories, existing, today = new Date() })
     expense: importCategories.find((c) => c.type === 'expense' && c.iconId === 'other') ?? importCategories.find((c) => c.type === 'expense'),
     income: importCategories.find((c) => c.type === 'income' && c.iconId === 'other'),
   };
+
+  const ruleByKey = new Map(rules.map((rule) => [rule.key, rule.value]));
 
   // Сколько раз каждая операция уже есть в Fin Money
   const existingCount = new Map();
@@ -134,16 +170,23 @@ export function rowsToDrafts(rows, { categories, existing, today = new Date() })
     let comment = description;
     if (type !== 'transfer') {
       const categoryType = type === 'expense' ? 'expense' : 'income';
-      // Категория банка с тем же названием, иначе описание вида «Зарплата», иначе «Другое»
+      // Категория банка с тем же названием, описание вида «Зарплата», словарь, иначе «Другое»
       const category =
-        names[categoryType][normalizeHeader(bankCategory)] ?? names[categoryType][normalizeHeader(description)] ?? fallback[categoryType];
+        names[categoryType][normalizeHeader(bankCategory)] ??
+        names[categoryType][normalizeHeader(description)] ??
+        autoCategory(bankCategory, description, categoryType, importCategories) ??
+        fallback[categoryType];
       categoryId = category.id;
       // Описание, совпадающее с названием категории, не повторяем в комментарии
       if (normalizeHeader(description) === normalizeHeader(category.name)) comment = '';
     }
 
-    const draft = { type, amount, incoming, categoryId, comment, date, importKey: key };
-    return status === 'duplicate' ? { line, status, reason: 'duplicate', draft, cells } : { line, status, draft, cells };
+    // Правило пользователя для этого магазина важнее всего остального
+    const merchant = merchantKey(description);
+    const base = { type, amount, incoming, categoryId, comment, date, importKey: key };
+    const draft = ruleByKey.has(merchant) ? applyCategoryChoice(base, ruleByKey.get(merchant), importCategories) : base;
+    const item = { line, status, draft, cells, key: merchant };
+    return status === 'duplicate' ? { ...item, reason: 'duplicate' } : item;
   });
 
   const drafts = items.filter((item) => item.status === 'new').map((item) => item.draft);
@@ -151,14 +194,40 @@ export function rowsToDrafts(rows, { categories, existing, today = new Date() })
 }
 
 /**
- * Смена категории черновика в окне импорта. value — id категории или 'transfer'.
- * Поступление можно сделать доходом, возвратом в категорию расходов или переводом,
- * списание — расходом или переводом.
+ * Смена категории черновика (или операции) в окне импорта и при разборе «Другого».
+ * value — id категории или 'transfer'. Поступление можно сделать доходом, возвратом в категорию
+ * расходов или переводом, списание — расходом или переводом. Неподходящий выбор (списание → доход)
+ * и несуществующая категория ничего не меняют.
  */
 export const TRANSFER_CHOICE = 'transfer';
 export function applyCategoryChoice(draft, value, categories) {
   if (value === TRANSFER_CHOICE) return { ...draft, type: 'transfer', categoryId: null };
   const category = categories.find((c) => c.id === value);
-  if (!category) return draft;
+  if (!category || (category.type === 'income' && !draft.incoming)) return draft;
   return { ...draft, type: category.type, categoryId: category.id };
+}
+
+// Выбранное значение для выпадающего списка категорий: id категории или 'transfer'
+export const categoryChoiceOf = (draft) => (draft.type === 'transfer' ? TRANSFER_CHOICE : draft.categoryId);
+
+/**
+ * Разбор «Другого»: импортированные операции без своей категории («Другое», «Прочие доходы» — значок other),
+ * сгруппированные по магазину и направлению денег. Самые частые — первыми.
+ * Возвращает [{ id, key, incoming, label, ids, total (со знаком), value (текущая категория) }].
+ */
+export function uncategorizedGroups(transactions, categories) {
+  const iconById = Object.fromEntries(categories.map((c) => [c.id, c.iconId]));
+  const groups = new Map();
+  for (const tx of transactions) {
+    const isOther = (iconById[tx.categoryId] ?? 'other') === 'other';
+    if (!tx.importId || tx.type === 'transfer' || !isOther) continue;
+    const key = merchantKey(tx.comment);
+    const incoming = tx.amount > 0;
+    const id = `${key || tx.comment || tx.id}|${incoming ? 'in' : 'out'}`;
+    const group = groups.get(id) ?? { id, key, incoming, label: tx.comment ?? '', ids: [], total: 0, value: tx.categoryId };
+    group.ids.push(tx.id);
+    group.total += tx.amount;
+    groups.set(id, group);
+  }
+  return [...groups.values()].sort((a, b) => b.ids.length - a.ids.length || Math.abs(b.total) - Math.abs(a.total));
 }
