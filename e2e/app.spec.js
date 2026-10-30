@@ -217,3 +217,47 @@ test('несколько счетов: остаток с копейками, в�
   await nav.getByRole('button', { name: 'Главная' }).click();
   await expect(main.getByText(money('142 560')).first()).toBeVisible();
 });
+
+test('бюджеты по категориям и сверка счёта с банком', async ({ page }) => {
+  await openAppWithDemo(page);
+  const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
+  const main = page.getByRole('main');
+
+  // На «Главной» — лимиты демо-данных
+  await expect(main.getByRole('heading', { name: 'Бюджеты по категориям' })).toBeVisible();
+  await expect(main.getByRole('progressbar', { name: 'Еда' })).toBeVisible();
+
+  // Трата 500 ₽ в «Еду» (категория по умолчанию) и лимит меньше неё — лимит превышен
+  await page.getByRole('button', { name: 'Добавить операцию' }).first().click();
+  const txDialog = page.getByRole('dialog', { name: 'Новая операция' });
+  await txDialog.getByLabel('Сумма').fill('500');
+  await txDialog.getByRole('button', { name: 'Добавить', exact: true }).click();
+  await expect(main.getByText(money('142 060')).first()).toBeVisible();
+
+  await nav.getByRole('button', { name: 'Настройки' }).click();
+  await page.getByRole('button', { name: 'Изменить лимит «Еда»' }).click();
+  const budgetDialog = page.getByRole('dialog', { name: 'Изменить лимит' });
+  await budgetDialog.getByLabel(/Лимит в месяц/).fill('100');
+  await budgetDialog.getByRole('button', { name: 'Сохранить' }).click();
+  await expect(page.getByRole('status').getByText('Лимит сохранён')).toBeVisible();
+  await expect(main.getByRole('progressbar', { name: 'Еда' })).toHaveAttribute('aria-valuetext', /Превышен на/);
+
+  // Предупреждение под колокольчиком
+  await page.getByRole('button', { name: 'Уведомления' }).first().click();
+  const notifications = page.getByRole('dialog', { name: 'Уведомления' });
+  await expect(notifications.getByText(/«Еда»: лимит превышен на/)).toBeVisible();
+  await notifications.getByRole('button', { name: 'Закрыть' }).last().click();
+
+  // Сверка: в банке на 10,50 ₽ больше — разницу учитываем в начальном остатке
+  await page.getByRole('button', { name: 'Сверить счёт Основной счёт с банком' }).click();
+  const reconcile = page.getByRole('dialog', { name: 'Сверка с банком: Основной счёт' });
+  await reconcile.getByLabel(/Остаток в банке/).fill('142070,50');
+  await expect(reconcile.getByText(/\+10,50\s₽/)).toBeVisible();
+  await expect(reconcile.getByText(/В банке на 10,50\s₽ больше/)).toBeVisible();
+  await reconcile.getByRole('button', { name: 'Учесть разницу в начальном остатке' }).click();
+  await expect(page.getByRole('status').getByText(/Начальный остаток поправлен/)).toBeVisible();
+  await expect(main.getByText(/Сверено на .*: совпадает/)).toBeVisible();
+
+  await nav.getByRole('button', { name: 'Главная' }).click();
+  await expect(main.getByText(money('142 070,50')).first()).toBeVisible();
+});

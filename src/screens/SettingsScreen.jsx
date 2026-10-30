@@ -1,6 +1,7 @@
 import AccountsCard from '../components/settings/AccountsCard.jsx';
 import BudgetCard from '../components/settings/BudgetCard.jsx';
 import CategoriesCard from '../components/settings/CategoriesCard.jsx';
+import CategoryBudgetsCard from '../components/settings/CategoryBudgetsCard.jsx';
 import CategoryRulesCard from '../components/settings/CategoryRulesCard.jsx';
 import DemoDataCard from '../components/settings/DemoDataCard.jsx';
 import ImportsCard from '../components/settings/ImportsCard.jsx';
@@ -17,7 +18,7 @@ import { monthName } from '../utils/dates.js';
 /**
  * Экран «Настройки» (веб-версия).
  * onLogout — «выход из аккаунта» (в прототипе возвращает на лендинг).
- * Параметры, бюджет и «Скрывать баланс» хранятся в общем состоянии и действуют на всех экранах.
+ * Параметры, бюджет, лимиты категорий и «Скрывать баланс» хранятся в общем состоянии и действуют на всех экранах.
  * Категории и счета можно добавлять, менять и удалять. Внизу — управление данными в браузере и история импорта выписок.
  */
 export default function SettingsScreen({ onLogout }) {
@@ -52,6 +53,10 @@ export default function SettingsScreen({ onLogout }) {
           onLimitChange={(value) => setSetting('budgetLimit', value)}
           className="h-full"
         />
+      </Reveal>
+
+      <Reveal delay={0.1} className="xl:col-span-3">
+        <CategoryBudgetsCard />
       </Reveal>
 
       <Reveal delay={0.1}>

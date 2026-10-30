@@ -49,11 +49,12 @@ const buildInsights = (data) => {
  * Экран 4. Аналитика (веб-версия).
  * Всё считается из истории операций: переключатель периода меняет показатели,
  * диаграмму и категории; стрелки листают периоды назад. Категория открывает свои операции.
+ * Для периода «Месяц» у категорий с лимитом видно, сколько потрачено из лимита.
  */
 export default function AnalyticsScreen() {
   const [periodId, setPeriodId] = useState(ANALYTICS_PAGE.defaultPeriod);
   const [offset, setOffset] = useState(0);
-  const { rawTransactions, categories, goals, settings, today } = useFinance();
+  const { rawTransactions, categories, goals, settings, today, budgetLimits } = useFinance();
   const { navigate } = useAppActions();
   const { kpi } = ANALYTICS_PAGE;
 
@@ -159,6 +160,7 @@ export default function AnalyticsScreen() {
         <CategoryBreakdownCard
           categories={categoriesInPeriod}
           texts={ANALYTICS_PAGE.categories}
+          budgetLimits={periodId === 'month' ? budgetLimits : {}}
           onCategoryClick={(category) => navigate('transactions', { categoryId: category.id })}
           className="h-full"
         />

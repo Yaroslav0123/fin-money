@@ -1,6 +1,16 @@
 import { createDemoData } from '../data/demoData.js';
 import { DEFAULT_CATEGORIES } from '../data/mockData.js';
-import { categoryBreakdown, monthSummary, periodExpenses, periodRange, savingsSeries } from './finance.js';
+import {
+  averageMonthlySpend,
+  budgetProgress,
+  categoryBreakdown,
+  monthSummary,
+  notificationData,
+  periodExpenses,
+  periodRange,
+  reconcileAccount,
+  savingsSeries,
+} from './finance.js';
 import { rub } from './money.js';
 
 // Фиксированное «сегодня»: среда, 28 октября 2026, 15:30
@@ -77,6 +87,70 @@ describe('monthSummary', () => {
     const items = [expense(1000, new Date(2026, 8, 15)), expense(500, new Date(2026, 9, 1, 10, 0)), expense(1500, new Date(2026, 9, 20))];
     expect(monthSummary(items, 0, lastDay)).toMatchObject({ expenses: 2000, expensesTrend: 100 });
     expect(periodExpenses(items, 'month', lastDay).trend.percent).toBe(100);
+  });
+});
+
+describe('budgetProgress', () => {
+  const month = [expense(rub(900), new Date(2026, 9, 3)), expense(rub(300), new Date(2026, 9, 5), 'fun'), expense(rub(50), new Date(2026, 9, 6), 'transport')];
+  // Возврат покупки (расход с плюсом) уменьшает потраченное
+  const refund = { ...expense(rub(100), new Date(2026, 9, 7), 'fun'), amount: rub(100) };
+  const limits = { food: rub(1000), fun: rub(150), transport: rub(500) };
+
+  it('считает потраченное из лимита и состояние, сначала самые «горячие»', () => {
+    const result = budgetProgress([...month, refund], DEFAULT_CATEGORIES, limits, 80);
+    expect(result.map((b) => [b.id, b.spent, b.status])).toEqual([
+      ['fun', rub(200), 'over'],
+      ['food', rub(900), 'warning'],
+      ['transport', rub(50), 'ok'],
+    ]);
+    expect(result[0].left).toBe(rub(-50));
+  });
+
+  it('категории без лимита не попадают, лимиты категорий — в уведомления', () => {
+    const result = budgetProgress(month, DEFAULT_CATEGORIES, { food: rub(1000) }, 80);
+    expect(result).toHaveLength(1);
+    const items = notificationData({ transactions: [], goals: [], monthSpent: 0, budgetLimit: rub(1), warnAt: 90, categoryBudgets: result, largeAmount: rub(5000), today: TODAY });
+    expect(items).toEqual([expect.objectContaining({ id: 'budget-food', kind: 'categoryBudget' })]);
+  });
+
+  it('средние траты — по полным месяцам до текущего', () => {
+    const items = [expense(rub(3000), new Date(2026, 6, 10)), expense(rub(6000), new Date(2026, 8, 10)), expense(rub(9999), new Date(2026, 9, 1))];
+    expect(averageMonthlySpend(items, 'food', TODAY)).toBe(rub(3000));
+    expect(averageMonthlySpend(items, 'fun', TODAY)).toBe(0);
+  });
+});
+
+describe('reconcileAccount', () => {
+  const account = { id: 'card', openingBalance: rub(1000) };
+  const onCard = (tx) => ({ ...tx, accountId: 'card' });
+  const coffee = (id, date) => onCard({ ...expense(rub(150.5), date), id, comment: 'Кофейня' });
+  const transactions = [
+    onCard(income(rub(5000), new Date(2026, 9, 20, 10))),
+    coffee('c1', new Date(2026, 9, 21, 9)),
+    coffee('c2', new Date(2026, 9, 21, 18)),
+    // Позже даты сверки и на другом счёте — не учитываются
+    onCard(expense(rub(700), new Date(2026, 9, 25))),
+    { ...expense(rub(999), new Date(2026, 9, 21)), accountId: 'main' },
+  ];
+  const date = new Date(2026, 9, 22);
+
+  it('совпадает до копейки', () => {
+    const result = reconcileAccount({ account, transactions, date, bankBalance: rub(1000 + 5000 - 301) });
+    expect(result).toMatchObject({ appBalance: rub(5699), difference: 0, matches: true, laterCount: 1 });
+  });
+
+  it('повтор в Fin Money: разница — минус его сумма, операция в подозреваемых', () => {
+    const result = reconcileAccount({ account, transactions, date, bankBalance: rub(1000 + 5000 - 150.5) });
+    expect(result.difference).toBe(rub(150.5));
+    expect(result.duplicates).toHaveLength(1);
+    expect(result.duplicates[0].map((tx) => tx.id)).toEqual(['c1', 'c2']);
+    expect(result.suspects.map((tx) => tx.id)).toEqual(['c1', 'c2']);
+    expect(result.lastDate).toEqual(new Date(2026, 9, 21, 18));
+  });
+
+  it('пропущенная трата: в банке меньше, подозреваемых нет', () => {
+    const result = reconcileAccount({ account, transactions, date, bankBalance: rub(5699 - 2000) });
+    expect(result).toMatchObject({ difference: rub(-2000), matches: false, suspects: [] });
   });
 });
 

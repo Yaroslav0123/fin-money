@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ExpenseStructureCard from '../components/cards/ExpenseStructureCard.jsx';
 import StatCard from '../components/cards/StatCard.jsx';
 import BalanceCard from '../components/dashboard/BalanceCard.jsx';
+import BudgetsCard from '../components/dashboard/BudgetsCard.jsx';
 import GoalCard from '../components/dashboard/GoalCard.jsx';
 import SavingsPreviewCard from '../components/dashboard/SavingsPreviewCard.jsx';
 import TransactionsCard from '../components/dashboard/TransactionsCard.jsx';
@@ -10,6 +11,7 @@ import Reveal from '../components/ui/Reveal.jsx';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
 import { DASHBOARD, SAVINGS_PAGE } from '../data/mockData.js';
+import { monthName } from '../utils/dates.js';
 import { isGoalDone } from '../utils/finance.js';
 
 // Цель для карточки на «Главной»: ближайшая по сроку из незавершённых, иначе любая
@@ -18,14 +20,14 @@ const featuredGoal = (goals) =>
 
 /**
  * Экран 2. Главная (веб-версия).
- * Сетка: баланс + цель → доходы, расходы, накопления → структура расходов + операции.
+ * Сетка: баланс + цель → доходы, расходы, накопления → структура расходов + операции → лимиты категорий.
  * Всё считается из истории операций за текущий месяц, поэтому сразу учитывает
  * новые, изменённые и удалённые операции, переводы на накопления и пополнения целей.
  * «Перевести» — перевод на накопительный счёт. Настройка «Скрывать баланс» прячет сумму при открытии.
  * onNavigate — переход на другие экраны (например, в «Накопления»).
  */
 export default function DashboardScreen({ onNavigate }) {
-  const { summary, accounts, monthCategories, transactions, goals, savings, hideBalance, moveSavings } = useFinance();
+  const { summary, accounts, monthCategories, budgets, transactions, goals, savings, hideBalance, moveSavings, today } = useFinance();
   // Переводы в накопления идут с основного счёта
   const mainBalance = accounts[0].balance;
   const { openTransaction, openAddTransaction, notify } = useAppActions();
@@ -94,6 +96,9 @@ export default function DashboardScreen({ onNavigate }) {
             onAdd={openAddTransaction}
             className="h-full"
           />
+        </Reveal>
+        <Reveal delay={0.1} className="xl:col-span-3">
+          <BudgetsCard budgets={budgets} month={monthName(today)} texts={DASHBOARD.budgets} onSetup={() => onNavigate('settings')} />
         </Reveal>
       </div>
 

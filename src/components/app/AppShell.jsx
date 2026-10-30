@@ -27,7 +27,7 @@ const greetingFor = (date) => {
  */
 export default function AppShell({ activeScreen, onNavigate, onExit, children }) {
   const { openAddTransaction } = useAppActions();
-  const { today, rawTransactions, goals, summary, settings, onboardingDone, isDark, setSetting } = useFinance();
+  const { today, rawTransactions, goals, summary, budgets, settings, onboardingDone, isDark, setSetting } = useFinance();
   const themeTexts = SETTINGS_PAGE.preferences.theme;
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -43,6 +43,7 @@ export default function AppShell({ activeScreen, onNavigate, onExit, children })
     monthSpent: summary.expenses.amount,
     budgetLimit: settings.budgetLimit,
     warnAt: SETTINGS_PAGE.budget.warnAt,
+    categoryBudgets: budgets,
     largeAmount: APP_SHELL.notifications.largeAmount,
     today,
   });

@@ -69,6 +69,9 @@ const RANDOM_SPENDING = [
 ];
 const FREELANCE = { chance: 0.04, amount: [3000, 12000], hours: [11, 19], comments: ['Заказ на сайт', 'Разовый проект', ''] };
 
+// Месячные лимиты категорий (в рублях): чтобы на «Главной» сразу было видно, как работают бюджеты
+const DEMO_BUDGETS = { food: 25000, transport: 9000, fun: 7000 };
+
 // Цели: срок в месяцах от сегодня (отрицательный — уже достигнута), сколько накоплено
 const DEMO_GOALS = [
   { id: 'trip', name: 'Путешествие', iconId: 'plane', accent: 'green', target: 100000, saved: 43500, monthsFromNow: 12 },
@@ -92,7 +95,7 @@ const isWeekend = (date) => date.getDay() === 0 || date.getDay() === 6;
 
 /**
  * Демо-данные на дату today.
- * Возвращает { accounts, savingsOpeningBalance, transactions, savingsTransactions, goals, categories }.
+ * Возвращает { accounts, savingsOpeningBalance, transactions, savingsTransactions, goals, categories, budgets }.
  * Операции отсортированы от новых к старым, суммы со знаком и в копейках. Демо-счёт один — основной.
  */
 export function createDemoData(today = new Date()) {
@@ -210,6 +213,7 @@ export function createDemoData(today = new Date()) {
     savingsTransactions: savingsTransactions.map(inKopecks),
     goals,
     categories: DEFAULT_CATEGORIES,
+    budgets: Object.fromEntries(Object.entries(DEMO_BUDGETS).map(([id, limit]) => [id, rub(limit)])),
   };
 }
 
@@ -222,5 +226,6 @@ export function createEmptyData() {
     savingsTransactions: [],
     goals: [],
     categories: DEFAULT_CATEGORIES,
+    budgets: {},
   };
 }

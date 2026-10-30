@@ -306,6 +306,31 @@ describe('FinanceContext', () => {
     expect(JSON.parse(window.localStorage.getItem(LEGACY_STORAGE_KEY))).toEqual(legacy);
   });
 
+  it('лимиты категорий: задать, изменить, убрать; удаление категории убирает и её лимит', () => {
+    const { result } = renderFinance();
+    // В демо-данных лимиты уже есть
+    expect(Object.keys(result.current.budgetLimits)).toEqual(expect.arrayContaining(['food', 'transport', 'fun']));
+    act(() => result.current.setCategoryBudget('housing', rub(10000)));
+    const housing = () => result.current.budgets.find((b) => b.id === 'housing');
+    const spentBefore = housing().spent;
+    act(() => result.current.addTransaction({ type: 'expense', amount: rub(250), categoryId: 'housing' }));
+    expect(housing()).toMatchObject({ limit: rub(10000), spent: spentBefore + rub(250) });
+
+    act(() => result.current.setCategoryBudget('housing', null));
+    expect(housing()).toBeUndefined();
+
+    act(() => result.current.deleteCategory('fun'));
+    expect(result.current.budgetLimits).not.toHaveProperty('fun');
+  });
+
+  it('сверку можно сохранить в счёте, а разницу — учесть в начальном остатке', () => {
+    const { result } = renderFinance();
+    const main = () => result.current.accounts[0];
+    const reconciliation = { date: new Date().toISOString(), bankBalance: main().balance + rub(10.5) };
+    act(() => result.current.updateAccount('main', { openingBalance: main().openingBalance + rub(10.5), reconciliation }));
+    expect(main()).toMatchObject({ reconciliation, balance: reconciliation.bankBalance });
+  });
+
   it('игнорирует повреждённое сохранение', () => {
     window.localStorage.setItem(STORAGE_KEY, '{не json');
     const { result } = renderFinance();

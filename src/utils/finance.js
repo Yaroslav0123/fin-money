@@ -17,6 +17,7 @@ import {
   startOfDay,
   startOfMonth,
   startOfWeek,
+  toDateInputValue,
   weekdayShort,
 } from './dates.js';
 import { toPercent } from './format.js';
@@ -287,19 +288,98 @@ export function savingsStats(savingsTransactions, openingBalance, today, interes
   };
 }
 
+// ───── Бюджеты по категориям ─────
+
+/**
+ * Месячные лимиты категорий расходов: сколько потрачено из лимита.
+ * items — операции месяца, limits — { [id категории]: лимит в копейках }, warnAt — порог в процентах.
+ * status: 'ok' | 'warning' (порог пройден) | 'over' (лимит превышен). Сначала — самые «горячие».
+ */
+export function budgetProgress(items, categories, limits, warnAt) {
+  const expenses = expensesOf(items);
+  return categories
+    .filter((c) => c.type === 'expense' && limits[c.id] > 0)
+    .map((c) => {
+      const limit = limits[c.id];
+      const amount = 0 - sum(expenses.filter((tx) => tx.categoryId === c.id));
+      const percent = toPercent(amount, limit);
+      const status = amount > limit ? 'over' : percent >= warnAt ? 'warning' : 'ok';
+      return { ...c, limit, spent: amount, left: limit - amount, percent, status };
+    })
+    .sort((a, b) => b.percent - a.percent);
+}
+
+// Сколько в среднем уходит на категорию за полный месяц (последние months месяцев) — подсказка для лимита
+export function averageMonthlySpend(transactions, categoryId, today, months = INSIGHT_LOOKBACK_MONTHS) {
+  const end = startOfMonth(today);
+  const items = inRange(transactions, addMonths(end, -months), end).filter((tx) => tx.categoryId === categoryId);
+  return Math.round(spent(items) / months / KOPECKS_IN_RUBLE) * KOPECKS_IN_RUBLE;
+}
+
+// ───── Сверка с банком ─────
+
+// День операции (по местному времени) для поиска повторов: «2026-10-28»
+const dayKey = (tx) => toDateInputValue(txDate(tx));
+const normalizeComment = (text) => (text ?? '').trim().toLowerCase();
+
+/**
+ * Сверка счёта с остатком из банка на конец дня date.
+ * account — { id, openingBalance }, bankBalance — остаток в банке (копейки).
+ * Возвращает:
+ *   appBalance — баланс в Fin Money на конец того же дня (операции позже даты не учитываются),
+ *   difference — банк минус Fin Money (больше нуля — в банке денег больше),
+ *   duplicates — возможные повторы: группы операций с одной суммой, днём и описанием,
+ *   suspects — операции, сумма которых ровно объясняет разницу (их стоит проверить первыми),
+ *   lastDate — дата последней операции счёта до даты сверки (после неё операций может не хватать),
+ *   laterCount — сколько операций позже даты сверки.
+ */
+export function reconcileAccount({ account, transactions, date, bankBalance }) {
+  const end = addDays(startOfDay(date), 1);
+  const own = transactions.filter((tx) => tx.accountId === account.id);
+  const counted = own.filter((tx) => txDate(tx) < end);
+  const appBalance = account.openingBalance + sum(counted);
+  const difference = bankBalance - appBalance;
+
+  const groups = new Map();
+  for (const tx of counted) {
+    const key = `${dayKey(tx)}|${tx.amount}|${normalizeComment(tx.comment)}`;
+    groups.set(key, [...(groups.get(key) ?? []), tx]);
+  }
+  const duplicates = [...groups.values()].filter((group) => group.length > 1);
+
+  // Лишняя операция в Fin Money даёт разницу «минус её сумма»
+  const suspects = difference === 0 ? [] : counted.filter((tx) => tx.amount === -difference);
+  const latest = counted.reduce((last, tx) => (!last || txDate(tx) > last ? txDate(tx) : last), null);
+
+  return {
+    appBalance,
+    difference,
+    matches: difference === 0,
+    duplicates,
+    suspects,
+    lastDate: latest,
+    laterCount: own.length - counted.length,
+  };
+}
+
 // ───── Уведомления (колокольчик в шапке) ─────
 
 const SOON_DAYS = 30;
 const RECENT_DAYS = 7;
 
 /**
- * Список событий для панели уведомлений: бюджет почти исчерпан,
+ * Список событий для панели уведомлений: бюджет почти исчерпан, лимиты категорий,
  * срок цели скоро, крупные траты за последнюю неделю.
+ * categoryBudgets — результат budgetProgress.
  */
-export function notificationData({ transactions, goals, monthSpent, budgetLimit, warnAt, largeAmount, today }) {
+export function notificationData({ transactions, goals, monthSpent, budgetLimit, warnAt, categoryBudgets = [], largeAmount, today }) {
   const items = [];
   const budgetPercent = toPercent(monthSpent, budgetLimit);
   if (budgetPercent >= warnAt) items.push({ id: 'budget', kind: 'budget', percent: budgetPercent });
+
+  categoryBudgets
+    .filter((budget) => budget.status !== 'ok')
+    .forEach((budget) => items.push({ id: `budget-${budget.id}`, kind: 'categoryBudget', budget }));
 
   goals
     .filter((g) => !isGoalDone(g))

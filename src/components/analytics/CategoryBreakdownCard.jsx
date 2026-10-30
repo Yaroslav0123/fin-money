@@ -3,12 +3,21 @@ import { ChevronRight } from 'lucide-react';
 import Card from '../ui/Card.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import LinkArrow from '../ui/LinkArrow.jsx';
+import { CATEGORY_BUDGETS } from '../../data/mockData.js';
 import { ACCENTS } from '../../theme/accents.js';
-import { formatMoney } from '../../utils/format.js';
+import { fillTemplate, formatMoney } from '../../utils/format.js';
+
+// Подпись лимита: «Лимит 10 000 ₽ · осталось 2 000 ₽» или «… · превышен на 500 ₽»
+const limitLine = (amount, limit) => {
+  const t = CATEGORY_BUDGETS;
+  const left = limit - amount;
+  const status = left < 0 ? fillTemplate(t.over, { amount: formatMoney(-left) }) : fillTemplate(t.left, { amount: formatMoney(left) });
+  return { text: `${fillTemplate(t.analyticsLine, { limit: formatMoney(limit) })} · ${status.toLowerCase()}`, isOver: left < 0 };
+};
 
 // Список категорий как на мобильном макете + цветная полоска доли.
-// onCategoryClick(category) — открыть операции этой категории.
-export default function CategoryBreakdownCard({ categories, texts, onCategoryClick, className = '' }) {
+// budgetLimits — { [id]: лимит } для периода «Месяц» (иначе пусто); onCategoryClick(category) — открыть операции этой категории.
+export default function CategoryBreakdownCard({ categories, texts, budgetLimits = {}, onCategoryClick, className = '' }) {
   return (
     <Card className={`p-6 ${className}`}>
       <div className="flex items-center justify-between">
@@ -21,35 +30,39 @@ export default function CategoryBreakdownCard({ categories, texts, onCategoryCli
       {categories.length === 0 && <p className="py-10 text-center text-sm text-ink-muted">{texts.empty}</p>}
 
       <ul className="-mx-2 mt-3">
-        {categories.map((c) => (
-          <li key={c.id}>
-            <button
-              type="button"
-              onClick={() => onCategoryClick(c)}
-              className="group flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors duration-200 hover:bg-surface"
-            >
-              <IconTile icon={c.icon} accent={c.accent} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2 text-sm">
-                  <span className="truncate font-semibold text-ink">{c.name}</span>
-                  <span className="shrink-0 font-semibold text-ink">{formatMoney(c.amount)}</span>
-                </div>
-                <div className="mt-2 flex items-center gap-3">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink/5">
-                    <motion.div
-                      className={`h-full rounded-full ${ACCENTS[c.accent].dot}`}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${c.share}%` }}
-                      transition={{ duration: 0.8, ease: 'easeOut' }}
-                    />
+        {categories.map((c) => {
+          const limit = budgetLimits[c.id] > 0 ? limitLine(c.amount, budgetLimits[c.id]) : null;
+          return (
+            <li key={c.id}>
+              <button
+                type="button"
+                onClick={() => onCategoryClick(c)}
+                className="group flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors duration-200 hover:bg-surface"
+              >
+                <IconTile icon={c.icon} accent={c.accent} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="truncate font-semibold text-ink">{c.name}</span>
+                    <span className="shrink-0 font-semibold text-ink">{formatMoney(c.amount)}</span>
                   </div>
-                  <span className="w-8 text-right text-xs text-ink-muted">{c.share}%</span>
+                  <div className="mt-2 flex items-center gap-3">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink/5">
+                      <motion.div
+                        className={`h-full rounded-full ${ACCENTS[c.accent].dot}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${c.share}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                      />
+                    </div>
+                    <span className="w-8 text-right text-xs text-ink-muted">{c.share}%</span>
+                  </div>
+                  {limit && <p className={`mt-1 text-xs font-medium ${limit.isOver ? 'text-negative' : 'text-ink-muted'}`}>{limit.text}</p>}
                 </div>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-ink-muted transition-transform duration-200 group-hover:translate-x-0.5" />
-            </button>
-          </li>
-        ))}
+                <ChevronRight className="h-4 w-4 shrink-0 text-ink-muted transition-transform duration-200 group-hover:translate-x-0.5" />
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </Card>
   );

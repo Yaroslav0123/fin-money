@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createDemoData, createEmptyData } from '../data/demoData.js';
 import {
+  CATEGORY_BUDGETS,
   CATEGORY_ICONS,
   GOAL_TRANSFER,
   GOALS_PAGE,
@@ -13,7 +14,7 @@ import {
   SUMMARY,
 } from '../data/mockData.js';
 import { formatDay, formatFullDate, formatTransactionDate } from '../utils/dates.js';
-import { categoryBreakdown, goalMonthsLeft, isGoalDone, monthSummary, savingsStats } from '../utils/finance.js';
+import { budgetProgress, categoryBreakdown, goalMonthsLeft, isGoalDone, monthSummary, savingsStats } from '../utils/finance.js';
 import { setDisplayCurrency } from '../utils/format.js';
 import { applyCategoryChoice, signedDraftAmount, TRANSFER_CHOICE } from '../utils/statement.js';
 import { clearFinanceState, loadFinanceState, saveFinanceState } from './financeStorage.js';
@@ -27,6 +28,7 @@ import { CURRENT_VERSION } from './migrations.js';
  * resetDemo() заново строит демо-историю от сегодняшнего дня, startFromScratch() — очищает всё.
  * Все суммы — целые копейки (utils/money.js). Счетов может быть несколько: у каждой операции есть accountId,
  * общий баланс — сумма счетов. Первый счёт основной: с него пополняются накопления и цели, его нельзя удалить.
+ * budgets — месячные лимиты категорий расходов: { [id категории]: лимит в копейках }.
  */
 
 const FinanceContext = createContext(null);
@@ -50,6 +52,7 @@ const DEFAULT_SETTINGS = {
 // categoryRules — «запомнить для похожих»: { key (ключ магазина), value (id категории или 'transfer'), label (пример описания) }.
 const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) => ({
   version: CURRENT_VERSION,
+  budgets: {},
   ...data,
   imports: [],
   categoryRules: [],
@@ -58,11 +61,12 @@ const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) =
   nextId: FIRST_ID,
 });
 
-// Сохранённое состояние (уже в текущем формате, см. migrations.js) дополняем настройками, появившимися в новых версиях
+// Сохранённое состояние (уже в текущем формате, см. migrations.js) дополняем полями и настройками,
+// появившимися в новых версиях: у них есть значение по умолчанию, поэтому отдельный шаг миграции не нужен
 const restoreState = () => {
   const saved = loadFinanceState();
   if (!saved) return buildState(createDemoData());
-  return { imports: [], categoryRules: [], ...saved, settings: { ...DEFAULT_SETTINGS, ...saved.settings } };
+  return { imports: [], categoryRules: [], budgets: {}, ...saved, settings: { ...DEFAULT_SETTINGS, ...saved.settings } };
 };
 
 const byDateDesc = (a, b) => new Date(b.date) - new Date(a.date);
@@ -85,6 +89,9 @@ function useSystemDark(theme) {
   }, []);
   return theme === 'dark' || (theme === 'system' && systemDark);
 }
+
+// Лимиты без одной категории
+const withoutBudget = (budgets, categoryId) => Object.fromEntries(Object.entries(budgets).filter(([id]) => id !== categoryId));
 
 // Новые правила заменяют старые для тех же магазинов
 const mergeRules = (rules, added) => [...added, ...rules.filter((rule) => !added.some((a) => a.key === rule.key))];
@@ -364,7 +371,8 @@ export function FinanceProvider({ children }) {
 
   // ───── Счета ─────
 
-  // draft — { name, openingBalance (копейки, может быть отрицательным — кредитная карта) }
+  // draft — { name, openingBalance (копейки, может быть отрицательным — кредитная карта) }.
+  // Сверка с банком хранится в счёте: reconciliation — { date (ISO), bankBalance (копейки) }
   const addAccount = useCallback(
     (draft) => update((prev, newId) => ({ ...prev, accounts: [...prev.accounts, { ...draft, id: newId('account') }] })),
     [update],
@@ -405,7 +413,7 @@ export function FinanceProvider({ children }) {
     [update],
   );
 
-  // Удаление категории: её операции переходят в запасную категорию того же типа, правила на неё удаляются
+  // Удаление категории: её операции переходят в запасную категорию того же типа, правила и лимит на неё удаляются
   const deleteCategory = useCallback(
     (id) =>
       update((prev) => {
@@ -417,7 +425,18 @@ export function FinanceProvider({ children }) {
           categories: prev.categories.filter((c) => c.id !== id),
           transactions: prev.transactions.map((tx) => (tx.categoryId === id ? { ...tx, categoryId: fallback.id } : tx)),
           categoryRules: prev.categoryRules.filter((rule) => rule.value !== id),
+          budgets: withoutBudget(prev.budgets, id),
         };
+      }),
+    [update],
+  );
+
+  // Месячный лимит категории расходов (копейки); 0 или null — убрать лимит
+  const setCategoryBudget = useCallback(
+    (categoryId, limit) =>
+      update((prev) => {
+        const rest = withoutBudget(prev.budgets, categoryId);
+        return { ...prev, budgets: limit > 0 ? { ...rest, [categoryId]: limit } : rest };
       }),
     [update],
   );
@@ -534,6 +553,9 @@ export function FinanceProvider({ children }) {
       expenseCategories: categories.filter((c) => c.type === 'expense'),
       incomeCategories: categories.filter((c) => c.type === 'income'),
       monthCategories: categoryBreakdown(month.monthTransactions, categories),
+      // Лимиты категорий: как заданы (budgetLimits) и сколько из них потрачено за текущий месяц (budgets)
+      budgetLimits: state.budgets,
+      budgets: budgetProgress(month.monthTransactions, categories, state.budgets, CATEGORY_BUDGETS.warnAt),
       summary,
       goals,
       savingsBalance: savings.balance,
@@ -574,6 +596,7 @@ export function FinanceProvider({ children }) {
       addCategory,
       updateCategory,
       deleteCategory,
+      setCategoryBudget,
       setSetting,
       setHideBalance,
       resetDemo,
@@ -601,6 +624,7 @@ export function FinanceProvider({ children }) {
     addCategory,
     updateCategory,
     deleteCategory,
+    setCategoryBudget,
     setSetting,
     setHideBalance,
     resetDemo,

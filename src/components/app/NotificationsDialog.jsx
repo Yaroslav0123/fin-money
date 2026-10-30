@@ -11,6 +11,14 @@ import { fillTemplate, formatMoney } from '../../utils/format.js';
 const describe = (item, describeTx) => {
   const t = APP_SHELL.notifications;
   if (item.kind === 'budget') return { icon: Wallet, accent: 'pink', text: fillTemplate(t.budget, { percent: item.percent }) };
+  if (item.kind === 'categoryBudget') {
+    const { budget } = item;
+    const text =
+      budget.status === 'over'
+        ? fillTemplate(t.categoryOver, { name: budget.name, over: formatMoney(-budget.left) })
+        : fillTemplate(t.categoryWarning, { name: budget.name, percent: budget.percent, left: formatMoney(budget.left) });
+    return { icon: budget.icon, accent: budget.status === 'over' ? 'pink' : 'orange', text };
+  }
   if (item.kind === 'goal') {
     const text = item.days === 0 ? t.goalToday : t.goal;
     return { icon: Target, accent: 'blue', text: fillTemplate(text, { name: item.goal.name, days: item.days }) };
@@ -21,7 +29,7 @@ const describe = (item, describeTx) => {
 
 /**
  * Панель уведомлений под колокольчиком. Список собирается из данных
- * (см. notificationData): бюджет, сроки целей, крупные траты за неделю.
+ * (см. notificationData): бюджет, лимиты категорий, сроки целей, крупные траты за неделю.
  * Крупную трату можно открыть и, например, исправить.
  */
 export default function NotificationsDialog({ isOpen, items, onClose }) {
