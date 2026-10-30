@@ -6,6 +6,7 @@ import Modal from '../ui/Modal.jsx';
 import { useFinance } from '../../context/FinanceContext.jsx';
 import { CATEGORY_ICONS, IMPORT_DIALOG, IMPORT_TRANSFER } from '../../data/mockData.js';
 import { formatDay } from '../../utils/dates.js';
+import { sberLinesToRows } from '../../utils/bankPdf.js';
 import { decodeCsv, parseCsv } from '../../utils/csv.js';
 import { fillTemplate, formatMoney, formatSignedMoney } from '../../utils/format.js';
 import { applyCategoryChoice, rowsToDrafts, signedDraftAmount, TRANSFER_CHOICE, withImportCategories } from '../../utils/statement.js';
@@ -13,8 +14,18 @@ import { applyCategoryChoice, rowsToDrafts, signedDraftAmount, TRANSFER_CHOICE, 
 // Сколько строк предпросмотра показывать за раз
 const PAGE_SIZE = 30;
 
+const isPdfFile = (file) => file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+
+// Файл → таблица строк: PDF-выписка Сбербанка (pdf.js подгружается только для PDF) или CSV
+const readRows = async (file) => {
+  const buffer = await file.arrayBuffer();
+  if (!isPdfFile(file)) return parseCsv(decodeCsv(buffer));
+  const { pdfToLines } = await import('../../utils/pdf.js');
+  return sberLinesToRows(await pdfToLines(buffer));
+};
+
 /**
- * Импорт выписки CSV: выбор или перетаскивание файла → проверка всех строк → подтверждение.
+ * Импорт выписки (PDF Сбербанка или CSV): выбор или перетаскивание файла → проверка всех строк → подтверждение.
  * В предпросмотре у каждой строки можно сменить категорию (или сделать её переводом между своими счетами)
  * и снять галочку. Строки, которые не попадут в импорт, перечислены с причиной.
  * Файл читается прямо в браузере и никуда не отправляется. onDone(count) — сколько операций добавлено.
@@ -25,6 +36,7 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
   const [result, setResult] = useState(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isDragging, setIsDragging] = useState(false);
+  const [isReading, setIsReading] = useState(false);
   const inputRef = useRef(null);
   const t = IMPORT_DIALOG;
 
@@ -48,16 +60,21 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
 
   const readFile = async (file) => {
     if (!file) return;
+    setIsReading(true);
     try {
-      const rows = parseCsv(decodeCsv(await file.arrayBuffer()));
+      const rows = await readRows(file);
       const parsed = rowsToDrafts(rows, { categories, existing: rawTransactions });
+      // В PDF без операций нет и «столбцов» — объясняем, какие PDF подходят
+      const error = parsed.error && isPdfFile(file) ? 'pdfUnknown' : parsed.error;
       setResult(
-        parsed.error
-          ? { fileName: file.name, error: parsed.error }
+        error
+          ? { fileName: file.name, error }
           : { fileName: file.name, items: parsed.items.map((item) => ({ ...item, include: item.status === 'new' })) },
       );
     } catch {
       setResult({ fileName: file.name, error: 'readError' });
+    } finally {
+      setIsReading(false);
     }
   };
 
@@ -121,12 +138,15 @@ export default function ImportDialog({ isOpen, onClose, onDone }) {
             }`}
           >
             <IconTile icon={FileUp} accent="brand" />
-            <span className="text-sm font-semibold text-ink">{isDragging ? t.dropActive : t.dropLabel}</span>
+            <span className="text-sm font-semibold text-ink" role="status">
+              {isReading ? t.reading : isDragging ? t.dropActive : t.dropLabel}
+            </span>
             <span className="rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white">{t.chooseFile}</span>
             <input
               ref={inputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,text/csv,.pdf,application/pdf"
+              disabled={isReading}
               className="sr-only"
               onChange={(e) => readFile(e.target.files[0])}
             />

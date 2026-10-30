@@ -67,9 +67,35 @@ test('экспорт CSV и повторный импорт того же фай
   expect(lines.length).toBeGreaterThan(1);
   for (const line of lines.slice(1)) expect(line).toContain('Метро');
 
-  await page.getByRole('button', { name: 'Импорт CSV' }).click();
+  await page.getByRole('button', { name: 'Импорт выписки' }).click();
   const dialog = page.getByRole('dialog', { name: 'Импорт выписки' });
   await dialog.locator('input[type="file"]').setInputFiles(await download.path());
+  await expect(dialog.getByRole('alert')).toHaveText('В файле нет операций, которые можно добавить.');
+});
+
+test('PDF-выписка Сбербанка (образец с вымышленными данными): импорт и защита от повторов', async ({ page }) => {
+  await openAppWithDemo(page);
+  await page.getByRole('searchbox', { name: 'Поиск операций' }).press('Enter');
+  const sample = 'samples/sber-vypiska-primer.pdf';
+
+  await page.getByRole('button', { name: 'Импорт выписки' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Импорт выписки' });
+  await dialog.locator('input[type="file"]').setInputFiles(sample);
+  await expect(dialog.getByText('К импорту: 16 из 16')).toBeVisible();
+  await expect(dialog.getByText('Переводов между своими счетами: 1 — в доходы и расходы не входят')).toBeVisible();
+  await expect(dialog.getByText('Возвраты покупок: 4 990 ₽ — уменьшат расходы')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Импортировать' }).click();
+  await expect(page.getByRole('status').getByText('Импортировано операций: 16')).toBeVisible();
+
+  // 142 560 + поступления 176 490 − списания 34 435 (копейки округлены по каждой операции)
+  const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
+  await nav.getByRole('button', { name: 'Главная' }).click();
+  await expect(page.getByRole('main').getByText(money('284 615')).first()).toBeVisible();
+
+  // Тот же файл ещё раз — всё уже есть
+  await page.getByRole('searchbox', { name: 'Поиск операций' }).press('Enter');
+  await page.getByRole('button', { name: 'Импорт выписки' }).click();
+  await dialog.locator('input[type="file"]').setInputFiles(sample);
   await expect(dialog.getByRole('alert')).toHaveText('В файле нет операций, которые можно добавить.');
 });
 
@@ -96,7 +122,7 @@ test('выписка банка: проверка строк, импорт и е
     `${date} 13:00:00;FAILED;-700,00;Такси;Поездка`,
   ].join('\r\n');
 
-  await page.getByRole('button', { name: 'Импорт CSV' }).click();
+  await page.getByRole('button', { name: 'Импорт выписки' }).click();
   const dialog = page.getByRole('dialog', { name: 'Импорт выписки' });
   await dialog.locator('input[type="file"]').setInputFiles({ name: 'bank.csv', mimeType: 'text/csv', buffer: encode1251(csv) });
 
