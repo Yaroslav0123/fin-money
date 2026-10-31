@@ -3,7 +3,6 @@ import { CalendarRange, ChevronLeft, ChevronRight, Wallet } from 'lucide-react';
 import CategoryBreakdownCard from '../components/analytics/CategoryBreakdownCard.jsx';
 import CategoryComparisonCard from '../components/analytics/CategoryComparisonCard.jsx';
 import CategoryHistoryDialog from '../components/analytics/CategoryHistoryDialog.jsx';
-import InsightsCard from '../components/analytics/InsightsCard.jsx';
 import KpiCard from '../components/analytics/KpiCard.jsx';
 import SpendingCalendarCard from '../components/analytics/SpendingCalendarCard.jsx';
 import { IncomeExpenseChart, SpendingBarChart } from '../components/charts/lazy.jsx';
@@ -20,42 +19,13 @@ import {
   categoryComparison,
   categoryHistory,
   incomeVsExpenses,
-  insightData,
   periodExpenses,
   spendingCalendar,
 } from '../utils/finance.js';
-import { fillTemplate, formatMoney, monthlyPayment } from '../utils/format.js';
+import { formatMoney } from '../utils/format.js';
 
 // Для расходов снижение — хорошо, поэтому зелёный бейдж при отрицательной динамике
 const expenseTone = (trend) => (trend.percent <= 0 ? 'positive' : 'negative');
-
-// Коэффициент для текста: 1.47 → «1,5»
-const ratioFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
-
-// Тексты подсказок из посчитанных данных
-const buildInsights = (data) => {
-  const t = ANALYTICS_PAGE.insights;
-  const items = [];
-  if (data.hasPreviousMonth && data.monthDiff !== 0) {
-    const rule = data.monthDiff < 0 ? t.less : t.more;
-    items.push({ id: 'month', ...rule, text: fillTemplate(rule.text, { amount: formatMoney(Math.abs(data.monthDiff)) }) });
-  }
-  if (data.topCategory) {
-    const { name, share, icon, accent } = data.topCategory;
-    items.push({ id: 'top', icon, accent, text: fillTemplate(t.top.text, { name, share }) });
-  }
-  if (data.weekendRatio) {
-    const rule = data.weekendRatio > 1 ? t.weekendMore : t.weekdayMore;
-    const ratio = data.weekendRatio > 1 ? data.weekendRatio : 1 / data.weekendRatio;
-    items.push({ id: 'weekend', ...rule, text: fillTemplate(rule.text, { ratio: ratioFormatter.format(ratio) }) });
-  }
-  if (data.nextGoal) {
-    const { name, left, monthsLeft } = data.nextGoal;
-    const payment = formatMoney(monthlyPayment(left, monthsLeft));
-    items.push({ id: 'goal', ...t.goal, text: fillTemplate(t.goal.text, { name, left: formatMoney(left), payment }) });
-  }
-  return items;
-};
 
 /**
  * Экран 4. Аналитика (веб-версия).
@@ -69,7 +39,7 @@ export default function AnalyticsScreen() {
   const [offset, setOffset] = useState(0);
   // Категория, чья динамика открыта в окне (null — окно закрыто)
   const [historyCategory, setHistoryCategory] = useState(null);
-  const { rawTransactions, categories, goals, settings, today, budgetLimits } = useFinance();
+  const { rawTransactions, categories, settings, today, budgetLimits } = useFinance();
   const { navigate } = useAppActions();
   const { kpi } = ANALYTICS_PAGE;
 
@@ -78,7 +48,6 @@ export default function AnalyticsScreen() {
   const categoriesInPeriod = categoryBreakdown(period.transactions, categories);
   const topCategory = categoriesInPeriod[0];
   const comparison = incomeVsExpenses(rawTransactions, today);
-  const insights = buildInsights(insightData(rawTransactions, categories, goals, today));
   const tone = expenseTone(period.trend);
   const comparisonItems = categoryComparison(rawTransactions, categories, periodId, today, offset, settings.weekStart);
   const isMonth = periodId === 'month';
@@ -211,7 +180,7 @@ export default function AnalyticsScreen() {
       </Reveal>
 
       {/* Доходы против расходов */}
-      <Reveal delay={0.1} className="xl:col-span-2">
+      <Reveal delay={0.1} className="xl:col-span-3">
         <Card className="h-full p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -231,14 +200,6 @@ export default function AnalyticsScreen() {
           </div>
           <IncomeExpenseChart data={comparison} labels={ANALYTICS_PAGE.comparison} className="mt-6 h-64" />
         </Card>
-      </Reveal>
-      <Reveal delay={0.15}>
-        <InsightsCard
-          insights={insights}
-          title={ANALYTICS_PAGE.insights.title}
-          emptyText={ANALYTICS_PAGE.insights.empty}
-          className="h-full"
-        />
       </Reveal>
 
       <CategoryHistoryDialog

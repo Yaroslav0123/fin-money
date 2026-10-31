@@ -356,22 +356,158 @@ export const goalMonthsLeft = (goal, today) => Math.max(0, monthsBetween(today, 
 // За сколько последних месяцев считаем темп пополнения цели
 const GOAL_PACE_MONTHS = 3;
 
+// Средний темп пополнения цели в месяц: отметки «отложил» и засчитанные переводы за последние GOAL_PACE_MONTHS месяцев
+export function goalPace(goal, today) {
+  const since = addMonths(startOfDay(today), -GOAL_PACE_MONTHS);
+  return sum(inRange(goal.contributions ?? [], since, addDays(startOfDay(today), 1))) / GOAL_PACE_MONTHS;
+}
+
 /**
- * Прогноз цели по темпу пополнений за последние GOAL_PACE_MONTHS месяцев
- * (пополнения минус возвраты на основной счёт — операции kind: 'goal' с её goalId).
+ * Прогноз цели по темпу пополнений (goal.contributions — [{ amount, date }]).
  * Возвращает { status: 'done' } | { status: 'noPace' } |
  * { status: 'forecast', pace (в месяц), date (примерная дата), onTime (успеет к сроку) }.
  */
-export function goalForecast(goal, transactions, today) {
+export function goalForecast(goal, today) {
   if (isGoalDone(goal)) return { status: 'done' };
-  const since = addMonths(startOfDay(today), -GOAL_PACE_MONTHS);
-  // Перевод на цель уменьшает основной счёт, поэтому сумма отрицательная; возврат — положительная
-  const moved = 0 - sum(inRange(transactions, since, addDays(startOfDay(today), 1)).filter((tx) => tx.kind === 'goal' && tx.goalId === goal.id));
-  const pace = moved / GOAL_PACE_MONTHS;
+  const pace = goalPace(goal, today);
   if (pace <= 0) return { status: 'noPace' };
   const months = Math.ceil((goal.target - goal.saved) / pace);
   const date = addMonths(startOfMonth(today), months);
   return { status: 'forecast', pace: Math.round(pace), date, onTime: date <= new Date(goal.deadline) };
+}
+
+/**
+ * На сколько месяцев раньше будет достигнута цель, если откладывать на extra больше в месяц.
+ * pace — нынешний темп в месяц; без темпа сравниваем «никогда» нельзя — тогда null.
+ */
+export function goalSpeedup(goal, pace, extra) {
+  const left = goal.target - goal.saved;
+  if (left <= 0 || pace <= 0 || extra <= 0) return null;
+  return Math.ceil(left / pace) - Math.ceil(left / (pace + extra));
+}
+
+// ───── Прогноз месяца и советы ─────
+
+// Сколько полных месяцев перед текущим задают «обычный» темп трат
+const FORECAST_LOOKBACK_MONTHS = 3;
+// Прогноз — оценка, поэтому без копеек
+const toRubles = (kopecks) => Math.round(kopecks / KOPECKS_IN_RUBLE) * KOPECKS_IN_RUBLE;
+
+// Полные месяцы перед текущим (новые — первыми), но не раньше месяца первой операции:
+// до начала истории трат «нет» не потому, что их не было
+const historyMonths = (transactions, today) => {
+  const monthStart = startOfMonth(today);
+  const first = transactions.reduce((min, tx) => (txDate(tx) < min ? txDate(tx) : min), monthStart);
+  return Array.from({ length: FORECAST_LOOKBACK_MONTHS }, (_, i) => addMonths(monthStart, -(i + 1))).filter((m) => m >= startOfMonth(first));
+};
+
+/**
+ * Прогноз текущего месяца: сколько ещё потратится до его конца и сколько останется от доходов.
+ * Оставшиеся дни считаются по обычному темпу — средним тратам в день за полные месяцы перед текущим
+ * (без истории — по темпу этого месяца). Доход — уже полученный, но не меньше обычного месячного:
+ * зарплата могла ещё не прийти.
+ * limits — лимиты категорий: для тех, что по прогнозу будут превышены, — примерная дата превышения.
+ * Возвращает { endDate, spent, projectedExpenses, usualExpenses (null без истории), income, projectedLeft,
+ * hasHistory, categories: { [id]: { spent, projected, usual } }, budgets: [{ categoryId, limit, projected, date }] }.
+ */
+export function monthForecast(transactions, today, limits = {}) {
+  const monthStart = startOfMonth(today);
+  const elapsedDays = daysBetween(monthStart, today) + 1;
+  const remainingDays = daysInMonth(today) - elapsedDays;
+  const current = inRange(transactions, monthStart, addDays(startOfDay(today), 1));
+  const months = historyMonths(transactions, today);
+  const past = months.length > 0 ? inRange(transactions, months.at(-1), monthStart) : [];
+  const pastDays = months.reduce((total, month) => total + daysInMonth(month), 0);
+
+  const forecastOf = (filter) => {
+    const nowSpent = spent(current.filter(filter));
+    const pastSpent = spent(past.filter(filter));
+    const rate = pastDays > 0 ? pastSpent / pastDays : nowSpent / elapsedDays;
+    return {
+      spent: nowSpent,
+      rate,
+      projected: toRubles(nowSpent + rate * remainingDays),
+      usual: months.length > 0 ? toRubles(pastSpent / months.length) : null,
+    };
+  };
+
+  const total = forecastOf(() => true);
+  const usualIncome = months.length > 0 ? toRubles(sum(incomeOf(past)) / months.length) : 0;
+  const income = Math.max(sum(incomeOf(current)), usualIncome);
+
+  const categoryIds = [...new Set(expensesOf([...current, ...past]).map((tx) => tx.categoryId))];
+  const categories = Object.fromEntries(categoryIds.map((id) => [id, forecastOf((tx) => tx.categoryId === id)]));
+
+  // Лимит ещё не превышен, но к концу месяца будет: день, когда траты по обычному темпу дойдут до лимита
+  const budgets = Object.entries(limits)
+    .flatMap(([categoryId, limit]) => {
+      const c = categories[categoryId];
+      if (!c || c.rate <= 0 || c.spent >= limit || c.projected <= limit) return [];
+      const date = addDays(startOfDay(today), Math.ceil((limit - c.spent) / c.rate));
+      return [{ categoryId, limit, projected: c.projected, date }];
+    })
+    .sort((a, b) => a.date - b.date);
+
+  return {
+    endDate: new Date(today.getFullYear(), today.getMonth(), daysInMonth(today)),
+    spent: total.spent,
+    projectedExpenses: total.projected,
+    usualExpenses: total.usual,
+    income,
+    projectedLeft: income - total.projected,
+    hasHistory: months.length > 0,
+    categories,
+    budgets,
+  };
+}
+
+// Рост категории считается заметным: прогноз выше обычного на GROWTH_MIN_PERCENT% и на GROWTH_MIN_AMOUNT
+const GROWTH_MIN_PERCENT = 20;
+const GROWTH_MIN_AMOUNT = 1000 * KOPECKS_IN_RUBLE;
+
+// Категория, которая в этом месяце сильнее всего обгоняет свой обычный уровень (forecast — из monthForecast), или null
+export function categoryGrowth(forecast, categories) {
+  const grown = Object.entries(forecast.categories)
+    .map(([id, c]) => ({ ...c, category: categories.find((cat) => cat.id === id), diff: c.projected - (c.usual ?? 0) }))
+    .filter((c) => c.category && c.usual > 0 && c.diff >= GROWTH_MIN_AMOUNT && toPercent(c.diff, c.usual) >= GROWTH_MIN_PERCENT)
+    .sort((a, b) => b.diff - a.diff)[0];
+  return grown ? { ...grown, percent: toPercent(grown.diff, grown.usual) } : null;
+}
+
+// Регулярный платёж: одно описание в REGULAR_MIN_MONTHS из REGULAR_LOOKBACK_MONTHS полных месяцев,
+// и суммы по месяцам отличаются не больше чем в REGULAR_SPREAD раза
+const REGULAR_LOOKBACK_MONTHS = 4;
+const REGULAR_MIN_MONTHS = 3;
+const REGULAR_SPREAD = 1.25;
+
+// Ключ описания: без цифр, звёздочек и регистра — номер карты и дата в тексте выписки не мешают
+const descriptionKey = (text) =>
+  (text ?? '')
+    .toLowerCase()
+    .replace(/[\d*]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * Регулярные платежи и подписки: расходы с одинаковым описанием почти каждый месяц и похожей суммой.
+ * Возвращает [{ name, categoryId, monthly (средняя сумма в месяц) }], самые крупные — первыми.
+ */
+export function regularPayments(transactions, today) {
+  const monthStart = startOfMonth(today);
+  const groups = new Map();
+  for (const tx of expensesOf(inRange(transactions, addMonths(monthStart, -REGULAR_LOOKBACK_MONTHS), monthStart))) {
+    const key = descriptionKey(tx.comment);
+    if (!key || tx.amount >= 0) continue;
+    const group = groups.get(key) ?? { name: tx.comment.trim(), categoryId: tx.categoryId, months: new Map() };
+    const month = startOfMonth(txDate(tx)).getTime();
+    group.months.set(month, (group.months.get(month) ?? 0) - tx.amount);
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .map(({ name, categoryId, months }) => ({ name, categoryId, amounts: [...months.values()] }))
+    .filter(({ amounts }) => amounts.length >= REGULAR_MIN_MONTHS && Math.max(...amounts) <= Math.min(...amounts) * REGULAR_SPREAD)
+    .map(({ name, categoryId, amounts }) => ({ name, categoryId, monthly: Math.round(amounts.reduce((a, b) => a + b, 0) / amounts.length) }))
+    .sort((a, b) => b.monthly - a.monthly);
 }
 
 // ───── Бюджеты по категориям ─────

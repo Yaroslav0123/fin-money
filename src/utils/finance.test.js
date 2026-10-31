@@ -6,7 +6,11 @@ import {
   categoryBreakdown,
   categoryComparison,
   categoryHistory,
+  categoryGrowth,
   goalForecast,
+  goalSpeedup,
+  monthForecast,
+  regularPayments,
   historyRange,
   isInHistoryRange,
   monthSummary,
@@ -232,18 +236,85 @@ describe('categoryHistory', () => {
 });
 
 describe('goalForecast', () => {
-  const goal = { id: 'g1', target: rub(100000), saved: rub(40000), deadline: new Date(2027, 11, 1).toISOString() };
-  const toGoal = (amount, date) => ({ id: `g-${date}`, type: 'transfer', kind: 'goal', goalId: 'g1', amount: -amount, date: date.toISOString() });
+  const put = (amount, date) => ({ id: `c-${date}`, amount, date: date.toISOString() });
+  const goal = {
+    id: 'g1',
+    target: rub(100000),
+    saved: rub(40000),
+    deadline: new Date(2027, 11, 1).toISOString(),
+    contributions: [put(rub(10000), new Date(2026, 7, 30)), put(rub(10000), new Date(2026, 8, 30)), put(rub(10000), new Date(2026, 9, 20))],
+  };
 
   it('по темпу за 3 месяца: 30 000 ₽ за 3 месяца → 10 000 ₽ в месяц, осталось 6 месяцев', () => {
-    const items = [toGoal(rub(10000), new Date(2026, 7, 30)), toGoal(rub(10000), new Date(2026, 8, 30)), toGoal(rub(10000), new Date(2026, 9, 20))];
-    const forecast = goalForecast(goal, items, TODAY);
+    const forecast = goalForecast(goal, TODAY);
     expect(forecast).toMatchObject({ status: 'forecast', pace: rub(10000), onTime: true });
     expect(forecast.date).toEqual(new Date(2027, 3, 1));
   });
 
   it('без пополнений — прогноза нет; достигнутая цель — «done»', () => {
-    expect(goalForecast(goal, [], TODAY).status).toBe('noPace');
-    expect(goalForecast({ ...goal, saved: goal.target }, [], TODAY).status).toBe('done');
+    expect(goalForecast({ ...goal, contributions: [] }, TODAY).status).toBe('noPace');
+    expect(goalForecast({ ...goal, saved: goal.target }, TODAY).status).toBe('done');
+  });
+
+  it('если откладывать больше, цель ближе: 60 000 ₽ при 10 000 → 6 мес., при 15 000 → 4 мес.', () => {
+    expect(goalSpeedup(goal, rub(10000), rub(5000))).toBe(2);
+    expect(goalSpeedup(goal, 0, rub(5000))).toBeNull();
+  });
+});
+
+describe('monthForecast', () => {
+  // 15 октября: за июль–сентябрь (92 дня) на еду ушло 92 000 ₽ — обычный темп 1 000 ₽ в день
+  const MID = new Date(2026, 9, 15, 12);
+  const history = [6, 7, 8].flatMap((month) => [
+    expense(rub(month === 8 ? 30000 : 31000), new Date(2026, month, 10), 'food'),
+    { id: `s-${month}`, type: 'income', categoryId: 'salary', amount: rub(80000), date: new Date(2026, month, 5).toISOString() },
+  ]);
+
+  it('остаток месяца — по обычному темпу, доход — не меньше обычного', () => {
+    const items = [...history, expense(rub(20000), new Date(2026, 9, 3), 'food')];
+    const forecast = monthForecast(items, MID);
+    // 16 оставшихся дней × 1 000 ₽ + уже потрачено 20 000 ₽
+    expect(forecast.projectedExpenses).toBe(rub(36000));
+    expect(forecast.usualExpenses).toBe(rub(30667));
+    // Зарплата в октябре ещё не пришла — берём обычную
+    expect(forecast.income).toBe(rub(80000));
+    expect(forecast.projectedLeft).toBe(rub(44000));
+    expect(forecast.endDate).toEqual(new Date(2026, 9, 31));
+  });
+
+  it('лимит, который будет превышен, — с примерной датой', () => {
+    const items = [...history, expense(rub(20000), new Date(2026, 9, 3), 'food')];
+    const { budgets } = monthForecast(items, MID, { food: rub(25000) });
+    // До лимита 5 000 ₽ — при 1 000 ₽ в день это 5 дней
+    expect(budgets).toEqual([{ categoryId: 'food', limit: rub(25000), projected: rub(36000), date: new Date(2026, 9, 20) }]);
+    expect(monthForecast(items, MID, { food: rub(40000) }).budgets).toEqual([]);
+  });
+
+  it('без истории — по темпу этого месяца', () => {
+    const forecast = monthForecast([expense(rub(15000), new Date(2026, 9, 2), 'food')], MID);
+    expect(forecast.hasHistory).toBe(false);
+    expect(forecast.projectedExpenses).toBe(rub(31000));
+  });
+
+  it('рост категории против обычного уровня', () => {
+    const items = [...history, expense(rub(30000), new Date(2026, 9, 3), 'food')];
+    const growth = categoryGrowth(monthForecast(items, MID), [{ id: 'food', name: 'Еда' }]);
+    expect(growth).toMatchObject({ category: { name: 'Еда' }, projected: rub(46000), usual: rub(30667), percent: 50 });
+  });
+});
+
+describe('regularPayments', () => {
+  const pay = (comment, amount, date) => ({ id: `${comment}-${date}`, type: 'expense', categoryId: 'housing', comment, amount: -amount, date: date.toISOString() });
+
+  it('одно описание почти каждый месяц и похожая сумма — регулярный платёж', () => {
+    const items = [
+      ...[6, 7, 8].map((m) => pay('Интернет 7701', rub(990), new Date(2026, m, 15))),
+      ...[6, 7, 8, 9].map((m) => pay('Коммунальные услуги', rub(5000 + m * 50), new Date(2026, m, 28))),
+      // Суммы слишком разные — это не подписка
+      ...[6, 7, 8].map((m) => pay('Супермаркет', rub(500 * (m - 5) ** 2), new Date(2026, m, 3))),
+    ];
+    const regular = regularPayments(items, TODAY);
+    expect(regular.map((r) => r.name)).toEqual(['Коммунальные услуги', 'Интернет 7701']);
+    expect(regular[1].monthly).toBe(rub(990));
   });
 });

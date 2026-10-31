@@ -58,21 +58,46 @@ describe('FinanceContext', () => {
     expect(result.current.summary.balance.amount).toBe(balance);
   });
 
-  it('пополнение цели списывается с баланса, удаление перевода уменьшает цель', () => {
+  it('«отложить» на цель — отметка: цель растёт, баланс и операции не меняются', () => {
     const { result } = renderFinance();
     const goal = result.current.goals[0];
     const balance = result.current.summary.balance.amount;
+    const count = result.current.transactions.length;
 
     act(() => result.current.depositToGoal(goal, 1500));
     expect(result.current.goals[0].saved).toBe(goal.saved + 1500);
-    expect(result.current.summary.balance.amount).toBe(balance - 1500);
-    expect(result.current.transactions[0].title).toContain(goal.name);
-
-    act(() => result.current.deleteTransaction(result.current.transactions[0].id));
-    expect(result.current.goals[0].saved).toBe(goal.saved);
+    expect(result.current.goals[0].contributions[0]).toMatchObject({ amount: 1500 });
+    expect(result.current.summary.balance.amount).toBe(balance);
+    expect(result.current.transactions).toHaveLength(count);
   });
 
-  it('цель создаётся, меняется и удаляется с возвратом накопленного', () => {
+  it('перевод из выписки засчитывается в цель; удаление перевода убирает сумму из цели', () => {
+    const { result } = renderFinance();
+    const goal = result.current.goals[0];
+    act(() =>
+      result.current.addTransactions([{ type: 'transfer', amount: 300000, incoming: false, comment: 'На вклад', date: new Date(), importKey: 'v' }], {
+        fileName: 'bank.csv',
+      }),
+    );
+    const transfer = result.current.transactions.find((tx) => tx.comment === 'На вклад');
+    const balance = result.current.summary.balance.amount;
+
+    act(() => result.current.assignTransferToGoal(transfer.id, goal.id));
+    expect(result.current.goals[0].saved).toBe(goal.saved + 300000);
+    expect(result.current.summary.balance.amount).toBe(balance);
+    expect(result.current.transactions.find((tx) => tx.id === transfer.id).category).toContain(goal.name);
+
+    // Перенос в другую цель не задваивает сумму
+    const other = result.current.goals[1];
+    act(() => result.current.assignTransferToGoal(transfer.id, other.id));
+    expect(result.current.goals[0].saved).toBe(goal.saved);
+    expect(result.current.goals[1].saved).toBe(other.saved + 300000);
+
+    act(() => result.current.deleteTransaction(transfer.id));
+    expect(result.current.goals[1].saved).toBe(other.saved);
+  });
+
+  it('цель создаётся, меняется и удаляется, баланс при этом не меняется', () => {
     const { result } = renderFinance();
     const deadline = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365);
     act(() => result.current.createGoal({ name: 'Велосипед', target: 50000, deadline, iconId: 'gift', accent: 'pink' }));
@@ -86,7 +111,7 @@ describe('FinanceContext', () => {
     const balance = result.current.summary.balance.amount;
     act(() => result.current.deleteGoal(trip.id));
     expect(result.current.goals.find((g) => g.id === trip.id)).toBeUndefined();
-    expect(result.current.summary.balance.amount).toBe(balance + trip.saved);
+    expect(result.current.summary.balance.amount).toBe(balance);
   });
 
   it('удалённая категория передаёт операции запасной', () => {
@@ -170,7 +195,7 @@ describe('FinanceContext', () => {
     // «Перезагрузка»: новый провайдер читает localStorage
     const { result } = renderFinance();
     expect(result.current.transactions).toHaveLength(saved.transactions.length);
-    expect(result.current.summary.balance.amount).toBe(DEMO_BALANCE - 3000);
+    expect(result.current.summary.balance.amount).toBe(DEMO_BALANCE - 2000);
     expect(result.current.goals[0].saved).toBe(goal.saved + 1000);
     expect(result.current.goals[0].icon).toBe(goal.icon);
     expect(result.current.hideBalance).toBe(true);
@@ -231,8 +256,8 @@ describe('FinanceContext', () => {
     expect(result.current.accounts[1].count).toBe(2);
     expect(result.current.imports[0]).toMatchObject({ accountId: cash.id, accountBadge: 'Наличные' });
 
-    // Пополнения целей — всегда с основного счёта
-    act(() => result.current.depositToGoal(result.current.goals[0], 500));
+    // Операция без счёта попадает на основной
+    act(() => result.current.addTransaction({ type: 'expense', amount: 500, categoryId: 'food' }));
     expect(result.current.transactions[0].accountId).toBe(main.id);
 
     // Основной счёт не удаляется, другой — вместе с операциями и историей импорта

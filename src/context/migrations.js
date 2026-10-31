@@ -7,12 +7,13 @@
  * 2 — история операций с датами, суммы в рублях, один основной счёт (openingBalance);
  * 3 — суммы в копейках (utils/money.js);
  * 4 — несколько счетов: accounts [{ id, name, openingBalance }], у операции и импорта — accountId;
- * 5 — без накопительного счёта (Fin Money — учёт и прогноз, а не банк).
+ * 5 — без накопительного счёта (Fin Money — учёт и прогноз, а не банк);
+ * 6 — цели не списывают деньги со счёта: пополнение — отметка в goal.contributions [{ id, amount, date, txId? }].
  */
 import { DEFAULT_ACCOUNT } from '../data/mockData.js';
 import { rub } from '../utils/money.js';
 
-export const CURRENT_VERSION = 5;
+export const CURRENT_VERSION = 6;
 // Данные без поля version сохранены версией 2
 const UNVERSIONED = 2;
 
@@ -52,6 +53,23 @@ const STEPS = {
     delete result.savingsOpeningBalance;
     delete result.savingsTransactions;
     return result;
+  },
+  // Пополнения целей были переводами с основного счёта: они уходят из операций (деньги возвращаются на счёт —
+  // в банке они никуда не уходили) и становятся отметками в истории цели, по которым считается темп.
+  // Возвраты с удалённых целей просто исчезают: целей уже нет, а баланс и так восстановлен.
+  5: (data) => {
+    const deposits = data.transactions.filter((tx) => tx.kind === 'goal' && tx.mode !== 'return');
+    return {
+      ...data,
+      transactions: data.transactions.filter((tx) => tx.kind !== 'goal'),
+      goals: data.goals.map((goal) => ({
+        ...goal,
+        contributions: [
+          ...(goal.contributions ?? []),
+          ...deposits.filter((tx) => tx.goalId === goal.id).map((tx) => ({ id: tx.id, amount: -tx.amount, date: tx.date })),
+        ],
+      })),
+    };
   },
 };
 

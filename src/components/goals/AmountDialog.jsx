@@ -16,13 +16,13 @@ const DISPLAY_PRECISION = 100;
 const floorDisplay = (value) => Math.floor(value * DISPLAY_PRECISION) / DISPLAY_PRECISION;
 
 /**
- * Диалог пополнения или снятия.
+ * Диалог суммы (на «Целях» — «Отложить на цель»).
  * mode — 'deposit' | 'withdraw' | null (закрыт).
- * hint — подсказка под полем: { label, amount } (в рублях).
+ * hint — подсказка под полем: { label, amount } (в копейках); note — пояснение под кнопками быстрых сумм.
  * limits — ограничения суммы [{ max, error }] в рублях; действует самое строгое.
  * Сумма вводится в валюте отображения; onConfirm(mode, amount) получает рубли.
  */
-export default function AmountDialog({ mode, hint, limits = [], texts, onClose, onConfirm }) {
+export default function AmountDialog({ mode, hint, note, limits = [], texts, onClose, onConfirm }) {
   const [rawAmount, setRawAmount] = useState('');
 
   // Общий потолок одной операции действует всегда, даже если экран не задал лимитов
@@ -103,6 +103,8 @@ export default function AmountDialog({ mode, hint, limits = [], texts, onClose, 
             </button>
           ))}
         </div>
+
+        {note && <p className="mt-4 text-xs leading-relaxed text-ink-muted">{note}</p>}
 
         <div className="mt-8 grid grid-cols-2 gap-3">
           <Button variant="secondary" size="md" onClick={handleClose}>

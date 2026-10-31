@@ -2,7 +2,9 @@ import ExpenseStructureCard from '../components/cards/ExpenseStructureCard.jsx';
 import StatCard from '../components/cards/StatCard.jsx';
 import BalanceCard from '../components/dashboard/BalanceCard.jsx';
 import BudgetsCard from '../components/dashboard/BudgetsCard.jsx';
+import ForecastCard from '../components/dashboard/ForecastCard.jsx';
 import GoalCard from '../components/dashboard/GoalCard.jsx';
+import InsightsCard from '../components/dashboard/InsightsCard.jsx';
 import StatementCard from '../components/dashboard/StatementCard.jsx';
 import TransactionsCard from '../components/dashboard/TransactionsCard.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
@@ -10,8 +12,9 @@ import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
 import { DASHBOARD } from '../data/mockData.js';
 import { monthName } from '../utils/dates.js';
-import { isGoalDone } from '../utils/finance.js';
+import { isGoalDone, monthForecast } from '../utils/finance.js';
 import { fillTemplate } from '../utils/format.js';
+import { buildTips } from '../utils/tips.js';
 
 // Цель для карточки на «Главной»: ближайшая по сроку из незавершённых, иначе любая
 const featuredGoal = (goals) =>
@@ -29,6 +32,7 @@ const monthLeftStat = (summary) => {
 /**
  * Экран 2. Главная (веб-версия).
  * Сетка: приглашение загрузить выписку (пока ни одной не загружали) → баланс + цель → доходы, расходы, остаток месяца →
+ * прогноз на конец месяца + советы →
  * самые заполненные лимиты категорий → структура расходов + операции. На телефоне три показателя листаются вбок,
  * чтобы не занимать три экрана подряд.
  * Всё считается из истории операций за текущий месяц, поэтому сразу учитывает
@@ -37,9 +41,12 @@ const monthLeftStat = (summary) => {
  * onNavigate — переход на другие экраны (например, в «Цели»).
  */
 export default function DashboardScreen({ onNavigate }) {
-  const { summary, accounts, monthCategories, budgets, transactions, goals, imports, hideBalance, today } = useFinance();
+  const { summary, accounts, monthCategories, budgets, budgetLimits, transactions, rawTransactions, categories, goals, imports, hideBalance, today } =
+    useFinance();
   const { openTransaction, openAddTransaction, openImport } = useAppActions();
   const goal = featuredGoal(goals);
+  const forecast = monthForecast(rawTransactions, today, budgetLimits);
+  const tips = buildTips({ transactions: rawTransactions, categories, goals, today, forecast });
 
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
@@ -74,6 +81,21 @@ export default function DashboardScreen({ onNavigate }) {
           <StatCard stat={monthLeftStat(summary)} className="h-full" />
         </Reveal>
       </div>
+
+      <Reveal delay={0.1} className="xl:col-span-2">
+        <ForecastCard
+          forecast={forecast}
+          categories={categories}
+          today={today}
+          hasData={rawTransactions.length > 0}
+          hasBudgets={Object.keys(budgetLimits).length > 0}
+          texts={DASHBOARD.forecast}
+          className="h-full"
+        />
+      </Reveal>
+      <Reveal delay={0.15}>
+        <InsightsCard insights={tips} title={DASHBOARD.tips.title} emptyText={DASHBOARD.tips.empty} className="h-full" />
+      </Reveal>
 
       <Reveal delay={0.1} className="xl:col-span-3">
         <BudgetsCard

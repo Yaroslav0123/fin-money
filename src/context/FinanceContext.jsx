@@ -3,7 +3,6 @@ import { createDemoData, createEmptyData } from '../data/demoData.js';
 import {
   CATEGORY_BUDGETS,
   CATEGORY_ICONS,
-  GOAL_TRANSFER,
   GOALS_PAGE,
   IMPORT_FALLBACK_INCOME,
   IMPORT_TRANSFER,
@@ -12,7 +11,7 @@ import {
 } from '../data/mockData.js';
 import { formatFullDate, formatTransactionDate } from '../utils/dates.js';
 import { budgetProgress, categoryBreakdown, goalMonthsLeft, isGoalDone, monthSummary } from '../utils/finance.js';
-import { setDisplayCurrency } from '../utils/format.js';
+import { fillTemplate, setDisplayCurrency } from '../utils/format.js';
 import { applyCategoryChoice, signedDraftAmount, TRANSFER_CHOICE } from '../utils/statement.js';
 import { clearFinanceState, loadFinanceState, saveFinanceState } from './financeStorage.js';
 import { CURRENT_VERSION } from './migrations.js';
@@ -24,7 +23,9 @@ import { CURRENT_VERSION } from './migrations.js';
  * Это прототип без сервера: данные сохраняются в localStorage этого браузера,
  * resetDemo() заново строит демо-историю от сегодняшнего дня, startFromScratch() — очищает всё.
  * Все суммы — целые копейки (utils/money.js). Счетов может быть несколько: у каждой операции есть accountId,
- * общий баланс — сумма счетов. Первый счёт основной: с него пополняются цели, его нельзя удалить.
+ * общий баланс — сумма счетов. Первый счёт основной (на него попадают операции, добавленные вручную), его нельзя удалить.
+ * Цели — план, а не счёт: пополнение цели — отметка в её истории (contributions), баланс счетов оно не меняет.
+ * Перевод из выписки на свой вклад можно засчитать в цель — тогда отметка связана с операцией (txId).
  * budgets — месячные лимиты категорий расходов: { [id категории]: лимит в копейках }.
  */
 
@@ -72,6 +73,25 @@ const sumAmounts = (items) => items.reduce((total, item) => total + item.amount,
 const primaryAccountId = (state) => state.accounts[0].id;
 // Счёт из черновика, если он есть, иначе основной
 const accountOf = (state, accountId) => (state.accounts.some((a) => a.id === accountId) ? accountId : primaryAccountId(state));
+
+// Пополнение цели: сумма растёт, отметка попадает в историю цели (по ней считается темп)
+const addContribution = (goal, contribution) => ({
+  ...goal,
+  saved: goal.saved + contribution.amount,
+  contributions: [contribution, ...(goal.contributions ?? [])],
+});
+
+// Цели без отметок, связанных с удалёнными операциями из выписки (txIds — Set id операций)
+const withoutTxContributions = (goals, txIds) =>
+  goals.map((goal) => {
+    const removed = (goal.contributions ?? []).filter((c) => c.txId && txIds.has(c.txId));
+    if (removed.length === 0) return goal;
+    return {
+      ...goal,
+      saved: Math.max(0, goal.saved - sumAmounts(removed)),
+      contributions: goal.contributions.filter((c) => !removed.includes(c)),
+    };
+  });
 
 // Нужна ли тёмная тема: явный выбор или (для «Авто») настройка устройства с подпиской на её смену
 const DARK_QUERY = '(prefers-color-scheme: dark)';
@@ -215,14 +235,19 @@ export function FinanceProvider({ children }) {
     [update],
   );
 
-  // Отмена импорта: удаляются все операции пакета, в том числе изменённые после загрузки
+  // Отмена импорта: удаляются все операции пакета, в том числе изменённые после загрузки,
+  // и их суммы в целях, если переводы из этой выписки были засчитаны в цели
   const undoImport = useCallback(
     (importId) =>
-      update((prev) => ({
-        ...prev,
-        transactions: prev.transactions.filter((tx) => tx.importId !== importId),
-        imports: prev.imports.filter((item) => item.id !== importId),
-      })),
+      update((prev) => {
+        const removed = new Set(prev.transactions.filter((tx) => tx.importId === importId).map((tx) => tx.id));
+        return {
+          ...prev,
+          transactions: prev.transactions.filter((tx) => !removed.has(tx.id)),
+          imports: prev.imports.filter((item) => item.id !== importId),
+          goals: withoutTxContributions(prev.goals, removed),
+        };
+      }),
     [update],
   );
 
@@ -254,43 +279,49 @@ export function FinanceProvider({ children }) {
     [update],
   );
 
-  // Удаление операции. У пополнения цели откатываем и вторую сторону — сумму на цели.
+  // Удаление операции. Если это перевод, засчитанный в цель, его сумма уходит и из цели.
   const deleteTransaction = useCallback(
     (id) =>
-      update((prev) => {
-        const tx = prev.transactions.find((t) => t.id === id);
-        if (!tx) return prev;
-        const next = { ...prev, transactions: prev.transactions.filter((t) => t.id !== id) };
-        if (tx.kind === 'goal' && tx.mode !== 'return') {
-          next.goals = prev.goals.map((g) => (g.id === tx.goalId ? { ...g, saved: Math.max(0, g.saved + tx.amount) } : g));
-        }
-        return next;
-      }),
+      update((prev) => ({
+        ...prev,
+        transactions: prev.transactions.filter((t) => t.id !== id),
+        goals: withoutTxContributions(prev.goals, new Set([id])),
+      })),
     [update],
   );
 
   // ───── Цели ─────
 
-  // Пополнение цели — перевод с основного счёта: цель растёт, общий баланс уменьшается
+  // «Отложить» на цель — отметка для учёта: цель растёт, баланс счетов не меняется
   const depositToGoal = useCallback(
     (goal, amount) =>
       update((prev, newId) => ({
         ...prev,
-        goals: prev.goals.map((g) => (g.id === goal.id ? { ...g, saved: g.saved + amount } : g)),
-        transactions: [
-          {
-            id: newId('goal-transfer'),
-            accountId: primaryAccountId(prev),
-            type: 'transfer',
-            kind: 'goal',
-            goalId: goal.id,
-            goalName: goal.name,
-            amount: -amount,
-            date: new Date().toISOString(),
-          },
-          ...prev.transactions,
-        ],
+        goals: prev.goals.map((g) =>
+          g.id === goal.id ? addContribution(g, { id: newId('contribution'), amount, date: new Date().toISOString() }) : g,
+        ),
       })),
+    [update],
+  );
+
+  /*
+   * Перевод из выписки (на свой вклад, в копилку) засчитывается в цель goalId; null — больше не засчитывается.
+   * Баланс не меняется: перевод уже учтён на счёте, цель только узнаёт, что на неё отложили.
+   */
+  const assignTransferToGoal = useCallback(
+    (txId, goalId) =>
+      update((prev, newId) => {
+        const tx = prev.transactions.find((t) => t.id === txId);
+        if (!tx || tx.type !== 'transfer' || tx.amount >= 0) return prev;
+        let goals = withoutTxContributions(prev.goals, new Set([txId]));
+        if (goalId) {
+          const contribution = { id: newId('contribution'), amount: -tx.amount, date: tx.date, txId };
+          goals = goals.map((g) => (g.id === goalId ? addContribution(g, contribution) : g));
+        }
+        // undefined не попадает в сохранённый JSON — связь с целью просто исчезает
+        const transactions = prev.transactions.map((t) => (t.id === txId ? { ...t, goalId: goalId ?? undefined } : t));
+        return { ...prev, goals, transactions };
+      }),
     [update],
   );
 
@@ -299,7 +330,7 @@ export function FinanceProvider({ children }) {
     (draft) =>
       update((prev, newId) => ({
         ...prev,
-        goals: [...prev.goals, { ...draft, deadline: draft.deadline.toISOString(), id: newId('goal'), saved: 0 }],
+        goals: [...prev.goals, { ...draft, deadline: draft.deadline.toISOString(), id: newId('goal'), saved: 0, contributions: [] }],
       })),
     [update],
   );
@@ -313,30 +344,14 @@ export function FinanceProvider({ children }) {
     [update],
   );
 
-  // Удаление цели: накопленное на ней возвращается на основной счёт
+  // Удаление цели вместе с её отметками. Баланс не меняется; переводы, засчитанные в неё, остаются обычными переводами.
   const deleteGoal = useCallback(
     (id) =>
-      update((prev, newId) => {
-        const goal = prev.goals.find((g) => g.id === id);
-        if (!goal) return prev;
-        const refund =
-          goal.saved > 0
-            ? [
-                {
-                  id: newId('goal-transfer'),
-                  accountId: primaryAccountId(prev),
-                  type: 'transfer',
-                  kind: 'goal',
-                  mode: 'return',
-                  goalId: goal.id,
-                  goalName: goal.name,
-                  amount: goal.saved,
-                  date: new Date().toISOString(),
-                },
-              ]
-            : [];
-        return { ...prev, goals: prev.goals.filter((g) => g.id !== id), transactions: [...refund, ...prev.transactions] };
-      }),
+      update((prev) => ({
+        ...prev,
+        goals: prev.goals.filter((g) => g.id !== id),
+        transactions: prev.transactions.map((tx) => (tx.goalId === id ? { ...tx, goalId: undefined } : tx)),
+      })),
     [update],
   );
 
@@ -355,16 +370,18 @@ export function FinanceProvider({ children }) {
   );
 
   // Удаление счёта вместе с его операциями и историей импорта. Основной счёт не удаляется:
-  // на нём пополнения целей, связанные с другими данными.
+  // на него попадают операции, добавленные вручную.
   const deleteAccount = useCallback(
     (id) =>
       update((prev) => {
         if (id === primaryAccountId(prev) || !prev.accounts.some((a) => a.id === id)) return prev;
+        const removed = new Set(prev.transactions.filter((tx) => tx.accountId === id).map((tx) => tx.id));
         return {
           ...prev,
           accounts: prev.accounts.filter((a) => a.id !== id),
-          transactions: prev.transactions.filter((tx) => tx.accountId !== id),
+          transactions: prev.transactions.filter((tx) => !removed.has(tx.id)),
           imports: prev.imports.filter((item) => item.accountId !== id),
+          goals: withoutTxContributions(prev.goals, removed),
         };
       }),
     [update],
@@ -449,20 +466,18 @@ export function FinanceProvider({ children }) {
     });
     const accountName = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
     const openingBalance = state.accounts.reduce((total, a) => total + a.openingBalance, 0);
+    const goalNames = Object.fromEntries(state.goals.map((g) => [g.id, g.name]));
 
     // Операция в виде для списков: иконка, цвет, заголовок, подпись категории и даты
     const describeTx = (tx) => {
       const date = new Date(tx.date);
       const dateLabel = formatTransactionDate(date, today);
-      if (tx.type === 'transfer' && tx.kind === 'import') {
-        const { category, icon, accent } = IMPORT_TRANSFER;
-        return { ...tx, title: tx.comment || IMPORT_TRANSFER.title, category, icon, accent, dateLabel, editable: false };
-      }
-      // Остальные переводы — пополнения целей и возвраты с них
+      // Перевод между своими счетами из выписки; засчитанный в цель подписан её названием
       if (tx.type === 'transfer') {
-        const title = `${tx.mode === 'return' ? GOAL_TRANSFER.returnPrefix : GOAL_TRANSFER.titlePrefix} «${tx.goalName}»`;
-        const { category, icon, accent } = GOAL_TRANSFER;
-        return { ...tx, title, category, icon, accent, dateLabel, editable: false };
+        const { icon, accent } = IMPORT_TRANSFER;
+        const goalName = tx.goalId ? goalNames[tx.goalId] : null;
+        const category = goalName ? fillTemplate(IMPORT_TRANSFER.goalCategory, { name: goalName }) : IMPORT_TRANSFER.category;
+        return { ...tx, title: tx.comment || IMPORT_TRANSFER.title, category, icon, accent, dateLabel, editable: false };
       }
       const category = categoryById[tx.categoryId] ?? categories.find((c) => c.type === tx.type);
       return {
@@ -543,6 +558,7 @@ export function FinanceProvider({ children }) {
       updateTransaction,
       deleteTransaction,
       depositToGoal,
+      assignTransferToGoal,
       createGoal,
       updateGoal,
       deleteGoal,
@@ -570,6 +586,7 @@ export function FinanceProvider({ children }) {
     updateTransaction,
     deleteTransaction,
     depositToGoal,
+    assignTransferToGoal,
     createGoal,
     updateGoal,
     deleteGoal,

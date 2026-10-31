@@ -21,7 +21,7 @@ const SALARY = { days: [5, 20], amount: [37000, 39500], hour: 10 };
 const CASHBACK = { day: 1, amount: [300, 900], hour: 9 };
 const UTILITIES = { day: 28, amount: [4800, 5600], hour: 12, comment: 'Коммунальные услуги' };
 const INTERNET = { day: 15, amount: [1990, 1990], hour: 11, comment: 'Интернет и связь' };
-// Ежемесячные пополнения целей (7-го числа)
+// Ежемесячные отметки «отложил на цель» (7-го числа); баланс счёта они не меняют
 const GOAL_DEPOSITS = { day: 7, hour: 13, amounts: { trip: 2500, laptop: 5500 } };
 
 // Случайные траты: вероятность в будний / выходной день, сумма [от, до], часы [с, по], подписи
@@ -100,6 +100,7 @@ export function createDemoData(today = new Date()) {
   const nextId = (prefix) => `${prefix}-demo-${(counter += 1)}`;
 
   const transactions = [];
+  const contributions = Object.fromEntries(DEMO_GOALS.map((goal) => [goal.id, []]));
 
   // Операция в конкретный день и час (минуты случайные); будущее время пропускаем
   const at = (day, hour) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, Math.floor(random() * 60));
@@ -144,11 +145,11 @@ export function createDemoData(today = new Date()) {
       }
     }
 
-    // Пополнение целей — перевод с основного счёта
+    // Отметки «отложил» на цели
     if (date === GOAL_DEPOSITS.day) {
       for (const [goalId, amount] of Object.entries(GOAL_DEPOSITS.amounts)) {
-        const goalName = DEMO_GOALS.find((g) => g.id === goalId).name;
-        push({ type: 'transfer', kind: 'goal', goalId, goalName, amount: -amount }, at(day, GOAL_DEPOSITS.hour));
+        const when = at(day, GOAL_DEPOSITS.hour);
+        if (when <= today) contributions[goalId].push({ id: nextId('contribution'), amount: rub(amount), date: when.toISOString() });
       }
     }
   }
@@ -164,6 +165,7 @@ export function createDemoData(today = new Date()) {
     target: rub(target),
     saved: rub(saved),
     deadline: addMonths(today, monthsFromNow).toISOString(),
+    contributions: contributions[goal.id].sort(byDateDesc),
   }));
 
   // Рубли → копейки

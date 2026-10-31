@@ -2,7 +2,7 @@ import { Sparkles } from 'lucide-react';
 import Card from '../ui/Card.jsx';
 import IconTile from '../ui/IconTile.jsx';
 
-// Карточка «Подсказки»: короткие выводы по тратам. emptyText — когда данных для выводов мало.
+// Карточка «Советы» на «Главной»: короткие выводы по тратам (utils/tips.js). emptyText — когда данных для выводов мало.
 export default function InsightsCard({ insights, title, emptyText, className = '' }) {
   return (
     <Card className={`p-6 ${className}`}>

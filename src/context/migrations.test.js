@@ -44,8 +44,25 @@ describe('migrateState', () => {
     expect(data.version).toBe(CURRENT_VERSION);
     expect(data).not.toHaveProperty('savingsTransactions');
     expect(data).not.toHaveProperty('savingsOpeningBalance');
-    // Пополнение цели остаётся, перевод в накопления — нет
-    expect(data.transactions.map((tx) => tx.id)).toEqual(['a', 'c']);
+    // Перевод в накопления удалён; пополнение цели (шаг 5) стало отметкой в истории цели
+    expect(data.transactions.map((tx) => tx.id)).toEqual(['a']);
+  });
+
+  it('версия 5: пополнения целей — не операции, а отметки; деньги возвращаются на счёт', () => {
+    const v5 = {
+      version: 5,
+      accounts: [{ id: 'main', name: 'Основной счёт', openingBalance: 10000 }],
+      transactions: [
+        { id: 'a', accountId: 'main', type: 'expense', amount: -500, date: '2026-10-01T09:00:00.000Z' },
+        { id: 'g1', accountId: 'main', type: 'transfer', kind: 'goal', goalId: 'trip', amount: -1000, date: '2026-10-02T10:00:00.000Z' },
+        { id: 'g2', accountId: 'main', type: 'transfer', kind: 'goal', mode: 'return', goalId: 'old', amount: 700, date: '2026-10-03T10:00:00.000Z' },
+      ],
+      goals: [{ id: 'trip', name: 'Путешествие', target: 100000, saved: 1000 }],
+      categories: [],
+    };
+    const data = migrateState(v5);
+    expect(data.transactions.map((tx) => tx.id)).toEqual(['a']);
+    expect(data.goals[0]).toMatchObject({ saved: 1000, contributions: [{ id: 'g1', amount: 1000, date: '2026-10-02T10:00:00.000Z' }] });
   });
 
   it('текущая версия не меняется, повторный перенос ничего не портит', () => {

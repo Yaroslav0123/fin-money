@@ -7,7 +7,7 @@ import { rub, toRubles } from '../../utils/money.js';
 // Лимиты — в копейках, в поле вводятся рубли.
 const { depositDialog } = GOALS_PAGE;
 const texts = { ...depositDialog, deposit: { title: depositDialog.titlePrefix, confirm: depositDialog.confirm } };
-const NO_FUNDS = texts.errorNoFunds;
+const NO_FUNDS = 'Больше, чем осталось до цели';
 
 const renderDialog = (limits) =>
   render(

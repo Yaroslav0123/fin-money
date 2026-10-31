@@ -4,20 +4,28 @@ import IconTile from '../ui/IconTile.jsx';
 import Modal from '../ui/Modal.jsx';
 import { useFinance } from '../../context/FinanceContext.jsx';
 import { TRANSFER_DETAILS } from '../../data/mockData.js';
-import { formatSignedMoney } from '../../utils/format.js';
+import { fillTemplate, formatSignedMoney } from '../../utils/format.js';
+import { isGoalDone } from '../../utils/finance.js';
 
 /**
- * Карточка перевода: пополнение цели, возврат с неё или перевод между своими счетами из выписки.
- * Перевод нельзя изменить, но можно удалить — тогда деньги вернутся на прежнее место.
- * transaction — перевод в виде для списков (title, icon, dateLabel…), null — диалог закрыт.
+ * Карточка перевода между своими счетами из выписки. Перевод нельзя изменить, но можно удалить.
+ * Исходящий перевод (на вклад, в копилку) можно засчитать в цель: цель растёт, баланс не меняется.
+ * transaction — перевод в виде для списков (title, icon, dateLabel, goalId…), null — диалог закрыт.
  */
 export default function TransferDialog({ transaction, onClose, onDone }) {
-  const { deleteTransaction } = useFinance();
+  const { deleteTransaction, assignTransferToGoal, goals } = useFinance();
   const [isConfirming, setIsConfirming] = useState(false);
   const t = TRANSFER_DETAILS;
-  // Перевод из выписки ни с чем в Fin Money не связан: удаляется без возврата денег
-  const isImported = transaction?.kind === 'import';
-  const deleteQuestion = isImported ? t.importDeleteQuestion : t.deleteQuestion;
+  const deleteQuestion = t.deleteQuestion;
+  // В цель засчитываются только списания; в списке — незавершённые цели и та, куда перевод уже засчитан
+  const canAssign = transaction?.amount < 0 && goals.length > 0;
+  const goalOptions = goals.filter((g) => !isGoalDone(g) || g.id === transaction?.goalId);
+
+  const handleAssign = (goalId) => {
+    assignTransferToGoal(transaction.id, goalId || null);
+    const goal = goals.find((g) => g.id === goalId);
+    onDone(goal ? fillTemplate(t.goalAssigned, { name: goal.name }) : t.goalRemoved);
+  };
 
   const handleClose = () => {
     setIsConfirming(false);
@@ -42,7 +50,29 @@ export default function TransferDialog({ transaction, onClose, onDone }) {
             </div>
             <span className="shrink-0 text-base font-bold text-ink">{formatSignedMoney(transaction.amount)}</span>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-ink-muted">{isImported ? t.importNote : t.note}</p>
+          <p className="mt-4 text-xs leading-relaxed text-ink-muted">{t.note}</p>
+
+          {canAssign && (
+            <div className="mt-5">
+              <label htmlFor="transfer-goal" className="text-xs font-medium text-ink-muted">
+                {t.goalLabel}
+              </label>
+              <select
+                id="transfer-goal"
+                value={transaction.goalId ?? ''}
+                onChange={(e) => handleAssign(e.target.value)}
+                className="mt-2 h-12 w-full rounded-2xl border-2 border-transparent bg-surface px-4 text-sm font-semibold text-ink focus:border-brand focus:outline-none"
+              >
+                <option value="">{t.noGoal}</option>
+                {goalOptions.map((goal) => (
+                  <option key={goal.id} value={goal.id}>
+                    {goal.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs leading-relaxed text-ink-muted">{t.goalHint}</p>
+            </div>
+          )}
 
           {isConfirming ? (
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-negative-bg px-4 py-3" role="group" aria-label={deleteQuestion}>

@@ -2,6 +2,7 @@ import CategoriesSection from '../components/landing/CategoriesSection.jsx';
 import CtaBanner from '../components/landing/CtaBanner.jsx';
 import GoalsSection from '../components/landing/GoalsSection.jsx';
 import HeroSection from '../components/landing/HeroSection.jsx';
+import ForecastSection from '../components/landing/ForecastSection.jsx';
 import HowItWorksSection from '../components/landing/HowItWorksSection.jsx';
 import LandingFooter from '../components/landing/LandingFooter.jsx';
 import LandingHeader from '../components/landing/LandingHeader.jsx';
@@ -34,6 +35,7 @@ export default function LandingPage({ onStart }) {
       <main>
         <HeroSection appName={APP_NAME} onStart={onStart} onTrySample={handleTrySample} />
         <HowItWorksSection onTrySample={handleTrySample} />
+        <ForecastSection />
         <OverviewSection />
         <CategoriesSection />
         <GoalsSection />

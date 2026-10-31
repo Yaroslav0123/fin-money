@@ -389,11 +389,21 @@ test('цели: прогноз по темпу и праздник, когда �
   await expect(tile.getByText(/Прогноз: /)).toBeVisible();
   await expect(tile.getByRole('progressbar', { name: 'Новый ноутбук' })).toHaveAttribute('aria-valuenow', '45');
 
-  await tile.getByRole('button', { name: 'Пополнить' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Пополнить цель «Новый ноутбук»' });
+  await tile.getByRole('button', { name: 'Отложить' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Отложить на цель «Новый ноутбук»' });
   await dialog.getByLabel('Сумма').fill('66000');
-  await dialog.getByRole('button', { name: 'Пополнить', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Отложить', exact: true }).click();
   await expect(page.getByRole('status').getByText('Поздравляем! Цель «Новый ноутбук» достигнута')).toBeVisible();
   await expect(tile.getByText('Цель достигнута!')).toBeVisible();
   await expect(tile.getByRole('progressbar', { name: 'Новый ноутбук' })).toHaveAttribute('aria-valuenow', '100');
+});
+
+test('главная: прогноз на конец месяца и советы', async ({ page }) => {
+  await openAppWithDemo(page);
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: /^Прогноз на / })).toBeVisible();
+  await expect(main.getByText(/^К \d+ \S+ (останется около|расходы обгонят)/)).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Советы' })).toBeVisible();
+  // В демо-истории коммуналка и интернет приходят каждый месяц — это регулярные платежи
+  await expect(main.getByText(/Регулярные платежи: .*Коммунальные услуги/)).toBeVisible();
 });

@@ -29,13 +29,13 @@ const FILTERS = {
 
 /**
  * Экран «Цели» (веб-версия).
- * Цели можно пополнять, создавать, изменять и удалять — изменения живут в общем состоянии,
- * поэтому видны на «Главной», в «Накоплениях» и на лендинге.
- * При удалении накопленное на цели возвращается на основной счёт.
+ * Цель — план, а не счёт: «Отложить» ставит отметку, баланс счетов не меняется. Ещё цель пополняют
+ * переводы из выписки, засчитанные в неё (окно перевода в «Операциях»).
+ * Цели можно создавать, изменять и удалять — изменения видны на «Главной» и на лендинге.
  * У каждой цели — прогноз даты по темпу пополнений; пополнение, которое закрывает цель, празднуется «конфетти».
  */
 export default function GoalsScreen() {
-  const { goals, depositToGoal, createGoal, updateGoal, deleteGoal, accounts, rawTransactions, today } = useFinance();
+  const { goals, depositToGoal, createGoal, updateGoal, deleteGoal, today } = useFinance();
   const { notify } = useAppActions();
   const [filter, setFilter] = useState('all');
   const [depositGoal, setDepositGoal] = useState(null);
@@ -86,12 +86,9 @@ export default function GoalsScreen() {
     notify(GOALS_PAGE.deleteDialog.done);
   };
 
-  // Пополнить можно не больше остатка до цели и не больше денег на основном счёте
+  // Отложить можно не больше, чем осталось до цели
   const goalLeft = depositGoal ? depositGoal.target - depositGoal.saved : 0;
-  const depositLimits = [
-    { max: goalLeft, error: GOALS_PAGE.depositDialog.errorTooMuch },
-    { max: accounts[0].balance, error: GOALS_PAGE.depositDialog.errorNoFunds },
-  ];
+  const depositLimits = [{ max: goalLeft, error: GOALS_PAGE.depositDialog.errorTooMuch }];
 
   // Тексты диалога пополнения с названием выбранной цели
   const depositTexts = {
@@ -156,7 +153,7 @@ export default function GoalsScreen() {
                 <GoalTile
                   goal={goal}
                   texts={tile}
-                  forecast={goalForecast(goal, rawTransactions, today)}
+                  forecast={goalForecast(goal, today)}
                   celebrate={celebratingId === goal.id}
                   onDeposit={setDepositGoal}
                   onEdit={(g) => setGoalDialog({ goal: g })}
@@ -183,6 +180,7 @@ export default function GoalsScreen() {
         mode={depositGoal ? 'deposit' : null}
         hint={{ label: GOALS_PAGE.depositDialog.available, amount: goalLeft }}
         limits={depositLimits}
+        note={GOALS_PAGE.depositDialog.note}
         texts={depositTexts}
         onClose={() => setDepositGoal(null)}
         onConfirm={handleDeposit}
