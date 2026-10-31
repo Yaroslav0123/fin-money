@@ -3,6 +3,7 @@ import { ArrowRight, FileText } from 'lucide-react';
 import Button3D from '../ui/Button3D.jsx';
 import Container from './Container.jsx';
 import LaptopMockup from './LaptopMockup.jsx';
+import Smesharik from './Smesharik.jsx';
 import { EXPENSE_CATEGORIES, LANDING, SUMMARY } from '../../data/mockData.js';
 
 // Каскадное появление текстов слева
@@ -43,8 +44,17 @@ export default function HeroSection({ appName, onStart, onTrySample }) {
       {/* Мягкое зелёное пятно за ноутбуком */}
       <div className="pointer-events-none absolute -right-40 -top-24 h-[640px] w-[760px] rounded-full bg-gradient-to-bl from-brand-soft via-brand-light to-transparent opacity-80 blur-2xl" />
 
+      {/* Смешарики по краям экрана — только там, где по бокам хватает места */}
+      <Smesharik character="losyash" className="left-10 top-52 hidden h-52 w-52 min-[1680px]:block" />
+      <Smesharik character="krosh" className="right-36 top-3 hidden h-32 w-32 min-[1700px]:block" delay={0.6} />
+      <Smesharik character="sovunya" className="right-24 top-[340px] hidden h-28 w-28 min-[1600px]:block" delay={1.2} />
+
       <Container className="relative grid items-center gap-14 py-14 lg:grid-cols-[0.8fr_1.2fr] lg:py-20">
-        <motion.div variants={container} initial="hidden" animate="show">
+        {/* Копатыч между текстом и ноутбуком: на широком экране контейнер всегда одной ширины */}
+        <Smesharik character="kopatych" className="left-[415px] top-[360px] hidden h-16 w-16 xl:block" delay={0.9} />
+
+        <motion.div variants={container} initial="hidden" animate="show" className="relative">
+          <Smesharik character="yozhik" className="-left-[4.5rem] -top-2 hidden h-16 w-16 min-[1300px]:block" delay={0.3} />
           <motion.span
             variants={item}
             className="inline-flex rounded-full bg-ink/[0.04] px-3 py-1 text-xs font-medium text-ink-secondary"

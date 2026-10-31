@@ -5,6 +5,7 @@ import IconTile from '../ui/IconTile.jsx';
 import Reveal from '../ui/Reveal.jsx';
 import Container from './Container.jsx';
 import SectionHeading from './SectionHeading.jsx';
+import Smesharik from './Smesharik.jsx';
 import { LANDING } from '../../data/mockData.js';
 
 /**
@@ -15,7 +16,9 @@ export default function HowItWorksSection({ onTrySample }) {
   const { how } = LANDING;
 
   return (
-    <section id="how" className="scroll-mt-20">
+    <section id="how" className="relative scroll-mt-20">
+      {/* Кар-Карыч у левого края — только на широком экране */}
+      <Smesharik character="karych" className="left-6 top-36 hidden h-32 w-32 min-[1600px]:block" delay={0.4} />
       <Container className="pt-16">
         <Reveal>
           <SectionHeading eyebrow={how.eyebrow} title={how.title} description={how.description} />
