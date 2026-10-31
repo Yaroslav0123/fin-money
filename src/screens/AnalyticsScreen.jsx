@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { CalendarRange, ChevronLeft, ChevronRight, Wallet } from 'lucide-react';
 import CategoryBreakdownCard from '../components/analytics/CategoryBreakdownCard.jsx';
+import CategoryComparisonCard from '../components/analytics/CategoryComparisonCard.jsx';
+import CategoryHistoryDialog from '../components/analytics/CategoryHistoryDialog.jsx';
 import InsightsCard from '../components/analytics/InsightsCard.jsx';
 import KpiCard from '../components/analytics/KpiCard.jsx';
+import SpendingCalendarCard from '../components/analytics/SpendingCalendarCard.jsx';
 import { IncomeExpenseChart, SpendingBarChart } from '../components/charts/lazy.jsx';
+import AnimatedMoney from '../components/ui/AnimatedMoney.jsx';
 import Card from '../components/ui/Card.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
 import SegmentedControl from '../components/ui/SegmentedControl.jsx';
@@ -11,7 +15,15 @@ import TrendBadge from '../components/ui/TrendBadge.jsx';
 import { ANALYTICS_PAGE } from '../data/mockData.js';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
-import { categoryBreakdown, incomeVsExpenses, insightData, periodExpenses } from '../utils/finance.js';
+import {
+  categoryBreakdown,
+  categoryComparison,
+  categoryHistory,
+  incomeVsExpenses,
+  insightData,
+  periodExpenses,
+  spendingCalendar,
+} from '../utils/finance.js';
 import { fillTemplate, formatMoney, monthlyPayment } from '../utils/format.js';
 
 // Для расходов снижение — хорошо, поэтому зелёный бейдж при отрицательной динамике
@@ -48,12 +60,15 @@ const buildInsights = (data) => {
 /**
  * Экран 4. Аналитика (веб-версия).
  * Всё считается из истории операций: переключатель периода меняет показатели,
- * диаграмму и категории; стрелки листают периоды назад. Категория открывает свои операции.
- * Для периода «Месяц» у категорий с лимитом видно, сколько потрачено из лимита.
+ * диаграмму и категории; стрелки листают периоды назад. Категория открывает свою динамику за полгода,
+ * а оттуда — свои операции. Сравнение категорий — с тем же отрезком прошлого периода.
+ * Для периода «Месяц» у категорий с лимитом видно, сколько потрачено из лимита, и есть календарь трат по дням.
  */
 export default function AnalyticsScreen() {
   const [periodId, setPeriodId] = useState(ANALYTICS_PAGE.defaultPeriod);
   const [offset, setOffset] = useState(0);
+  // Категория, чья динамика открыта в окне (null — окно закрыто)
+  const [historyCategory, setHistoryCategory] = useState(null);
   const { rawTransactions, categories, goals, settings, today, budgetLimits } = useFinance();
   const { navigate } = useAppActions();
   const { kpi } = ANALYTICS_PAGE;
@@ -65,6 +80,10 @@ export default function AnalyticsScreen() {
   const comparison = incomeVsExpenses(rawTransactions, today);
   const insights = buildInsights(insightData(rawTransactions, categories, goals, today));
   const tone = expenseTone(period.trend);
+  const comparisonItems = categoryComparison(rawTransactions, categories, periodId, today, offset, settings.weekStart);
+  const isMonth = periodId === 'month';
+  const calendar = isMonth ? spendingCalendar(rawTransactions, period.start, today, settings.weekStart) : null;
+  const history = historyCategory ? categoryHistory(rawTransactions, historyCategory.id, today) : null;
 
   const changePeriod = (id) => {
     setPeriodId(id);
@@ -110,7 +129,7 @@ export default function AnalyticsScreen() {
           icon={Wallet}
           accent="brand"
           label={kpi.expenses}
-          value={formatMoney(period.total)}
+          amount={period.total}
           footer={
             period.hasPrevious ? (
               <span className="flex flex-wrap items-center gap-2">
@@ -124,7 +143,7 @@ export default function AnalyticsScreen() {
         />
       </Reveal>
       <Reveal delay={0.1}>
-        <KpiCard icon={CalendarRange} accent="blue" label={kpi.perDay} value={formatMoney(period.perDay)} footer={period.label} />
+        <KpiCard icon={CalendarRange} accent="blue" label={kpi.perDay} amount={period.perDay} footer={period.label} />
       </Reveal>
       <Reveal delay={0.15}>
         <KpiCard
@@ -143,7 +162,9 @@ export default function AnalyticsScreen() {
             <div>
               <p className="text-xs font-medium text-ink-muted">{periodMeta.chartTitle}</p>
               <div className="mt-1 flex items-center gap-3">
-                <span className="text-3xl font-bold tracking-tight text-ink">{formatMoney(period.total)}</span>
+                <span className="text-3xl font-bold tracking-tight text-ink">
+                  <AnimatedMoney value={period.total} />
+                </span>
                 {period.hasPrevious && <TrendBadge trend={period.trend} tone={tone} />}
               </div>
             </div>
@@ -161,7 +182,30 @@ export default function AnalyticsScreen() {
           categories={categoriesInPeriod}
           texts={ANALYTICS_PAGE.categories}
           budgetLimits={periodId === 'month' ? budgetLimits : {}}
-          onCategoryClick={(category) => navigate('transactions', { categoryId: category.id })}
+          onCategoryClick={setHistoryCategory}
+          className="h-full"
+        />
+      </Reveal>
+
+      {/* Календарь трат (только «Месяц») и сравнение категорий с прошлым периодом */}
+      {isMonth && (
+        <Reveal delay={0.1}>
+          <SpendingCalendarCard
+            calendar={calendar}
+            today={today}
+            weekStart={settings.weekStart}
+            texts={ANALYTICS_PAGE.calendar}
+            onDayClick={(day) => navigate('transactions', { period: 'custom', from: day, to: day })}
+            className="h-full"
+          />
+        </Reveal>
+      )}
+      <Reveal delay={0.15} className={isMonth ? 'xl:col-span-2' : 'xl:col-span-3'}>
+        <CategoryComparisonCard
+          items={comparisonItems}
+          texts={ANALYTICS_PAGE.compare}
+          periodLabel={period.label}
+          onCategoryClick={setHistoryCategory}
           className="h-full"
         />
       </Reveal>
@@ -196,6 +240,14 @@ export default function AnalyticsScreen() {
           className="h-full"
         />
       </Reveal>
+
+      <CategoryHistoryDialog
+        category={historyCategory}
+        history={history}
+        texts={ANALYTICS_PAGE.history}
+        onClose={() => setHistoryCategory(null)}
+        onShowTransactions={() => navigate('transactions', { categoryId: historyCategory.id })}
+      />
     </div>
   );
 }

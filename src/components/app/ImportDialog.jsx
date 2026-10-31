@@ -3,6 +3,7 @@ import { Check, FileUp } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import Modal from '../ui/Modal.jsx';
+import Skeleton from '../ui/Skeleton.jsx';
 import { useAppActions } from '../../context/AppActionsContext.jsx';
 import { useFinance } from '../../context/FinanceContext.jsx';
 import { CATEGORY_ICONS, IMPORT_DIALOG, IMPORT_TRANSFER } from '../../data/mockData.js';
@@ -256,6 +257,18 @@ export default function ImportDialog({ isOpen, source = null, onClose, onImporte
               onChange={(e) => readFile(e.target.files[0])}
             />
           </label>
+          {/* Пока читаем файл (PDF разбирается дольше CSV) — заглушка будущей таблицы */}
+          {isReading && (
+            <div className="mt-4 grid gap-3" aria-hidden="true">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-9 w-9 shrink-0 rounded-xl" />
+                  <Skeleton className="h-3 flex-1 rounded-full" />
+                  <Skeleton className="h-3 w-16 rounded-full" />
+                </div>
+              ))}
+            </div>
+          )}
           <p className="mt-3 text-center text-xs text-ink-muted">
             {t.sampleHint}{' '}
             <button type="button" disabled={isReading} onClick={() => readFile(loadSampleStatement)} className="font-semibold text-brand hover:underline">

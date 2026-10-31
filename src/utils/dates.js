@@ -49,6 +49,7 @@ export const isInRange = (date, start, end) => date >= start && date < end;
 const dayMonth = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
 const dayMonthYear = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 const time = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' });
+const weekdayLong = new Intl.DateTimeFormat('ru-RU', { weekday: 'long' });
 
 // Название месяца в именительном падеже: «октябрь»
 export const monthName = (date) => DATE_TEXTS.months[date.getMonth()];
@@ -73,12 +74,12 @@ export const formatTransactionDate = (date, today = new Date()) => {
   return `${day}, ${time.format(date)}`;
 };
 
-// Заголовок группы операций в полном списке: «Сегодня», «Вчера», «12 октября»
+// Заголовок группы операций в полном списке: «Сегодня», «Вчера», «вторник, 12 октября»
 export const formatGroupDate = (date, today = new Date()) => {
   const diff = daysBetween(date, today);
   if (diff === 0) return DATE_TEXTS.today;
   if (diff === 1) return DATE_TEXTS.yesterday;
-  return formatDay(date, today);
+  return `${weekdayLong.format(date)}, ${formatDay(date, today)}`;
 };
 
 // Диапазон: «1–28 октября 2026», «27 сент. – 3 окт.», «ноябрь 2025 — октябрь 2026»

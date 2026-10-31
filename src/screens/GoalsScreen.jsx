@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PiggyBank, Plus, Target, Trophy } from 'lucide-react';
 import KpiCard from '../components/analytics/KpiCard.jsx';
@@ -14,8 +14,11 @@ import SegmentedControl from '../components/ui/SegmentedControl.jsx';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
 import { GOAL_ICON_OPTIONS, GOAL_TERM_OPTIONS, GOALS_PAGE } from '../data/mockData.js';
-import { isGoalDone } from '../utils/finance.js';
+import { goalForecast, isGoalDone } from '../utils/finance.js';
 import { fillTemplate, formatMoney } from '../utils/format.js';
+
+// Сколько длится праздничная анимация достигнутой цели
+const CELEBRATION_MS = 2600;
 
 // Правила фильтрации списка целей
 const FILTERS = {
@@ -29,15 +32,18 @@ const FILTERS = {
  * Цели можно пополнять, создавать, изменять и удалять — изменения живут в общем состоянии,
  * поэтому видны на «Главной», в «Накоплениях» и на лендинге.
  * При удалении накопленное на цели возвращается на основной счёт.
+ * У каждой цели — прогноз даты по темпу пополнений; пополнение, которое закрывает цель, празднуется «конфетти».
  */
 export default function GoalsScreen() {
-  const { goals, depositToGoal, createGoal, updateGoal, deleteGoal, accounts } = useFinance();
+  const { goals, depositToGoal, createGoal, updateGoal, deleteGoal, accounts, rawTransactions, today } = useFinance();
   const { notify } = useAppActions();
   const [filter, setFilter] = useState('all');
   const [depositGoal, setDepositGoal] = useState(null);
   // Диалог цели: null — закрыт, { goal: null } — новая, { goal } — изменение
   const [goalDialog, setGoalDialog] = useState(null);
   const [deletingGoal, setDeletingGoal] = useState(null);
+  // Цель, которую только что достигли: на её карточке — праздничная анимация
+  const [celebratingId, setCelebratingId] = useState(null);
   const { kpi, tile } = GOALS_PAGE;
 
   // Сводные показатели
@@ -48,8 +54,19 @@ export default function GoalsScreen() {
 
   const handleDeposit = (_mode, amount) => {
     depositToGoal(depositGoal, amount);
+    if (depositGoal.saved + amount >= depositGoal.target) {
+      setCelebratingId(depositGoal.id);
+      notify(fillTemplate(GOALS_PAGE.reached, { name: depositGoal.name }));
+    }
     setDepositGoal(null);
   };
+
+  // Праздник короткий: через пару секунд карточка возвращается к обычному виду
+  useEffect(() => {
+    if (!celebratingId) return undefined;
+    const timer = setTimeout(() => setCelebratingId(null), CELEBRATION_MS);
+    return () => clearTimeout(timer);
+  }, [celebratingId]);
 
   const handleSave = (draft) => {
     if (goalDialog.goal) {
@@ -94,10 +111,10 @@ export default function GoalsScreen() {
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         {/* Сводка */}
         <Reveal>
-          <KpiCard icon={PiggyBank} accent="brand" label={kpi.saved} value={formatMoney(totalSaved)} footer={kpi.savedHint} />
+          <KpiCard icon={PiggyBank} accent="brand" label={kpi.saved} amount={totalSaved} footer={kpi.savedHint} />
         </Reveal>
         <Reveal delay={0.05}>
-          <KpiCard icon={Target} accent="blue" label={kpi.left} value={formatMoney(totalLeft)} footer={kpi.leftHint} />
+          <KpiCard icon={Target} accent="blue" label={kpi.left} amount={totalLeft} footer={kpi.leftHint} />
         </Reveal>
         <Reveal delay={0.1}>
           <KpiCard
@@ -139,6 +156,8 @@ export default function GoalsScreen() {
                 <GoalTile
                   goal={goal}
                   texts={tile}
+                  forecast={goalForecast(goal, rawTransactions, today)}
+                  celebrate={celebratingId === goal.id}
                   onDeposit={setDepositGoal}
                   onEdit={(g) => setGoalDialog({ goal: g })}
                   onDelete={setDeletingGoal}

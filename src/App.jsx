@@ -2,6 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { AppActionsProvider } from './context/AppActionsContext.jsx';
 import { FinanceProvider } from './context/FinanceContext.jsx';
+import { ScreenSkeleton } from './components/ui/Skeleton.jsx';
+import { APP_SHELL } from './data/mockData.js';
 import LandingPage from './screens/LandingPage.jsx';
 import { trackScreen } from './utils/monitoring.js';
 
@@ -101,7 +103,8 @@ export default function App() {
                     <AnimatePresence mode="wait">
                       {/* Новые параметры (другой поиск, другая категория) — тот же экран заново */}
                       <motion.div key={`${activeScreen}:${JSON.stringify(route.params)}`} {...screenTransition}>
-                        <Suspense fallback={null}>{renderAppScreen()}</Suspense>
+                        {/* Пока код экрана скачивается — заглушка вместо пустоты */}
+                        <Suspense fallback={<ScreenSkeleton label={APP_SHELL.loading} />}>{renderAppScreen()}</Suspense>
                       </motion.div>
                     </AnimatePresence>
                   </AppShell>

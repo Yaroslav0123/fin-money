@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "sample:sber": "node scripts/make-sber-sample.js"
+    "sample:sber": "node scripts/make-sber-sample.js",
+    "og:image": "node scripts/make-og-image.js"
   },
   "dependencies": {
     "@sentry/browser": "^8.40.0",

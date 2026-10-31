@@ -90,6 +90,41 @@ export function periodRange(periodId, today, offset = 0, weekStart = 'mon') {
 }
 
 /**
+ * Границы периода для списка операций. periodId — 'all' | 'month' | 'prev' | 'quarter' | 'year' | 'custom';
+ * custom — { from, to } в формате <input type="date"> (любая граница может быть пустой).
+ * Возвращает { start, end } (end не включительно; null — без границы) или null — без ограничений.
+ * «3 месяца» и «12 месяцев» — считая текущий месяц.
+ */
+export function historyRange(periodId, today, custom = {}) {
+  const monthStart = startOfMonth(today);
+  const nextMonth = addMonths(monthStart, 1);
+  switch (periodId) {
+    case 'month':
+      return { start: monthStart, end: nextMonth };
+    case 'prev':
+      return { start: addMonths(monthStart, -1), end: monthStart };
+    case 'quarter':
+      return { start: addMonths(monthStart, -2), end: nextMonth };
+    case 'year':
+      return { start: addMonths(monthStart, -(MONTHS_IN_YEAR - 1)), end: nextMonth };
+    case 'custom': {
+      const parse = (value) => (value ? new Date(`${value}T00:00:00`) : null);
+      const to = parse(custom.to);
+      return { start: parse(custom.from), end: to ? addDays(to, 1) : null };
+    }
+    default:
+      return null;
+  }
+}
+
+// Попадает ли операция в границы historyRange
+export const isInHistoryRange = (tx, range) => {
+  if (!range) return true;
+  const date = txDate(tx);
+  return (!range.start || date >= range.start) && (!range.end || date < range.end);
+};
+
+/**
  * Расходы за период: итог, столбцы, динамика к прошлому периоду и среднее за день.
  * Для текущего периода сравниваем с тем же отрезком прошлого (1–28 октября с 1–28 сентября),
  * а среднее считаем по прошедшим дням, а не по всему периоду.
@@ -152,6 +187,85 @@ export function incomeVsExpenses(transactions, today, months = 6) {
     const items = inRange(transactions, start, addMonths(start, 1));
     return { label: monthShort(start), income: sum(incomeOf(items)), expenses: spent(items) };
   });
+}
+
+// ───── Аналитика: календарь, сравнение, динамика категории ─────
+
+// Сколько ступеней яркости у дней в календаре трат (0 — трат нет)
+export const CALENDAR_LEVELS = 4;
+
+/**
+ * Календарь трат за месяц: недели по 7 дней (с пустыми клетками до первого и после последнего числа).
+ * monthStart — первое число месяца, weekStart — 'mon' | 'sun'.
+ * День: { date, amount, level (0…CALENDAR_LEVELS), isFuture } или null — клетка вне месяца.
+ * Ступень — доля от самого дорогого дня месяца: так видно «пики», даже если траты в целом небольшие.
+ */
+export function spendingCalendar(transactions, monthStart, today, weekStart = 'mon') {
+  const days = daysInMonth(monthStart);
+  const end = addDays(monthStart, days);
+  const expenses = expensesOf(inRange(transactions, monthStart, end));
+  const amounts = Array(days).fill(0);
+  for (const tx of expenses) amounts[txDate(tx).getDate() - 1] -= tx.amount;
+  const max = Math.max(0, ...amounts);
+
+  const cells = amounts.map((amount, i) => {
+    const date = addDays(monthStart, i);
+    const level = amount > 0 && max > 0 ? Math.max(1, Math.ceil((amount / max) * CALENDAR_LEVELS)) : 0;
+    return { date, amount, level, isFuture: date > today };
+  });
+  const lead = daysBetween(startOfWeek(monthStart, weekStart), monthStart);
+  const padded = [...Array(lead).fill(null), ...cells];
+  while (padded.length % DAYS_IN_WEEK) padded.push(null);
+  const weeks = [];
+  for (let i = 0; i < padded.length; i += DAYS_IN_WEEK) weeks.push(padded.slice(i, i + DAYS_IN_WEEK));
+
+  const active = amounts.filter((amount) => amount > 0).length;
+  return { weeks, max, total: amounts.reduce((a, b) => a + b, 0), activeDays: active };
+}
+
+/**
+ * Расходы по категориям за период против прошлого периода (того же отрезка, как в periodExpenses).
+ * Возвращает [{ ...категория, amount, previous, diff, percent | null }] —
+ * категории с тратами хотя бы в одном из двух периодов, по убыванию большей из сумм.
+ * percent — null, если в прошлом периоде трат не было (рост «с нуля» в процентах не выразить).
+ */
+export function categoryComparison(transactions, categories, periodId, today, offset = 0, weekStart = 'mon') {
+  const range = periodRange(periodId, today, offset, weekStart);
+  const previous = periodRange(periodId, today, offset - 1, weekStart);
+  const isCurrent = today >= range.start && today < range.end;
+  const elapsedMs = isCurrent ? today - range.start : range.end - range.start;
+  const current = expensesOf(inRange(transactions, range.start, range.end));
+  const before = expensesOf(inRange(transactions, previous.start, sameElapsedEnd(previous.start, elapsedMs, previous.end)));
+  const spentIn = (items, id) => 0 - sum(items.filter((tx) => tx.categoryId === id));
+
+  return categories
+    .filter((c) => c.type === 'expense')
+    .map((c) => {
+      const amount = spentIn(current, c.id);
+      const prev = spentIn(before, c.id);
+      return { ...c, amount, previous: prev, diff: amount - prev, percent: prev > 0 ? Math.round((amount / prev - 1) * 100) : null };
+    })
+    .filter((c) => c.amount > 0 || c.previous > 0)
+    .sort((a, b) => Math.max(b.amount, b.previous) - Math.max(a.amount, a.previous));
+}
+
+/**
+ * Траты категории по месяцам за последние months месяцев, заканчивая текущим.
+ * Возвращает { bars: [{ label, value }], average } — среднее по полным месяцам (без текущего), до рубля.
+ * Месяцы до самой первой операции в истории в среднее не входят: данных тогда ещё не было, это не «ноль трат».
+ */
+export function categoryHistory(transactions, categoryId, today, months = 6) {
+  const first = addMonths(startOfMonth(today), -(months - 1));
+  const earliest = transactions.reduce((min, tx) => Math.min(min, txDate(tx).getTime()), Infinity);
+  const historyStart = Number.isFinite(earliest) ? startOfMonth(new Date(earliest)) : startOfMonth(today);
+  const bars = Array.from({ length: months }, (_, i) => {
+    const start = addMonths(first, i);
+    const items = expensesOf(inRange(transactions, start, addMonths(start, 1))).filter((tx) => tx.categoryId === categoryId);
+    return { label: monthShort(start), value: 0 - sum(items), start };
+  });
+  const full = bars.slice(0, -1).filter((bar) => bar.start >= historyStart);
+  const average = full.length ? Math.round(full.reduce((total, bar) => total + bar.value, 0) / full.length / KOPECKS_IN_RUBLE) * KOPECKS_IN_RUBLE : 0;
+  return { bars: bars.map(({ label, value }) => ({ label, value })), average };
 }
 
 // ───── Сводка для «Главной» ─────
@@ -239,6 +353,27 @@ export const isGoalDone = (goal) => goal.saved >= goal.target;
 
 // Сколько полных месяцев осталось до срока цели (не меньше 0)
 export const goalMonthsLeft = (goal, today) => Math.max(0, monthsBetween(today, new Date(goal.deadline)));
+
+// За сколько последних месяцев считаем темп пополнения цели
+const GOAL_PACE_MONTHS = 3;
+
+/**
+ * Прогноз цели по темпу пополнений за последние GOAL_PACE_MONTHS месяцев
+ * (пополнения минус возвраты на основной счёт — операции kind: 'goal' с её goalId).
+ * Возвращает { status: 'done' } | { status: 'noPace' } |
+ * { status: 'forecast', pace (в месяц), date (примерная дата), onTime (успеет к сроку) }.
+ */
+export function goalForecast(goal, transactions, today) {
+  if (isGoalDone(goal)) return { status: 'done' };
+  const since = addMonths(startOfDay(today), -GOAL_PACE_MONTHS);
+  // Перевод на цель уменьшает основной счёт, поэтому сумма отрицательная; возврат — положительная
+  const moved = 0 - sum(inRange(transactions, since, addDays(startOfDay(today), 1)).filter((tx) => tx.kind === 'goal' && tx.goalId === goal.id));
+  const pace = moved / GOAL_PACE_MONTHS;
+  if (pace <= 0) return { status: 'noPace' };
+  const months = Math.ceil((goal.target - goal.saved) / pace);
+  const date = addMonths(startOfMonth(today), months);
+  return { status: 'forecast', pace: Math.round(pace), date, onTime: date <= new Date(goal.deadline) };
+}
 
 // ───── Накопительный счёт ─────
 

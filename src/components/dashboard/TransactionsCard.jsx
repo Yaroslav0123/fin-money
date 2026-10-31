@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, ReceiptText } from 'lucide-react';
+import { FileText, Plus, ReceiptText } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
@@ -11,7 +11,13 @@ import { formatSignedMoney } from '../../utils/format.js';
 // Одна строка операции. Новые строки плавно появляются, остальные сдвигаются.
 // forwardRef нужен AnimatePresence mode="popLayout": он измеряет уходящую строку через ref.
 // onSelect — открыть операцию (изменить, удалить).
-export const TransactionRow = forwardRef(function TransactionRow({ tx, onSelect, showDate = true }, ref) {
+// source — подпись «Из выписки …» (значок файла у операций из импорта);
+// needsSort — подпись-метка у операций, которые остались в «Другом» и их стоит разобрать.
+// compact — на телефоне строки ниже, чтобы на экран помещалось больше операций.
+export const TransactionRow = forwardRef(function TransactionRow(
+  { tx, onSelect, showDate = true, source = '', needsSort = '', compact = false },
+  ref,
+) {
   const isIncome = tx.amount > 0;
 
   return (
@@ -26,15 +32,33 @@ export const TransactionRow = forwardRef(function TransactionRow({ tx, onSelect,
       <button
         type="button"
         onClick={() => onSelect(tx)}
-        className="flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors duration-200 hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className={`flex w-full items-center gap-3 rounded-2xl px-2 text-left transition-colors duration-200 hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+          compact ? 'py-2 sm:py-3' : 'py-3'
+        }`}
       >
         <IconTile icon={tx.icon} accent={tx.accent} size="sm" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-ink">{tx.title}</p>
-          <p className="truncate text-xs text-ink-muted">
-            {tx.category}
-            {tx.accountBadge && ` · ${tx.accountBadge}`}
-            {showDate && ` · ${tx.dateLabel}`}
+          <p className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-sm font-semibold text-ink">{tx.title}</span>
+            {needsSort && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-orange/15 px-2 py-0.5 text-[10px] font-semibold text-ink">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent-orange" aria-hidden="true" />
+                {needsSort}
+              </span>
+            )}
+          </p>
+          <p className="flex min-w-0 items-center gap-1 truncate text-xs text-ink-muted">
+            {source && (
+              <span title={source} className="shrink-0">
+                <FileText className="h-3 w-3" aria-hidden="true" />
+                <span className="sr-only">{source}. </span>
+              </span>
+            )}
+            <span className="truncate">
+              {tx.category}
+              {tx.accountBadge && ` · ${tx.accountBadge}`}
+              {showDate && ` · ${tx.dateLabel}`}
+            </span>
           </p>
         </div>
         <span className={`shrink-0 text-sm font-bold ${isIncome ? 'text-positive' : 'text-ink'}`}>

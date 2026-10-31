@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftRight, Eye, EyeOff, Plus } from 'lucide-react';
+import AnimatedMoney from '../ui/AnimatedMoney.jsx';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import TrendBadge from '../ui/TrendBadge.jsx';
-import { currencySymbol, formatMoney } from '../../utils/format.js';
+import { currencySymbol } from '../../utils/format.js';
 
 /**
  * Главная карточка «Общий баланс» с возможностью скрыть сумму
@@ -47,7 +48,7 @@ export default function BalanceCard({ balance, accounts = [], texts, hiddenByDef
             transition={{ duration: 0.18 }}
             className="mt-2 text-4xl font-extrabold tracking-tight text-ink sm:text-5xl"
           >
-            {isHidden ? `${texts.hiddenAmount} ${currencySymbol()}` : formatMoney(balance.amount)}
+            {isHidden ? `${texts.hiddenAmount} ${currencySymbol()}` : <AnimatedMoney value={balance.amount} />}
           </motion.p>
         </AnimatePresence>
 
@@ -59,7 +60,7 @@ export default function BalanceCard({ balance, accounts = [], texts, hiddenByDef
               <div key={account.id} className="flex items-baseline justify-between gap-3">
                 <dt className="truncate text-ink-muted">{account.name}</dt>
                 <dd className="shrink-0 font-semibold text-ink">
-                  {isHidden ? `${texts.hiddenAmount} ${currencySymbol()}` : formatMoney(account.balance)}
+                  {isHidden ? `${texts.hiddenAmount} ${currencySymbol()}` : <AnimatedMoney value={account.balance} />}
                 </dd>
               </div>
             ))}

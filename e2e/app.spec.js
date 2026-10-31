@@ -14,7 +14,7 @@ test('лендинг открывается и ведёт в приложени�
 test('все разделы меню открываются', async ({ page }) => {
   await openAppWithDemo(page);
   const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
-  for (const label of ['Аналитика', 'Накопления', 'Цели', 'Настройки', 'Главная']) {
+  for (const label of ['Аналитика', 'Операции', 'Накопления', 'Цели', 'Настройки', 'Главная']) {
     await nav.getByRole('button', { name: label }).click();
     await expect(nav.getByRole('button', { name: label })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -292,7 +292,7 @@ test('пример выписки с лендинга: чистый счёт, и
   await expect(page.getByRole('heading', { name: 'Загрузите выписку из банка' })).toHaveCount(0);
 });
 
-test('настройки разбиты на разделы, профиль в шапке открывает «Профиль»', async ({ page }) => {
+test('настройки разбиты на разделы, меню профиля в шапке открывает «Профиль»', async ({ page }) => {
   await openAppWithDemo(page);
   const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
   await nav.getByRole('button', { name: 'Настройки' }).click();
@@ -303,6 +303,97 @@ test('настройки разбиты на разделы, профиль в �
   await expect(page.getByRole('heading', { name: 'Параметры' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Счета' })).toHaveCount(0);
 
+  await page.getByRole('button', { name: 'Меню профиля' }).click();
   await page.getByRole('button', { name: 'Профиль', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Профиль' })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('знакомство рассказывает про выписку и предлагает начать с примера', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Мои финансы' }).first().click();
+  const onboarding = page.getByRole('dialog', { name: 'Добро пожаловать в Fin Money' });
+  await expect(onboarding).toBeVisible();
+  for (const title of ['Скачайте выписку', 'Загрузите её сюда', 'Смотрите разбор', 'С чего начнём?']) {
+    await page.getByRole('dialog').getByRole('button', { name: 'Далее' }).click();
+    await expect(page.getByRole('dialog', { name: title })).toBeVisible();
+  }
+  await page.getByRole('button', { name: /Попробовать на примере/ }).click();
+
+  // Чистый счёт и сразу импорт образца
+  const dialog = page.getByRole('dialog', { name: 'Импорт выписки' });
+  await expect(dialog.getByText('К импорту: 16 из 16')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Импортировать' }).click();
+  await dialog.getByRole('button', { name: 'Готово' }).click();
+  await expect(page.getByRole('main').getByText(money('142 055,60')).first()).toBeVisible();
+});
+
+test('операции: итоги дня, метки выписки, свой период из календаря трат', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Попробовать на примере выписки' }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Импорт выписки' });
+  await dialog.getByRole('button', { name: 'Импортировать' }).click();
+  await dialog.getByRole('button', { name: 'Готово' }).click();
+
+  const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
+  await nav.getByRole('button', { name: 'Операции' }).click();
+  // 3 октября — одна покупка на 3 115,90 ₽: итог дня в заголовке; операция из выписки с её именем
+  const day = page.getByRole('heading', { name: /3 октября/ });
+  await expect(day).toContainText(money('−3 115,90'));
+  await expect(page.getByRole('button', { name: /PRODUKTY U DOMA.*Из выписки sber-vypiska-primer\.pdf/ }).first()).toBeVisible();
+  // Аптека осталась в «Другом» — помечена «Разобрать»
+  await expect(page.getByRole('button', { name: /APTEKA ZDOROVYE.*Разобрать/ })).toBeVisible();
+
+  // Свой период: только сентябрь 2026
+  await page.getByRole('combobox', { name: 'Период' }).selectOption('custom');
+  await page.getByLabel('Начало периода').fill('2026-09-01');
+  await page.getByLabel('Конец периода').fill('2026-09-30');
+  await expect(page.getByRole('heading', { name: /октября/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /сентября/ }).first()).toBeVisible();
+
+  // День в календаре трат на «Аналитике» → операции только этого дня
+  await nav.getByRole('button', { name: 'Аналитика' }).click();
+  // Календарь показывает месяц периода; если тест идёт позже октября 2026 — листаем назад до него
+  await expect(page.getByRole('heading', { name: 'Календарь трат' })).toBeVisible();
+  const kafeDay = page.getByRole('button', { name: /^15 октября/ });
+  for (let i = 0; i < 36 && (await kafeDay.count()) === 0; i += 1) {
+    await page.getByRole('button', { name: 'Предыдущий период' }).click();
+  }
+  await kafeDay.click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Операции' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Период' })).toHaveValue('custom');
+  await expect(page.getByRole('main').getByRole('heading', { level: 3 })).toHaveCount(1);
+  await expect(page.getByText('KAFE U REKI Moskva RUS. Операция по карте ****0000')).toBeVisible();
+});
+
+test('аналитика: сравнение с прошлым периодом и динамика категории за полгода', async ({ page }) => {
+  await openAppWithDemo(page);
+  const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
+  await nav.getByRole('button', { name: 'Аналитика' }).click();
+  await expect(page.getByRole('heading', { name: 'Календарь трат' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Сравнение с прошлым периодом' })).toBeVisible();
+
+  // Категория открывает свою динамику, оттуда — её операции
+  await page.getByRole('button', { name: /^Еда/ }).first().click();
+  const history = page.getByRole('dialog', { name: '«Еда» за полгода' });
+  await expect(history.getByText('В среднем за месяц')).toBeVisible();
+  await history.getByRole('button', { name: 'Показать операции' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Операции' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Категория' })).toHaveValue('food');
+});
+
+test('цели: прогноз по темпу и праздник, когда цель достигнута', async ({ page }) => {
+  await openAppWithDemo(page);
+  const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
+  await nav.getByRole('button', { name: 'Цели' }).click();
+  const tile = page.getByRole('main').locator('.group').filter({ has: page.getByText('Новый ноутбук', { exact: true }) });
+  await expect(tile.getByText(/Прогноз: /)).toBeVisible();
+  await expect(tile.getByRole('progressbar', { name: 'Новый ноутбук' })).toHaveAttribute('aria-valuenow', '45');
+
+  await tile.getByRole('button', { name: 'Пополнить' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Пополнить цель «Новый ноутбук»' });
+  await dialog.getByLabel('Сумма').fill('66000');
+  await dialog.getByRole('button', { name: 'Пополнить', exact: true }).click();
+  await expect(page.getByRole('status').getByText('Поздравляем! Цель «Новый ноутбук» достигнута')).toBeVisible();
+  await expect(tile.getByText('Цель достигнута!')).toBeVisible();
+  await expect(tile.getByRole('progressbar', { name: 'Новый ноутбук' })).toHaveAttribute('aria-valuenow', '100');
 });

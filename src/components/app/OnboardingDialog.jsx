@@ -1,28 +1,57 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, Sparkles, SquarePlus } from 'lucide-react';
+import { ArrowRight, FileText, Sparkles, Upload } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import Modal from '../ui/Modal.jsx';
+import { useAppActions } from '../../context/AppActionsContext.jsx';
 import { useFinance } from '../../context/FinanceContext.jsx';
 import { ONBOARDING } from '../../data/mockData.js';
 import { fillTemplate } from '../../utils/format.js';
+import { loadSampleStatement } from '../../utils/sample.js';
+
+// Карточка выбора на последнем шаге. primary — главный вариант (выделен рамкой)
+function ChoiceButton({ icon, title, hint, primary = false, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition-colors duration-200 ${
+        primary ? 'border-brand bg-brand-light/60 hover:bg-brand-light' : 'border-transparent bg-surface hover:border-line'
+      }`}
+    >
+      <IconTile icon={icon} accent={primary ? 'brand' : 'gray'} />
+      <span>
+        <span className="block text-sm font-bold text-ink">{title}</span>
+        <span className="block text-xs text-ink-muted">{hint}</span>
+      </span>
+    </button>
+  );
+}
 
 /**
- * Знакомство с приложением при первом входе: несколько коротких шагов,
- * затем выбор — смотреть на демо-данных или начать с чистого счёта.
+ * Знакомство с приложением при первом входе: как устроен главный сценарий
+ * (скачать выписку → загрузить → смотреть разбор), затем выбор, с чего начать:
+ * своя выписка, образец выписки или демо-данные. Есть и «начать с нуля» — без выписки.
+ * Выписка и образец начинают с чистого счёта, чтобы разбор был только по ней.
  * Закрытие крестиком или Esc — то же, что «демо-данные».
  */
 export default function OnboardingDialog({ isOpen }) {
   const { completeOnboarding, startFromScratch } = useFinance();
+  const { openImport } = useAppActions();
   const [stepIndex, setStepIndex] = useState(0);
-  const { steps } = ONBOARDING;
+  const { steps, choices } = ONBOARDING;
   // Последний «шаг» — выбор режима
   const isChoice = stepIndex === steps.length;
   const step = steps[stepIndex];
 
+  const startWithStatement = (source) => {
+    startFromScratch();
+    openImport(source);
+  };
+
   return (
-    <Modal isOpen={isOpen} title={isChoice ? ONBOARDING.choice : step.title} onClose={completeOnboarding} closeLabel={ONBOARDING.demoAction}>
+    <Modal isOpen={isOpen} title={isChoice ? ONBOARDING.choice : step.title} onClose={completeOnboarding} closeLabel={choices.demo.title}>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={stepIndex}
@@ -33,31 +62,23 @@ export default function OnboardingDialog({ isOpen }) {
         >
           {isChoice ? (
             <div className="grid gap-3">
-              <button
-                type="button"
-                onClick={completeOnboarding}
-                className="flex items-center gap-4 rounded-2xl border-2 border-brand bg-brand-light/60 p-4 text-left transition-colors duration-200 hover:bg-brand-light"
-              >
-                <IconTile icon={Sparkles} accent="brand" />
-                <span>
-                  <span className="block text-sm font-bold text-ink">{ONBOARDING.demoAction}</span>
-                  <span className="block text-xs text-ink-muted">{ONBOARDING.demoHint}</span>
-                </span>
-              </button>
+              <ChoiceButton icon={Upload} {...choices.own} primary onClick={() => startWithStatement(null)} />
+              <ChoiceButton icon={FileText} {...choices.sample} onClick={() => startWithStatement(loadSampleStatement)} />
+              <ChoiceButton icon={Sparkles} {...choices.demo} onClick={completeOnboarding} />
               <button
                 type="button"
                 onClick={startFromScratch}
-                className="flex items-center gap-4 rounded-2xl border-2 border-transparent bg-surface p-4 text-left transition-colors duration-200 hover:border-line"
+                className="mt-1 justify-self-center text-xs font-semibold text-ink-muted transition-colors duration-200 hover:text-brand"
               >
-                <IconTile icon={SquarePlus} accent="gray" />
-                <span>
-                  <span className="block text-sm font-bold text-ink">{ONBOARDING.emptyAction}</span>
-                  <span className="block text-xs text-ink-muted">{ONBOARDING.emptyHint}</span>
-                </span>
+                {ONBOARDING.emptyAction}
               </button>
             </div>
           ) : (
             <div className="flex flex-col items-center py-4 text-center">
+              {/* Номер шага сценария над иконкой: «Шаг 1» — скачать, «Шаг 2» — загрузить… */}
+              {step.badge && (
+                <span className="mb-4 rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">{step.badge}</span>
+              )}
               <IconTile icon={step.icon} accent="brand" size="lg" />
               <p className="mt-5 max-w-sm text-sm leading-relaxed text-ink-secondary">{step.text}</p>
             </div>

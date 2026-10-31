@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import { Bell, Moon, Plus, Search, Sun, Upload, User } from 'lucide-react';
+import { Bell, Moon, Plus, Search, Sun, Upload } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import LeafMark from '../ui/LeafMark.jsx';
+import ProfileMenu from './ProfileMenu.jsx';
 import { APP_SHELL } from '../../data/mockData.js';
 
 /**
- * Верхняя панель экрана: заголовок, поиск, уведомления, профиль.
+ * Верхняя панель экрана: заголовок, поиск, уведомления, меню профиля (ProfileMenu: профиль, накопления, настройки).
  * На узких экранах слева появляется знак логотипа (ведёт на сайт).
  * onSearch(query) — поиск по операциям (открывает экран «Операции» с запросом).
  * hasNotifications — показать красную точку на колокольчике.
  * theme — { isDark, toggleLabel, onToggle }: быстрое переключение светлой и тёмной темы.
  * onImport — загрузка выписки (на самых широких экранах — с подписью, иначе круглая кнопка).
  */
-export default function Topbar({ title, subtitle, onExit, onAdd, onImport, onProfile, onSearch, hasNotifications, onNotifications, theme }) {
+export default function Topbar({ title, subtitle, activeScreen, onNavigate, onExit, onAdd, onImport, onSearch, hasNotifications, onNotifications, theme }) {
   const ThemeIcon = theme.isDark ? Sun : Moon;
   const [query, setQuery] = useState('');
 
@@ -88,15 +89,8 @@ export default function Topbar({ title, subtitle, onExit, onAdd, onImport, onPro
             {APP_SHELL.addAction}
           </Button>
 
-          {/* Профиль ведёт в настройки (на телефоне это единственный вход туда) */}
-          <button
-            type="button"
-            aria-label={APP_SHELL.profileLabel}
-            onClick={onProfile}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-soft text-brand transition-colors duration-200 hover:bg-brand-muted"
-          >
-            <User className="h-5 w-5" />
-          </button>
+          {/* Меню профиля: на телефоне через него открываются «Накопления» и «Настройки» */}
+          <ProfileMenu activeScreen={activeScreen} onNavigate={onNavigate} />
         </div>
       </div>
     </header>

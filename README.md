@@ -31,6 +31,7 @@ npm run dev
 | `npm test` | тесты Vitest (однократно) |
 | `npm run test:watch` | тесты в режиме наблюдения |
 | `npm run test:e2e` | сквозные тесты Playwright в браузере (сайт собирается и запускается сам) |
+| `npm run og:image` | заново нарисовать картинку превью ссылки `public/og-image.png` |
 
 Перед первым запуском сквозных тестов скачайте браузер: `npx playwright install chromium`.
 Если скачанный Chromium не запускается (бывает на Windows), используйте установленный Chrome или Edge:
@@ -84,7 +85,7 @@ Netlify подключён к GitHub-репозиторию и после каж
 2. Настройки подтянутся из `netlify.toml` — нажать Deploy.
 3. Site configuration → Change site name — задать понятный адрес, например `fin-money.netlify.app`.
 
-Картинка для превью ссылки в мессенджерах — `public/og-image.png` (1200×630).
+Картинка для превью ссылки в мессенджерах — `public/og-image.png` (1200×630), рисуется скриптом `npm run og:image`.
 
 ## Структура
 

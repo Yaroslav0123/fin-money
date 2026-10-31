@@ -31,6 +31,7 @@ import {
   Percent,
   PiggyBank,
   Pill,
+  ReceiptText,
   Plane,
   Settings,
   ShieldCheck,
@@ -58,6 +59,7 @@ export const APP_NAME = 'Fin Money';
 export const APP_NAV = [
   { id: 'dashboard', label: 'Главная', icon: LayoutGrid, screen: 'dashboard' },
   { id: 'analytics', label: 'Аналитика', icon: BarChart3, screen: 'analytics' },
+  { id: 'transactions', label: 'Операции', icon: ReceiptText, screen: 'transactions' },
   { id: 'savings', label: 'Накопления', icon: PiggyBank, screen: 'savings' },
   { id: 'goals', label: 'Цели', icon: Target, screen: 'goals' },
   { id: 'settings', label: 'Настройки', icon: Settings, screen: 'settings' },
@@ -68,8 +70,15 @@ export const BOTTOM_NAV = [
   { id: 'dashboard', label: 'Главная', icon: LayoutGrid, screen: 'dashboard' },
   { id: 'analytics', label: 'Аналитика', icon: BarChart3, screen: 'analytics' },
   { id: 'add', label: 'Добавить', isAction: true },
+  { id: 'transactions', label: 'Операции', icon: ReceiptText, screen: 'transactions' },
   { id: 'goals', label: 'Цели', icon: Target, screen: 'goals' },
+];
+
+// Меню профиля в шапке. На телефоне это вход в «Накопления» и «Настройки» — их нет в нижней панели
+export const PROFILE_MENU = [
+  { id: 'profile', label: 'Профиль', icon: User, screen: 'settings', params: { section: 'profile' } },
   { id: 'savings', label: 'Накопления', icon: PiggyBank, screen: 'savings' },
+  { id: 'settings', label: 'Настройки', icon: Settings, screen: 'settings' },
 ];
 
 export const APP_SHELL = {
@@ -80,8 +89,9 @@ export const APP_SHELL = {
   // Загрузка выписки — главный сценарий, поэтому кнопка есть на каждом экране
   importAction: 'Загрузить выписку',
   notificationsLabel: 'Уведомления',
-  profileLabel: 'Профиль',
+  profileLabel: 'Меню профиля',
   backToSite: 'На сайт',
+  loading: 'Загрузка…',
   promo: {
     title: 'Накопительный счёт',
     text: 'До 12% годовых на остаток. Пополнение в любое время.',
@@ -115,19 +125,46 @@ export const SCREEN_META = {
 };
 
 // Знакомство с приложением при первом входе
+// Шаги рассказывают главный сценарий: скачать выписку → загрузить → смотреть разбор
 export const ONBOARDING = {
   steps: [
-    { id: 'welcome', icon: Wallet, title: 'Добро пожаловать в Fin Money', text: 'Учебный проект: деньги здесь виртуальные, а данные хранятся только в вашем браузере.' },
-    { id: 'track', icon: BarChart3, title: 'Учитывайте доходы и расходы', text: 'Добавляйте операции кнопкой «+», а графики и подсказки посчитаются сами.' },
-    { id: 'goals', icon: Target, title: 'Копите на цели', text: 'Ставьте цели и откладывайте на накопительный счёт — прогресс видно сразу.' },
+    {
+      id: 'welcome',
+      icon: Wallet,
+      title: 'Добро пожаловать в Fin Money',
+      text: 'Загрузите выписку из банка — и увидите, куда уходят деньги. Всё считается в вашем браузере, файл никуда не отправляется.',
+    },
+    {
+      id: 'download',
+      icon: Download,
+      badge: 'Шаг 1',
+      title: 'Скачайте выписку',
+      text: 'В приложении или личном кабинете банка закажите выписку по карте за месяц-два. Подойдёт PDF Сбербанка или CSV любого банка.',
+    },
+    {
+      id: 'upload',
+      icon: FileUp,
+      badge: 'Шаг 2',
+      title: 'Загрузите её сюда',
+      text: 'Fin Money разложит операции по категориям, узнает переводы между своими счетами и пропустит повторы.',
+    },
+    {
+      id: 'analyze',
+      icon: BarChart3,
+      badge: 'Шаг 3',
+      title: 'Смотрите разбор',
+      text: 'Сразу после загрузки — отчёт: куда ушли деньги, крупные траты и что стоит разобрать. Дальше — аналитика, лимиты и цели.',
+    },
   ],
   next: 'Далее',
   back: 'Назад',
   choice: 'С чего начнём?',
-  demoAction: 'Посмотреть на демо-данных',
-  demoHint: 'Год правдоподобной истории операций',
-  emptyAction: 'Начать с нуля',
-  emptyHint: 'Чистый счёт без операций и целей',
+  choices: {
+    own: { title: 'Загрузить свою выписку', hint: 'PDF или CSV из банка — разбор только по ней' },
+    sample: { title: 'Попробовать на примере', hint: 'Образец выписки Сбербанка с вымышленными операциями' },
+    demo: { title: 'Посмотреть на демо-данных', hint: 'Год правдоподобной истории операций' },
+  },
+  emptyAction: 'Или начать с нуля и вносить операции вручную',
   stepLabel: 'Шаг {current} из {total}',
 };
 
@@ -519,6 +556,32 @@ export const ANALYTICS_PAGE = {
     noTopCategory: 'Нет расходов',
   },
   categories: { title: 'Категории', allLink: 'Все', empty: 'За этот период расходов нет' },
+  // Календарь трат по дням (период «Месяц»)
+  calendar: {
+    title: 'Календарь трат',
+    caption: 'Дней с тратами: {days} · самый дорогой — {max}',
+    empty: 'В этом месяце трат нет',
+    noSpending: 'трат нет',
+    less: 'меньше',
+    more: 'больше',
+  },
+  // Категории против того же отрезка прошлого периода
+  compare: {
+    title: 'Сравнение с прошлым периодом',
+    caption: '{period} против того же отрезка до него',
+    was: 'было {amount}',
+    same: 'без изменений',
+    new: 'новая',
+    empty: 'Трат нет ни в этом, ни в прошлом периоде',
+  },
+  // Окно динамики категории
+  history: {
+    title: '«{name}» за полгода',
+    current: 'В этом месяце',
+    average: 'В среднем за месяц',
+    showTransactions: 'Показать операции',
+    close: 'Закрыть',
+  },
   comparison: { title: 'Доходы и расходы', subtitle: 'За последние 6 месяцев', income: 'Доходы', expenses: 'Расходы' },
   // Подсказки собираются из истории операций; {…} — подстановки
   insights: {
@@ -545,6 +608,24 @@ export const TRANSACTIONS_PAGE = {
   ],
   allCategories: 'Все категории',
   categoryLabel: 'Категория',
+  // Период списка (см. historyRange в utils/finance.js)
+  periodLabel: 'Период',
+  periods: [
+    { id: 'all', label: 'За всё время' },
+    { id: 'month', label: 'Этот месяц' },
+    { id: 'prev', label: 'Прошлый месяц' },
+    { id: 'quarter', label: '3 месяца' },
+    { id: 'year', label: '12 месяцев' },
+    { id: 'custom', label: 'Свой период' },
+  ],
+  customFrom: 'Начало периода',
+  customTo: 'Конец периода',
+  // Кнопка, которая на телефоне показывает фильтры
+  filtersToggle: 'Фильтры',
+  // Итог дня в заголовке группы (подписи — для экранных дикторов)
+  dayTotal: { income: 'Доходы за день', expenses: 'Расходы за день' },
+  fromImport: 'Из выписки {file}',
+  needsSort: 'Разобрать',
   resetFilters: 'Сбросить фильтры',
   totals: { income: 'Доходы', expenses: 'Расходы', count: 'Операций' },
   empty: 'Ничего не нашлось. Попробуйте изменить поиск или фильтры.',
@@ -784,7 +865,15 @@ export const GOALS_PAGE = {
     done: 'Цель достигнута',
     edit: 'Изменить цель',
     delete: 'Удалить цель',
+    // Отметки 25/50/75% на кольце прогресса
+    nextMark: 'До отметки {mark}% — ещё {amount}',
+    // Прогноз по темпу пополнений за 3 месяца (goalForecast)
+    forecast: 'Прогноз: {date} — если откладывать ≈ {pace} в месяц',
+    forecastLate: 'Прогноз: {date}, позже срока — при ≈ {pace} в месяц',
+    noPace: 'За 3 месяца пополнений не было — прогноз появится после первого',
+    reached: 'Цель достигнута!',
   },
+  reached: 'Поздравляем! Цель «{name}» достигнута',
   // Подпись срока цели
   deadline: { before: 'до', overdue: 'Срок прошёл' },
   empty: 'Здесь пока нет целей',

@@ -63,10 +63,11 @@ export default function AppShell({ activeScreen, onNavigate, onExit, children })
         <Topbar
           title={meta.title}
           subtitle={subtitle}
+          activeScreen={activeScreen}
+          onNavigate={onNavigate}
           onExit={onExit}
           onAdd={openAddTransaction}
           onImport={() => openImport()}
-          onProfile={() => onNavigate('settings', { section: 'profile' })}
           onSearch={(query) => onNavigate('transactions', { query })}
           hasNotifications={notifications.length > 0}
           onNotifications={() => setIsNotificationsOpen(true)}

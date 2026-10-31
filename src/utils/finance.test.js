@@ -4,12 +4,18 @@ import {
   averageMonthlySpend,
   budgetProgress,
   categoryBreakdown,
+  categoryComparison,
+  categoryHistory,
+  goalForecast,
+  historyRange,
+  isInHistoryRange,
   monthSummary,
   notificationData,
   periodExpenses,
   periodRange,
   reconcileAccount,
   savingsSeries,
+  spendingCalendar,
 } from './finance.js';
 import { rub } from './money.js';
 
@@ -171,5 +177,82 @@ describe('demo data', () => {
     const series = savingsSeries(data.savingsTransactions, data.savingsOpeningBalance, 'year', TODAY);
     expect(series).toHaveLength(12);
     expect(series.at(-1).value).toBe(balance);
+  });
+});
+
+describe('historyRange', () => {
+  it('«Этот месяц», «Прошлый месяц» и «3 месяца» — по календарным месяцам', () => {
+    expect(historyRange('month', TODAY)).toEqual({ start: new Date(2026, 9, 1), end: new Date(2026, 10, 1) });
+    expect(historyRange('prev', TODAY)).toEqual({ start: new Date(2026, 8, 1), end: new Date(2026, 9, 1) });
+    expect(historyRange('quarter', TODAY).start).toEqual(new Date(2026, 7, 1));
+    expect(historyRange('all', TODAY)).toBeNull();
+  });
+
+  it('свой период включает последний день, пустая граница — без ограничения', () => {
+    const range = historyRange('custom', TODAY, { from: '2026-10-10', to: '2026-10-12' });
+    expect(isInHistoryRange(expense(1, new Date(2026, 9, 12, 23, 59)), range)).toBe(true);
+    expect(isInHistoryRange(expense(1, new Date(2026, 9, 13, 0, 1)), range)).toBe(false);
+    expect(isInHistoryRange(expense(1, new Date(2026, 9, 9)), range)).toBe(false);
+    const openEnd = historyRange('custom', TODAY, { from: '2026-10-10', to: '' });
+    expect(isInHistoryRange(expense(1, new Date(2030, 0, 1)), openEnd)).toBe(true);
+  });
+});
+
+describe('spendingCalendar', () => {
+  it('недели с понедельника, ступени от самого дорогого дня, будущие дни отмечены', () => {
+    // Октябрь 2026 начинается в четверг: три пустые клетки перед 1-м числом
+    const items = [expense(rub(1000), new Date(2026, 9, 5, 12)), expense(rub(250), new Date(2026, 9, 6, 12)), income(rub(5000), new Date(2026, 9, 6))];
+    const calendar = spendingCalendar(items, new Date(2026, 9, 1), TODAY, 'mon');
+    expect(calendar.weeks[0].slice(0, 3)).toEqual([null, null, null]);
+    expect(calendar.weeks.every((week) => week.length === 7)).toBe(true);
+    const days = calendar.weeks.flat().filter(Boolean);
+    expect(days).toHaveLength(31);
+    expect(days[4]).toMatchObject({ amount: rub(1000), level: 4 });
+    expect(days[5]).toMatchObject({ amount: rub(250), level: 1 });
+    expect(days[29].isFuture).toBe(true);
+    expect(calendar).toMatchObject({ max: rub(1000), total: rub(1250), activeDays: 2 });
+  });
+});
+
+describe('categoryComparison', () => {
+  it('сравнивает с теми же днями прошлого месяца, рост «с нуля» — без процента', () => {
+    const items = [
+      expense(rub(2000), new Date(2026, 9, 10), 'food'),
+      expense(rub(1000), new Date(2026, 8, 10), 'food'),
+      // 30 сентября — позже «тех же дней» (до 28-го), в сравнение не попадает
+      expense(rub(9000), new Date(2026, 8, 30), 'food'),
+      expense(rub(500), new Date(2026, 9, 3), 'transport'),
+    ];
+    const result = categoryComparison(items, DEFAULT_CATEGORIES, 'month', TODAY);
+    expect(result.map((c) => c.id)).toEqual(['food', 'transport']);
+    expect(result[0]).toMatchObject({ amount: rub(2000), previous: rub(1000), diff: rub(1000), percent: 100 });
+    expect(result[1]).toMatchObject({ amount: rub(500), previous: 0, percent: null });
+  });
+});
+
+describe('categoryHistory', () => {
+  it('траты категории по месяцам и среднее по полным месяцам с начала истории', () => {
+    const items = [expense(rub(3000), new Date(2026, 8, 5), 'food'), expense(rub(1000), new Date(2026, 9, 5), 'food'), expense(rub(700), new Date(2026, 7, 5), 'transport')];
+    const { bars, average } = categoryHistory(items, 'food', TODAY, 4);
+    expect(bars.map((bar) => bar.value)).toEqual([0, 0, rub(3000), rub(1000)]);
+    // Июль — до первой операции, в среднее не входит; август (0) и сентябрь (3 000) — входят
+    expect(average).toBe(rub(1500));
+  });
+});
+
+describe('goalForecast', () => {
+  const goal = { id: 'g1', target: rub(100000), saved: rub(40000), deadline: new Date(2027, 11, 1).toISOString() };
+  const toGoal = (amount, date) => ({ id: `g-${date}`, type: 'transfer', kind: 'goal', goalId: 'g1', amount: -amount, date: date.toISOString() });
+
+  it('по темпу за 3 месяца: 30 000 ₽ за 3 месяца → 10 000 ₽ в месяц, осталось 6 месяцев', () => {
+    const items = [toGoal(rub(10000), new Date(2026, 7, 30)), toGoal(rub(10000), new Date(2026, 8, 30)), toGoal(rub(10000), new Date(2026, 9, 20))];
+    const forecast = goalForecast(goal, items, TODAY);
+    expect(forecast).toMatchObject({ status: 'forecast', pace: rub(10000), onTime: true });
+    expect(forecast.date).toEqual(new Date(2027, 3, 1));
+  });
+
+  it('без пополнений — прогноза нет; достигнутая цель — «done»', () => {
+    expect(goalForecast(goal, [], TODAY).status).toBe('noPace');
+    expect(goalForecast({ ...goal, saved: goal.target }, [], TODAY).status).toBe('done');
   });
 });
