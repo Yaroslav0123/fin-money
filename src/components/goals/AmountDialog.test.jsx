@@ -1,18 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import AmountDialog from './AmountDialog.jsx';
-import { AMOUNT_LIMIT, SAVINGS_PAGE } from '../../data/mockData.js';
+import { AMOUNT_LIMIT, GOALS_PAGE } from '../../data/mockData.js';
 import { rub, toRubles } from '../../utils/money.js';
 
 // Ограничения суммы в диалоге пополнения: самое строгое правило и общий потолок.
 // Лимиты — в копейках, в поле вводятся рубли.
-const texts = SAVINGS_PAGE.dialog;
+const { depositDialog } = GOALS_PAGE;
+const texts = { ...depositDialog, deposit: { title: depositDialog.titlePrefix, confirm: depositDialog.confirm } };
 const NO_FUNDS = texts.errorNoFunds;
 
 const renderDialog = (limits) =>
   render(
     <AmountDialog
       mode="deposit"
-      hint={{ label: texts.availableMain, amount: rub(1000) }}
+      hint={{ label: texts.available, amount: rub(1000) }}
       limits={limits}
       texts={texts}
       onClose={() => {}}

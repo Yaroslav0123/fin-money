@@ -92,7 +92,7 @@ export default function AmountDialog({ mode, hint, limits = [], texts, onClose, 
 
         {/* Быстрый выбор суммы (в валюте отображения) */}
         <div className="mt-4 flex flex-wrap gap-2">
-          {currencyQuickAmounts('savingsQuick').map((value) => (
+          {currencyQuickAmounts('goalQuick').map((value) => (
             <button
               key={value}
               type="button"

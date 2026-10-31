@@ -17,11 +17,10 @@ const appModules = [
   () => import('./screens/DashboardScreen.jsx'),
   () => import('./screens/AnalyticsScreen.jsx'),
   () => import('./screens/GoalsScreen.jsx'),
-  () => import('./screens/SavingsScreen.jsx'),
   () => import('./screens/SettingsScreen.jsx'),
   () => import('./screens/TransactionsScreen.jsx'),
 ];
-const [AppShell, DashboardScreen, AnalyticsScreen, GoalsScreen, SavingsScreen, SettingsScreen, TransactionsScreen] =
+const [AppShell, DashboardScreen, AnalyticsScreen, GoalsScreen, SettingsScreen, TransactionsScreen] =
   appModules.map((load) => lazy(load));
 
 // В Safari нет requestIdleCallback — там просто ждём пару секунд
@@ -69,8 +68,6 @@ export default function App() {
   // Выбираем, какой экран отрисовать внутри приложения
   const renderAppScreen = () => {
     switch (activeScreen) {
-      case 'savings':
-        return <SavingsScreen />;
       case 'analytics':
         return <AnalyticsScreen />;
       case 'goals':

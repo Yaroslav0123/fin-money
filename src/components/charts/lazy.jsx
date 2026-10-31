@@ -19,6 +19,5 @@ const withLazyLoad = (load) => {
 };
 
 export const ExpenseDonut = withLazyLoad(() => import('./ExpenseDonut.jsx'));
-export const BalanceAreaChart = withLazyLoad(() => import('./BalanceAreaChart.jsx'));
 export const SpendingBarChart = withLazyLoad(() => import('./SpendingBarChart.jsx'));
 export const IncomeExpenseChart = withLazyLoad(() => import('./IncomeExpenseChart.jsx'));

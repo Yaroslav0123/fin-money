@@ -14,7 +14,6 @@ import {
   periodExpenses,
   periodRange,
   reconcileAccount,
-  savingsSeries,
   spendingCalendar,
 } from './finance.js';
 import { rub } from './money.js';
@@ -169,14 +168,6 @@ describe('demo data', () => {
     expect(balance).toBe(rub(142560));
     expect(a.transactions.every((tx) => Number.isInteger(tx.amount) && tx.accountId === a.accounts[0].id)).toBe(true);
     expect(a.transactions.every((tx) => new Date(tx.date) <= TODAY)).toBe(true);
-  });
-
-  it('график накоплений заканчивается текущим балансом', () => {
-    const data = createDemoData(TODAY);
-    const balance = data.savingsOpeningBalance + data.savingsTransactions.reduce((s, tx) => s + tx.amount, 0);
-    const series = savingsSeries(data.savingsTransactions, data.savingsOpeningBalance, 'year', TODAY);
-    expect(series).toHaveLength(12);
-    expect(series.at(-1).value).toBe(balance);
   });
 });
 

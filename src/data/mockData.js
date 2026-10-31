@@ -2,10 +2,8 @@
 // компоненты только отображают их. Денежные суммы — в копейках: rub(5000) — это 5 000 ₽.
 import {
   ArrowDown,
-  ArrowDownLeft,
   ArrowLeftRight,
   ArrowUp,
-  ArrowUpRight,
   BarChart3,
   Bell,
   Briefcase,
@@ -60,7 +58,6 @@ export const APP_NAV = [
   { id: 'dashboard', label: 'Главная', icon: LayoutGrid, screen: 'dashboard' },
   { id: 'analytics', label: 'Аналитика', icon: BarChart3, screen: 'analytics' },
   { id: 'transactions', label: 'Операции', icon: ReceiptText, screen: 'transactions' },
-  { id: 'savings', label: 'Накопления', icon: PiggyBank, screen: 'savings' },
   { id: 'goals', label: 'Цели', icon: Target, screen: 'goals' },
   { id: 'settings', label: 'Настройки', icon: Settings, screen: 'settings' },
 ];
@@ -74,10 +71,9 @@ export const BOTTOM_NAV = [
   { id: 'goals', label: 'Цели', icon: Target, screen: 'goals' },
 ];
 
-// Меню профиля в шапке. На телефоне это вход в «Накопления» и «Настройки» — их нет в нижней панели
+// Меню профиля в шапке. На телефоне это вход в «Настройки» — их нет в нижней панели
 export const PROFILE_MENU = [
   { id: 'profile', label: 'Профиль', icon: User, screen: 'settings', params: { section: 'profile' } },
-  { id: 'savings', label: 'Накопления', icon: PiggyBank, screen: 'savings' },
   { id: 'settings', label: 'Настройки', icon: Settings, screen: 'settings' },
 ];
 
@@ -92,11 +88,6 @@ export const APP_SHELL = {
   profileLabel: 'Меню профиля',
   backToSite: 'На сайт',
   loading: 'Загрузка…',
-  promo: {
-    title: 'Накопительный счёт',
-    text: 'До 12% годовых на остаток. Пополнение в любое время.',
-    action: 'Открыть',
-  },
   // Панель уведомлений (колокольчик): события считаются из данных
   notifications: {
     title: 'Уведомления',
@@ -117,7 +108,6 @@ export const APP_SHELL = {
 // Подзаголовок «Главной» собирается из приветствия и текущего месяца (см. DASHBOARD.subtitle).
 export const SCREEN_META = {
   dashboard: { title: 'Главная' },
-  savings: { title: 'Накопительный счёт', subtitle: 'Копите на важные цели с выгодной ставкой' },
   analytics: { title: 'Аналитика', subtitle: 'Расходы и доходы за выбранный период' },
   goals: { title: 'Цели', subtitle: 'Копите на мечты шаг за шагом' },
   settings: { title: 'Настройки', subtitle: 'Деньги, данные, профиль и параметры' },
@@ -178,7 +168,7 @@ export const ABOUT_PROJECT = {
       title: 'Учебный проект',
       paragraphs: [
         'Fin Money — прототип приложения для учёта личных финансов, сделанный для портфолио.',
-        'Это не банк и не платёжный сервис: все деньги, операции и проценты — виртуальные.',
+        'Это не банк и не платёжный сервис: приложение только считает деньги, а не хранит и не переводит их.',
       ],
     },
     {
@@ -219,9 +209,9 @@ export const DATE_TEXTS = {
 // Валюты отображения. Деньги в прототипе виртуальные и хранятся в рублях;
 // rate — условный курс для пересчёта при показе (1 ₽ = rate единиц валюты).
 export const CURRENCIES = {
-  rub: { symbol: '₽', rate: 1, quickAmounts: [500, 1000, 5000], savingsQuick: [1000, 5000, 10000] },
-  usd: { symbol: '$', rate: 0.0125, quickAmounts: [5, 10, 50], savingsQuick: [10, 50, 100] },
-  eur: { symbol: '€', rate: 0.0115, quickAmounts: [5, 10, 50], savingsQuick: [10, 50, 100] },
+  rub: { symbol: '₽', rate: 1, quickAmounts: [500, 1000, 5000], goalQuick: [1000, 5000, 10000] },
+  usd: { symbol: '$', rate: 0.0125, quickAmounts: [5, 10, 50], goalQuick: [10, 50, 100] },
+  eur: { symbol: '€', rate: 0.0115, quickAmounts: [5, 10, 50], goalQuick: [10, 50, 100] },
 };
 
 // Текстовые описания графиков для экранных дикторов ({…} — подстановки)
@@ -230,7 +220,6 @@ export const CHART_A11Y = {
   spendingEmpty: 'Диаграмма расходов: расходов нет',
   comparison: 'Доходы и расходы по месяцам: {items}',
   comparisonItem: '{label} — доходы {income}, расходы {expenses}',
-  balance: 'График баланса накоплений: от {first} до {last}',
   donut: 'Структура: {items}',
 };
 
@@ -329,7 +318,7 @@ export const SUMMARY = {
   expenses: { label: 'Расходы', amount: rub(63200), trend: { percent: 6 }, icon: ArrowDown, accent: 'pink' },
 };
 
-// Счёт, который есть всегда: на нём переводы в накопления и цели. Сюда же переносятся данные,
+// Счёт, который есть всегда: с него пополняются цели. Сюда же переносятся данные,
 // сохранённые до появления нескольких счетов.
 export const DEFAULT_ACCOUNT = { id: 'main', name: 'Основной счёт' };
 
@@ -382,83 +371,7 @@ export const EXPENSE_CATEGORIES = [
   { id: 'other', name: 'Другое', amount: rub(14500), share: 23, accent: 'gray', icon: Ellipsis },
 ];
 
-// Накопительный счёт
-export const SAVINGS = {
-  title: 'Накопительный счёт',
-  description: 'Копите на важные цели с выгодной ставкой. Пополнение в любое время.',
-  features: [
-    { id: 'rate', icon: Percent, title: 'До 12%', caption: 'годовых' },
-    { id: 'amount', icon: Wallet, title: 'Любая', caption: 'сумма' },
-    { id: 'fee', icon: ShieldCheck, title: 'Без', caption: 'комиссий' },
-  ],
-  balanceLabel: 'Текущий баланс',
-  balance: rub(52000),
-  trend: { amount: rub(4200), suffix: 'за месяц' },
-  depositAction: 'Пополнить',
-  withdrawAction: 'Снять',
-};
-
-// История баланса накопительного счёта по периодам (витрина лендинга; экран «Накопления» считает свою)
-export const SAVINGS_PERIODS = [
-  { id: 'week', label: 'Неделя' },
-  { id: 'month', label: 'Месяц' },
-  { id: 'year', label: 'Год' },
-];
-
-export const SAVINGS_HISTORY = {
-  week: [
-    { label: 'Пн', value: rub(50900) },
-    { label: 'Вт', value: rub(51050) },
-    { label: 'Ср', value: rub(51020) },
-    { label: 'Чт', value: rub(51400) },
-    { label: 'Пт', value: rub(51380) },
-    { label: 'Сб', value: rub(51760) },
-    { label: 'Вс', value: rub(52000) },
-  ],
-  month: [
-    { label: '1 мая', value: rub(47800) },
-    { label: '3 мая', value: rub(48150) },
-    { label: '5 мая', value: rub(47950) },
-    { label: '7 мая', value: rub(48400) },
-    { label: '9 мая', value: rub(48300) },
-    { label: '11 мая', value: rub(48900) },
-    { label: '12 мая', value: rub(49300) },
-    { label: '14 мая', value: rub(49100) },
-    { label: '16 мая', value: rub(49700) },
-    { label: '18 мая', value: rub(49550) },
-    { label: '20 мая', value: rub(50200) },
-    { label: '22 мая', value: rub(50050) },
-    { label: '24 мая', value: rub(50700) },
-    { label: '26 мая', value: rub(50900) },
-    { label: '28 мая', value: rub(51500) },
-    { label: '31 мая', value: rub(52000) },
-  ],
-  year: [
-    { label: 'Июн', value: rub(8000) },
-    { label: 'Июл', value: rub(11500) },
-    { label: 'Авг', value: rub(14200) },
-    { label: 'Сен', value: rub(18900) },
-    { label: 'Окт', value: rub(21300) },
-    { label: 'Ноя', value: rub(25800) },
-    { label: 'Дек', value: rub(31000) },
-    { label: 'Янв', value: rub(33400) },
-    { label: 'Фев', value: rub(37900) },
-    { label: 'Мар', value: rub(42100) },
-    { label: 'Апр', value: rub(47800) },
-    { label: 'Май', value: rub(52000) },
-  ],
-};
-
-// Переводы между основным и накопительным счётом в списке операций «Главной».
-// Это не доход и не расход: меняется только общий баланс.
-export const SAVINGS_TRANSFER = {
-  category: 'Накопления',
-  icon: PiggyBank,
-  accent: 'brand',
-  titles: { deposit: 'Пополнение накоплений', withdraw: 'Снятие с накоплений' },
-};
-
-// Пополнение финансовой цели: деньги уходят с основного счёта, как и в накопления
+// Пополнение финансовой цели: деньги откладываются с основного счёта. Это не доход и не расход.
 export const GOAL_TRANSFER = {
   category: 'Цели',
   icon: Target,
@@ -471,67 +384,6 @@ export const GOAL_TRANSFER = {
 export const AMOUNT_LIMIT = {
   max: rub(10000000),
   error: 'Максимальная сумма одной операции',
-};
-
-// ───────────── Экран «Накопления» ─────────────
-
-// Типы операций по накопительному счёту: иконка, цвет и подпись
-export const SAVINGS_TX_TYPES = {
-  deposit: { label: 'Пополнения', title: 'Пополнение', icon: ArrowUpRight, accent: 'green' },
-  interest: { label: 'Проценты', title: 'Проценты', icon: Percent, accent: 'brand' },
-  withdraw: { label: 'Снятия', title: 'Снятие', icon: ArrowDownLeft, accent: 'pink' },
-};
-
-export const SAVINGS_PAGE = {
-  // Годовая ставка в процентах (для калькулятора)
-  annualRate: 12,
-  // День месяца, когда начисляются проценты
-  interestDay: 10,
-  interest: {
-    title: 'Доход по процентам',
-    monthLabel: 'Начислено за {month}',
-    totalLabel: 'За всё время',
-    nextLabel: 'Следующее начисление',
-    rateLabel: 'Ставка',
-    rateValue: 'до 12% годовых',
-  },
-  trendSuffix: 'за месяц',
-  chart: { title: 'Динамика баланса' },
-  calculator: {
-    title: 'Калькулятор доходности',
-    monthlyLabel: 'Пополнение в месяц',
-    termLabel: 'Срок',
-    monthsSuffix: 'мес.',
-    resultPrefix: 'Через',
-    resultSuffix: 'на счёте будет',
-    interestLabel: 'Из них проценты',
-    note: 'Расчёт с ежемесячной капитализацией, ставка 12% годовых.',
-    defaults: { monthly: rub(5000), term: 12 },
-    ranges: {
-      monthly: { min: 0, max: rub(50000), step: rub(1000) },
-      term: { min: 1, max: 36, step: 1 },
-    },
-  },
-  history: { title: 'История', allFilter: 'Все', empty: 'Операций этого типа пока нет', emptyAll: 'Пополните счёт — здесь появится история' },
-  periods: [
-    { id: 'week', label: 'Неделя' },
-    { id: 'month', label: 'Месяц' },
-    { id: 'year', label: 'Год' },
-  ],
-  goals: { title: 'Копите на цели', allLink: 'Все цели', empty: 'Целей пока нет' },
-  // Диалог пополнения / снятия
-  dialog: {
-    deposit: { title: 'Пополнить счёт', confirm: 'Пополнить', done: 'Накопительный счёт пополнен' },
-    withdraw: { title: 'Снять со счёта', confirm: 'Снять', done: 'Деньги переведены на основной счёт' },
-    amountLabel: 'Сумма',
-    amountPlaceholder: '0',
-    available: 'Доступно',
-    availableMain: 'На основном счёте',
-    cancel: 'Отмена',
-    errorTooMuch: 'Сумма больше баланса счёта',
-    errorNoFunds: 'Недостаточно средств на основном счёте',
-    fillMax: 'Ввести максимум',
-  },
 };
 
 // ───────────── Экран «Аналитика» ─────────────
@@ -1035,14 +887,14 @@ export const SETTINGS_PAGE = {
   // Данные прототипа, сохранённые в браузере
   demo: {
     title: 'Данные',
-    description: 'Операции, накопления и цели хранятся только в этом браузере. Демо-история строится от сегодняшнего дня.',
+    description: 'Операции и цели хранятся только в этом браузере. Демо-история строится от сегодняшнего дня.',
     action: 'Новые демо-данные',
     confirmQuestion: 'Заменить все данные демо-историей?',
     confirm: 'Заменить',
     cancel: 'Отмена',
     done: 'Демо-данные обновлены',
     emptyAction: 'Начать с нуля',
-    emptyQuestion: 'Удалить все операции, накопления и цели?',
+    emptyQuestion: 'Удалить все операции и цели?',
     emptyConfirm: 'Удалить',
     emptyDone: 'Все данные удалены',
     about: 'О проекте и данных',
@@ -1067,7 +919,7 @@ export const SETTINGS_PAGE = {
     description: 'Карты, наличные и другие счета. Общий баланс — их сумма, у каждой выписки — свой счёт.',
     add: 'Добавить',
     primary: 'основной',
-    primaryHint: 'С основного счёта пополняются накопления и цели, его нельзя удалить',
+    primaryHint: 'С основного счёта пополняются цели, его нельзя удалить',
     count: ['операция', 'операции', 'операций'],
     edit: 'Изменить счёт {name}',
     delete: 'Удалить счёт {name}',
@@ -1158,7 +1010,7 @@ export const ADD_TRANSACTION = {
   deleted: 'Операция удалена',
 };
 
-// Карточка перевода (переводы нельзя изменить — только удалить вместе со второй стороной)
+// Карточка перевода: пополнение цели или перевод между своими счетами из выписки (изменить нельзя, только удалить)
 export const TRANSFER_DETAILS = {
   title: 'Перевод',
   note: 'Переводы нельзя изменить. Если удалить перевод, деньги вернутся обратно.',
@@ -1181,7 +1033,8 @@ export const DASHBOARD = {
   hideBalanceLabel: 'Скрыть баланс',
   showBalanceLabel: 'Показать баланс',
   hiddenAmount: '••• •••',
-  actions: { deposit: 'Пополнить', transfer: 'Перевести' },
+  // Быстрые действия под балансом: главный сценарий — выписка, запасной — ручной ввод
+  actions: { import: 'Загрузить выписку', add: 'Добавить операцию' },
   // Список счетов под балансом (если счетов больше одного)
   accountsLabel: 'По счетам',
   goal: {
@@ -1191,7 +1044,15 @@ export const DASHBOARD = {
     empty: 'Поставьте первую цель — мы рассчитаем ежемесячный взнос',
     create: 'Создать цель',
   },
-  savingsCard: { title: 'Накопительный счёт', caption: 'До 12% годовых' },
+  // Третий показатель: сколько осталось от доходов месяца после расходов
+  monthLeft: {
+    label: 'Осталось за месяц',
+    icon: PiggyBank,
+    accent: 'brand',
+    share: '{percent}% от доходов',
+    overspent: 'Расходы больше доходов',
+    noIncome: 'Доходов в этом месяце пока нет',
+  },
   structure: { title: 'Структура расходов', caption: 'расходы', allLink: 'Все', empty: 'В этом месяце расходов пока нет' },
   // Лимиты категорий за текущий месяц; настраиваются в «Настройках». На «Главной» — самые заполненные.
   budgets: { caption: 'за {month}', settingsLink: 'Настроить', limit: 3, more: 'Все лимиты ({count})' },
@@ -1204,8 +1065,6 @@ export const DASHBOARD = {
     drop: 'Отпустите файл, чтобы загрузить',
   },
   transactions: { title: 'Последние операции', allLink: 'Все', limit: 6, empty: 'Операций пока нет', addFirst: 'Добавить первую' },
-  // «Перевести» — перевод на накопительный счёт
-  transferDialog: { title: 'Перевести на накопления', confirm: 'Перевести', done: 'Деньги переведены на накопления' },
 };
 
 // ───────────── Веб-лендинг (экран «Приветствие») ─────────────
@@ -1273,7 +1132,7 @@ export const LANDING = {
   overview: {
     eyebrow: 'Обзор',
     title: 'Общая картина ваших финансов',
-    description: 'Следите за доходами и расходами, анализируйте структуру трат и управляйте накоплениями.',
+    description: 'Следите за доходами и расходами, анализируйте структуру трат и двигайтесь к своим целям.',
     donutTitle: 'Структура расходов',
     donutCaption: 'расходы',
     allLink: 'Все',
@@ -1311,4 +1170,17 @@ export const LANDING = {
     { id: 'budget', label: 'Бюджет', icon: PiggyBank },
     { id: 'settings', label: 'Настройки', icon: Settings },
   ],
+  // Карточка лимитов в превью (цифры — как у EXPENSE_CATEGORIES)
+  previewBudgets: {
+    title: 'Лимиты на месяц',
+    items: [
+      { id: 'food', name: 'Еда', icon: Utensils, accent: 'green', spent: rub(20200), limit: rub(25000) },
+      { id: 'transport', name: 'Транспорт', icon: Car, accent: 'blue', spent: rub(11400), limit: rub(15000) },
+      { id: 'fun', name: 'Развлечения', icon: Star, accent: 'purple', spent: rub(9500), limit: rub(9000) },
+      { id: 'housing', name: 'Жильё', icon: House, accent: 'orange', spent: rub(7600), limit: rub(12000) },
+      { id: 'other', name: 'Другое', icon: Ellipsis, accent: 'gray', spent: rub(14500), limit: rub(20000) },
+    ],
+    over: 'Превышен',
+    action: 'Задать лимит',
+  },
 };

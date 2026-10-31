@@ -7,7 +7,6 @@ import LandingFooter from '../components/landing/LandingFooter.jsx';
 import LandingHeader from '../components/landing/LandingHeader.jsx';
 import OverviewSection from '../components/landing/OverviewSection.jsx';
 import PrivacySection from '../components/landing/PrivacySection.jsx';
-import SavingsSection from '../components/landing/SavingsSection.jsx';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
 import { APP_NAME, LANDING } from '../data/mockData.js';
@@ -36,7 +35,6 @@ export default function LandingPage({ onStart }) {
         <HeroSection appName={APP_NAME} onStart={onStart} onTrySample={handleTrySample} />
         <HowItWorksSection onTrySample={handleTrySample} />
         <OverviewSection />
-        <SavingsSection />
         <CategoriesSection />
         <GoalsSection />
         <PrivacySection />

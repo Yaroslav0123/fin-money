@@ -15,20 +15,12 @@ const ROUND_TO = 10;
 
 // Баланс основного счёта на момент генерации: начальный остаток подбирается под него
 const TARGET_BALANCE = 142560;
-// Начальный баланс накопительного счёта год назад
-const SAVINGS_START = 8000;
-const SAVINGS_ANNUAL_RATE = 0.12;
-const MONTHS_IN_YEAR = 12;
 
 // Регулярные операции: день месяца, сумма [от, до], час
 const SALARY = { days: [5, 20], amount: [37000, 39500], hour: 10 };
 const CASHBACK = { day: 1, amount: [300, 900], hour: 9 };
 const UTILITIES = { day: 28, amount: [4800, 5600], hour: 12, comment: 'Коммунальные услуги' };
 const INTERNET = { day: 15, amount: [1990, 1990], hour: 11, comment: 'Интернет и связь' };
-const SAVINGS_DEPOSIT = { day: 12, amount: [3000, 5000], hour: 14 };
-const SAVINGS_INTEREST_DAY = 10;
-// Снятие с накоплений раз в несколько месяцев
-const SAVINGS_WITHDRAW = { everyMonths: 4, day: 25, amount: [2000, 4000], hour: 16 };
 // Ежемесячные пополнения целей (7-го числа)
 const GOAL_DEPOSITS = { day: 7, hour: 13, amounts: { trip: 2500, laptop: 5500 } };
 
@@ -95,7 +87,7 @@ const isWeekend = (date) => date.getDay() === 0 || date.getDay() === 6;
 
 /**
  * Демо-данные на дату today.
- * Возвращает { accounts, savingsOpeningBalance, transactions, savingsTransactions, goals, categories, budgets }.
+ * Возвращает { accounts, transactions, goals, categories, budgets }.
  * Операции отсортированы от новых к старым, суммы со знаком и в копейках. Демо-счёт один — основной.
  */
 export function createDemoData(today = new Date()) {
@@ -108,28 +100,17 @@ export function createDemoData(today = new Date()) {
   const nextId = (prefix) => `${prefix}-demo-${(counter += 1)}`;
 
   const transactions = [];
-  const savingsTransactions = [];
-  let savingsBalance = SAVINGS_START;
 
   // Операция в конкретный день и час (минуты случайные); будущее время пропускаем
   const at = (day, hour) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, Math.floor(random() * 60));
   const push = (tx, date) => {
     if (date <= today) transactions.push({ ...tx, id: nextId('tx'), date: date.toISOString() });
   };
-  // Возвращает id операции накоплений (для связи с переводом) или null, если дата в будущем
-  const pushSavings = (tx, date) => {
-    if (date > today) return null;
-    const id = nextId('saving');
-    savingsTransactions.push({ ...tx, id, date: date.toISOString() });
-    savingsBalance += tx.amount;
-    return id;
-  };
 
   const start = startOfMonth(addMonths(today, -(HISTORY_MONTHS - 1)));
   for (let day = start; day <= today; day = addDays(day, 1)) {
     const date = day.getDate();
     const weekend = isWeekend(day);
-    const monthIndex = (day.getFullYear() - start.getFullYear()) * MONTHS_IN_YEAR + day.getMonth() - start.getMonth();
 
     // Доходы
     if (SALARY.days.includes(date)) {
@@ -170,29 +151,10 @@ export function createDemoData(today = new Date()) {
         push({ type: 'transfer', kind: 'goal', goalId, goalName, amount: -amount }, at(day, GOAL_DEPOSITS.hour));
       }
     }
-
-    // Накопительный счёт: проценты, пополнение, редкое снятие
-    if (date === SAVINGS_INTEREST_DAY) {
-      const interest = Math.round((savingsBalance * SAVINGS_ANNUAL_RATE) / MONTHS_IN_YEAR);
-      pushSavings({ type: 'interest', amount: interest }, at(day, 0));
-    }
-    if (date === SAVINGS_DEPOSIT.day) {
-      const amount = between(SAVINGS_DEPOSIT.amount);
-      const when = at(day, SAVINGS_DEPOSIT.hour);
-      const savingsTxId = pushSavings({ type: 'deposit', amount }, when);
-      if (savingsTxId) push({ type: 'transfer', kind: 'savings', mode: 'deposit', savingsTxId, amount: -amount }, when);
-    }
-    if (date === SAVINGS_WITHDRAW.day && monthIndex % SAVINGS_WITHDRAW.everyMonths === SAVINGS_WITHDRAW.everyMonths - 1) {
-      const amount = between(SAVINGS_WITHDRAW.amount);
-      const when = at(day, SAVINGS_WITHDRAW.hour);
-      const savingsTxId = pushSavings({ type: 'withdraw', amount: -amount }, when);
-      if (savingsTxId) push({ type: 'transfer', kind: 'savings', mode: 'withdraw', savingsTxId, amount }, when);
-    }
   }
 
   const byDateDesc = (a, b) => new Date(b.date) - new Date(a.date);
   transactions.sort(byDateDesc);
-  savingsTransactions.sort(byDateDesc);
 
   // Начальный остаток так, чтобы сегодня баланс был ровно TARGET_BALANCE
   const net = transactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -208,9 +170,7 @@ export function createDemoData(today = new Date()) {
   const inKopecks = (tx) => ({ ...tx, amount: rub(tx.amount) });
   return {
     accounts: [{ ...DEFAULT_ACCOUNT, openingBalance: rub(TARGET_BALANCE - net) }],
-    savingsOpeningBalance: rub(SAVINGS_START),
     transactions: transactions.map((tx) => ({ ...inKopecks(tx), accountId: DEFAULT_ACCOUNT.id })),
-    savingsTransactions: savingsTransactions.map(inKopecks),
     goals,
     categories: DEFAULT_CATEGORIES,
     budgets: Object.fromEntries(Object.entries(DEMO_BUDGETS).map(([id, limit]) => [id, rub(limit)])),
@@ -221,9 +181,7 @@ export function createDemoData(today = new Date()) {
 export function createEmptyData() {
   return {
     accounts: [{ ...DEFAULT_ACCOUNT, openingBalance: 0 }],
-    savingsOpeningBalance: 0,
     transactions: [],
-    savingsTransactions: [],
     goals: [],
     categories: DEFAULT_CATEGORIES,
     budgets: {},

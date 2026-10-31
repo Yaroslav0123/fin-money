@@ -7,14 +7,11 @@ import {
   GOALS_PAGE,
   IMPORT_FALLBACK_INCOME,
   IMPORT_TRANSFER,
-  SAVINGS_PAGE,
-  SAVINGS_TRANSFER,
-  SAVINGS_TX_TYPES,
   SETTINGS_PAGE,
   SUMMARY,
 } from '../data/mockData.js';
-import { formatDay, formatFullDate, formatTransactionDate } from '../utils/dates.js';
-import { budgetProgress, categoryBreakdown, goalMonthsLeft, isGoalDone, monthSummary, savingsStats } from '../utils/finance.js';
+import { formatFullDate, formatTransactionDate } from '../utils/dates.js';
+import { budgetProgress, categoryBreakdown, goalMonthsLeft, isGoalDone, monthSummary } from '../utils/finance.js';
 import { setDisplayCurrency } from '../utils/format.js';
 import { applyCategoryChoice, signedDraftAmount, TRANSFER_CHOICE } from '../utils/statement.js';
 import { clearFinanceState, loadFinanceState, saveFinanceState } from './financeStorage.js';
@@ -27,7 +24,7 @@ import { CURRENT_VERSION } from './migrations.js';
  * Это прототип без сервера: данные сохраняются в localStorage этого браузера,
  * resetDemo() заново строит демо-историю от сегодняшнего дня, startFromScratch() — очищает всё.
  * Все суммы — целые копейки (utils/money.js). Счетов может быть несколько: у каждой операции есть accountId,
- * общий баланс — сумма счетов. Первый счёт основной: с него пополняются накопления и цели, его нельзя удалить.
+ * общий баланс — сумма счетов. Первый счёт основной: с него пополняются цели, его нельзя удалить.
  * budgets — месячные лимиты категорий расходов: { [id категории]: лимит в копейках }.
  */
 
@@ -257,16 +254,13 @@ export function FinanceProvider({ children }) {
     [update],
   );
 
-  // Удаление операции. У переводов откатываем и вторую сторону: накопления или цель.
+  // Удаление операции. У пополнения цели откатываем и вторую сторону — сумму на цели.
   const deleteTransaction = useCallback(
     (id) =>
       update((prev) => {
         const tx = prev.transactions.find((t) => t.id === id);
         if (!tx) return prev;
         const next = { ...prev, transactions: prev.transactions.filter((t) => t.id !== id) };
-        if (tx.kind === 'savings' && tx.savingsTxId) {
-          next.savingsTransactions = prev.savingsTransactions.filter((t) => t.id !== tx.savingsTxId);
-        }
         if (tx.kind === 'goal' && tx.mode !== 'return') {
           next.goals = prev.goals.map((g) => (g.id === tx.goalId ? { ...g, saved: Math.max(0, g.saved + tx.amount) } : g));
         }
@@ -275,30 +269,7 @@ export function FinanceProvider({ children }) {
     [update],
   );
 
-  // ───── Накопительный счёт и цели ─────
-
-  /*
-   * Пополнение или снятие с накопительного счёта.
-   * Деньги переходят между счетами: накопления растут — общий баланс уменьшается, и наоборот.
-   * mode — 'deposit' | 'withdraw', amount — положительное число.
-   */
-  const moveSavings = useCallback(
-    (mode, amount) =>
-      update((prev, newId) => {
-        const toSavings = mode === 'withdraw' ? -amount : amount;
-        const date = new Date().toISOString();
-        const savingsTxId = newId('saving');
-        return {
-          ...prev,
-          savingsTransactions: [{ id: savingsTxId, type: mode, amount: toSavings, date }, ...prev.savingsTransactions],
-          transactions: [
-            { id: newId('transfer'), accountId: primaryAccountId(prev), type: 'transfer', kind: 'savings', mode, savingsTxId, amount: -toSavings, date },
-            ...prev.transactions,
-          ],
-        };
-      }),
-    [update],
-  );
+  // ───── Цели ─────
 
   // Пополнение цели — перевод с основного счёта: цель растёт, общий баланс уменьшается
   const depositToGoal = useCallback(
@@ -384,7 +355,7 @@ export function FinanceProvider({ children }) {
   );
 
   // Удаление счёта вместе с его операциями и историей импорта. Основной счёт не удаляется:
-  // на нём переводы в накопления и цели, связанные с другими данными.
+  // на нём пополнения целей, связанные с другими данными.
   const deleteAccount = useCallback(
     (id) =>
       update((prev) => {
@@ -455,7 +426,7 @@ export function FinanceProvider({ children }) {
     setState((prev) => buildState(createDemoData(), prev.settings, true));
   }, []);
 
-  // Пустой аккаунт: без операций, накоплений и целей
+  // Пустой аккаунт: без операций и целей
   const startFromScratch = useCallback(() => {
     setState((prev) => buildState(createEmptyData(), prev.settings, true));
   }, []);
@@ -487,13 +458,11 @@ export function FinanceProvider({ children }) {
         const { category, icon, accent } = IMPORT_TRANSFER;
         return { ...tx, title: tx.comment || IMPORT_TRANSFER.title, category, icon, accent, dateLabel, editable: false };
       }
+      // Остальные переводы — пополнения целей и возвраты с них
       if (tx.type === 'transfer') {
-        const isGoal = tx.kind === 'goal';
-        const title = isGoal
-          ? `${tx.mode === 'return' ? GOAL_TRANSFER.returnPrefix : GOAL_TRANSFER.titlePrefix} «${tx.goalName}»`
-          : SAVINGS_TRANSFER.titles[tx.mode ?? 'deposit'];
-        const meta = isGoal ? GOAL_TRANSFER : SAVINGS_TRANSFER;
-        return { ...tx, title, category: meta.category, icon: meta.icon, accent: meta.accent, dateLabel, editable: false };
+        const title = `${tx.mode === 'return' ? GOAL_TRANSFER.returnPrefix : GOAL_TRANSFER.titlePrefix} «${tx.goalName}»`;
+        const { category, icon, accent } = GOAL_TRANSFER;
+        return { ...tx, title, category, icon, accent, dateLabel, editable: false };
       }
       const category = categoryById[tx.categoryId] ?? categories.find((c) => c.type === tx.type);
       return {
@@ -532,19 +501,10 @@ export function FinanceProvider({ children }) {
       return { ...g, icon: CATEGORY_ICONS[g.iconId] ?? CATEGORY_ICONS.other, deadlineLabel, monthsLeft: goalMonthsLeft(g, today) };
     });
 
-    const savings = savingsStats(state.savingsTransactions, state.savingsOpeningBalance, today, SAVINGS_PAGE.interestDay);
-    const savingsTransactions = state.savingsTransactions.map((tx) => ({
-      ...tx,
-      title: SAVINGS_TX_TYPES[tx.type].title,
-      dateLabel: formatDay(new Date(tx.date), today),
-    }));
-
     return {
       today,
       // Исходные данные (для расчётов на экранах)
       rawTransactions: state.transactions,
-      rawSavingsTransactions: state.savingsTransactions,
-      savingsOpeningBalance: state.savingsOpeningBalance,
       // Готовое к показу
       transactions,
       describe,
@@ -558,9 +518,6 @@ export function FinanceProvider({ children }) {
       budgets: budgetProgress(month.monthTransactions, categories, state.budgets, CATEGORY_BUDGETS.warnAt),
       summary,
       goals,
-      savingsBalance: savings.balance,
-      savings,
-      savingsTransactions,
       // История импорта: сколько операций пакета осталось сейчас (часть могли удалить вручную)
       imports: state.imports.map((item) => ({
         ...item,
@@ -576,7 +533,7 @@ export function FinanceProvider({ children }) {
       isDark,
       hideBalance: state.settings.hideBalance,
       onboardingDone: state.onboardingDone,
-      isEmpty: state.transactions.length === 0 && state.goals.length === 0 && state.savingsTransactions.length === 0,
+      isEmpty: state.transactions.length === 0 && state.goals.length === 0,
       // Действия
       addTransaction,
       addTransactions,
@@ -585,7 +542,6 @@ export function FinanceProvider({ children }) {
       deleteCategoryRule,
       updateTransaction,
       deleteTransaction,
-      moveSavings,
       depositToGoal,
       createGoal,
       updateGoal,
@@ -613,7 +569,6 @@ export function FinanceProvider({ children }) {
     deleteCategoryRule,
     updateTransaction,
     deleteTransaction,
-    moveSavings,
     depositToGoal,
     createGoal,
     updateGoal,

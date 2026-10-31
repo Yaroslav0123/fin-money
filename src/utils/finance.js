@@ -1,7 +1,6 @@
 /*
  * Расчёты по истории операций: всё, что показывают экраны, считается отсюда.
  * Суммы — в копейках. Операция счёта: { id, accountId, type: 'income' | 'expense' | 'transfer', amount (со знаком), date (ISO), ... }.
- * Операция накопительного счёта: { id, type: 'deposit' | 'interest' | 'withdraw', amount (со знаком), date }.
  * Функции чистые: получают данные и «сегодня», ничего не меняют.
  */
 import {
@@ -373,54 +372,6 @@ export function goalForecast(goal, transactions, today) {
   const months = Math.ceil((goal.target - goal.saved) / pace);
   const date = addMonths(startOfMonth(today), months);
   return { status: 'forecast', pace: Math.round(pace), date, onTime: date <= new Date(goal.deadline) };
-}
-
-// ───── Накопительный счёт ─────
-
-/**
- * Баланс накоплений по точкам периода: 'week' — 7 последних дней, 'month' — дни текущего месяца,
- * 'year' — 12 последних месяцев. Значение точки — баланс на конец дня / месяца.
- */
-export function savingsSeries(savingsTransactions, openingBalance, periodId, today) {
-  const balanceAt = (moment) => openingBalance + sum(savingsTransactions.filter((tx) => txDate(tx) < moment));
-  const tomorrow = addDays(startOfDay(today), 1);
-
-  if (periodId === 'year') {
-    const first = addMonths(startOfMonth(today), -(MONTHS_IN_YEAR - 1));
-    return Array.from({ length: MONTHS_IN_YEAR }, (_, i) => {
-      const month = addMonths(first, i);
-      const end = i === MONTHS_IN_YEAR - 1 ? tomorrow : addMonths(month, 1);
-      return { label: monthShort(month), value: balanceAt(end) };
-    });
-  }
-
-  const days = periodId === 'week' ? DAYS_IN_WEEK : daysBetween(startOfMonth(today), today) + 1;
-  const first = addDays(startOfDay(today), -(days - 1));
-  return Array.from({ length: days }, (_, i) => {
-    const day = addDays(first, i);
-    const label = periodId === 'week' ? weekdayShort(day) : `${day.getDate()} ${monthShort(day).toLowerCase()}`;
-    return { label, value: balanceAt(addDays(day, 1)) };
-  });
-}
-
-/**
- * Показатели накопительного счёта: баланс, изменение за месяц,
- * проценты за текущий месяц и за всё время, дата следующего начисления.
- */
-export function savingsStats(savingsTransactions, openingBalance, today, interestDay) {
-  const monthStart = startOfMonth(today);
-  const month = inRange(savingsTransactions, monthStart, addDays(startOfDay(today), 1));
-  const interest = savingsTransactions.filter((tx) => tx.type === 'interest');
-  const thisMonthInterestDay = new Date(today.getFullYear(), today.getMonth(), interestDay);
-  const nextInterest = today < thisMonthInterestDay ? thisMonthInterestDay : addMonths(thisMonthInterestDay, 1);
-
-  return {
-    balance: openingBalance + sum(savingsTransactions),
-    monthChange: sum(month),
-    monthInterest: sum(month.filter((tx) => tx.type === 'interest')),
-    totalInterest: sum(interest),
-    nextInterest,
-  };
 }
 
 // ───── Бюджеты по категориям ─────

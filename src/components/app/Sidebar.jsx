@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, PiggyBank } from 'lucide-react';
-import Button from '../ui/Button.jsx';
+import { ArrowLeft } from 'lucide-react';
 import IgnorePresence from '../ui/IgnorePresence.jsx';
 import Logo from '../ui/Logo.jsx';
 import { APP_NAME, APP_NAV, APP_SHELL } from '../../data/mockData.js';
@@ -10,7 +9,6 @@ import { APP_NAME, APP_NAV, APP_SHELL } from '../../data/mockData.js';
  * Пункты без готового экрана (screen: null) показаны, но неактивны.
  */
 export default function Sidebar({ activeScreen, onNavigate, onExit }) {
-  const { promo } = APP_SHELL;
 
   return (
     <aside className="sticky top-0 hidden h-screen flex-col border-r border-line bg-card px-5 py-7 lg:flex">
@@ -52,22 +50,10 @@ export default function Sidebar({ activeScreen, onNavigate, onExit }) {
         })}
       </nav>
 
-      {/* Промо-карточка накопительного счёта */}
-      <div className="mt-auto overflow-hidden rounded-card bg-gradient-to-br from-brand-dark to-brand-fill p-5 text-white">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
-          <PiggyBank className="h-5 w-5" />
-        </span>
-        <p className="mt-4 text-sm font-bold">{promo.title}</p>
-        <p className="mt-1 text-xs leading-relaxed text-white/70">{promo.text}</p>
-        <Button variant="outlineLight" size="sm" pill fullWidth className="mt-4" onClick={() => onNavigate('savings')}>
-          {promo.action}
-        </Button>
-      </div>
-
       <button
         type="button"
         onClick={onExit}
-        className="mt-5 flex items-center gap-2 px-3 text-xs font-semibold text-ink-muted transition-colors duration-200 hover:text-brand"
+        className="mt-auto flex items-center gap-2 px-3 text-xs font-semibold text-ink-muted transition-colors duration-200 hover:text-brand"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         {APP_SHELL.backToSite}

@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, FileText, Target } from 'lucide-react';
+import { ArrowRight, FileText } from 'lucide-react';
 import Button3D from '../ui/Button3D.jsx';
 import Container from './Container.jsx';
 import LaptopMockup from './LaptopMockup.jsx';
-import { EXPENSE_CATEGORIES, LANDING, SAVINGS, SUMMARY } from '../../data/mockData.js';
+import { EXPENSE_CATEGORIES, LANDING, SUMMARY } from '../../data/mockData.js';
 
 // Каскадное появление текстов слева
 const container = {
@@ -110,8 +110,7 @@ export default function HeroSection({ appName, onStart, onTrySample }) {
             sidebar={LANDING.previewSidebar}
             summary={SUMMARY}
             categories={EXPENSE_CATEGORIES}
-            savings={SAVINGS}
-            savingsIcon={Target}
+            budgets={LANDING.previewBudgets}
             donut={{ title: LANDING.overview.donutTitle, caption: LANDING.overview.donutCaption }}
           />
         </motion.div>

@@ -26,6 +26,28 @@ describe('migrateState', () => {
     expect(data.transactions.every((tx) => tx.accountId === 'main')).toBe(true);
   });
 
+  it('версия 4: накопительный счёт убирается, переведённые на него деньги возвращаются на основной', () => {
+    const v4 = {
+      version: 4,
+      accounts: [{ id: 'main', name: 'Основной счёт', openingBalance: 10000 }],
+      savingsOpeningBalance: 50000,
+      savingsTransactions: [{ id: 'saving-1', type: 'deposit', amount: 2000, date: '2026-10-01T10:00:00.000Z' }],
+      transactions: [
+        { id: 'a', accountId: 'main', type: 'expense', amount: -500, date: '2026-10-01T09:00:00.000Z' },
+        { id: 'b', accountId: 'main', type: 'transfer', kind: 'savings', mode: 'deposit', savingsTxId: 'saving-1', amount: -2000, date: '2026-10-01T10:00:00.000Z' },
+        { id: 'c', accountId: 'main', type: 'transfer', kind: 'goal', goalId: 'trip', amount: -1000, date: '2026-10-01T11:00:00.000Z' },
+      ],
+      goals: [],
+      categories: [],
+    };
+    const data = migrateState(v4);
+    expect(data.version).toBe(CURRENT_VERSION);
+    expect(data).not.toHaveProperty('savingsTransactions');
+    expect(data).not.toHaveProperty('savingsOpeningBalance');
+    // Пополнение цели остаётся, перевод в накопления — нет
+    expect(data.transactions.map((tx) => tx.id)).toEqual(['a', 'c']);
+  });
+
   it('текущая версия не меняется, повторный перенос ничего не портит', () => {
     const once = migrateState(V2);
     expect(migrateState(once)).toEqual(once);

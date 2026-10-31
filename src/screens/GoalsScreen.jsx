@@ -6,7 +6,7 @@ import CreateGoalDialog from '../components/goals/CreateGoalDialog.jsx';
 import GoalTile from '../components/goals/GoalTile.jsx';
 import GoalsDistributionCard from '../components/goals/GoalsDistributionCard.jsx';
 import NewGoalTile from '../components/goals/NewGoalTile.jsx';
-import AmountDialog from '../components/savings/AmountDialog.jsx';
+import AmountDialog from '../components/goals/AmountDialog.jsx';
 import Button from '../components/ui/Button.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import Reveal from '../components/ui/Reveal.jsx';

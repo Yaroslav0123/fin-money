@@ -27,7 +27,6 @@ const readJson = (key) => {
 
 const isValid = (data) =>
   Array.isArray(data.transactions) &&
-  Array.isArray(data.savingsTransactions) &&
   Array.isArray(data.goals) &&
   Array.isArray(data.categories) &&
   Array.isArray(data.accounts) &&

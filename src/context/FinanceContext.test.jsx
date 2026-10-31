@@ -5,7 +5,7 @@ import { CURRENT_VERSION } from './migrations.js';
 import { DEFAULT_CATEGORIES } from '../data/mockData.js';
 import { rub } from '../utils/money.js';
 
-// Общее состояние финансов: история операций, накопления, цели, категории
+// Общее состояние финансов: история операций, цели, категории
 const renderFinance = () => renderHook(() => useFinance(), { wrapper: FinanceProvider });
 
 // Баланс демо-данных на момент генерации (см. demoData.js), в копейках, как все суммы
@@ -56,32 +56,6 @@ describe('FinanceContext', () => {
     act(() => result.current.deleteTransaction(id));
     expect(result.current.transactions.find((t) => t.id === id)).toBeUndefined();
     expect(result.current.summary.balance.amount).toBe(balance);
-  });
-
-  it('пополнение накоплений — перевод; удаление перевода возвращает деньги', () => {
-    const { result } = renderFinance();
-    const { balance, income, expenses } = result.current.summary;
-    const savings = result.current.savingsBalance;
-
-    act(() => result.current.moveSavings('deposit', 2000));
-    expect(result.current.savingsBalance).toBe(savings + 2000);
-    expect(result.current.summary.balance.amount).toBe(balance.amount - 2000);
-    expect(result.current.summary.income.amount).toBe(income.amount);
-    expect(result.current.summary.expenses.amount).toBe(expenses.amount);
-    expect(result.current.transactions[0]).toMatchObject({ type: 'transfer', amount: -2000, editable: false });
-
-    act(() => result.current.deleteTransaction(result.current.transactions[0].id));
-    expect(result.current.savingsBalance).toBe(savings);
-    expect(result.current.summary.balance.amount).toBe(balance.amount);
-  });
-
-  it('снятие с накоплений возвращает деньги на баланс', () => {
-    const { result } = renderFinance();
-    const balance = result.current.summary.balance.amount;
-    const savings = result.current.savingsBalance;
-    act(() => result.current.moveSavings('withdraw', 3000));
-    expect(result.current.savingsBalance).toBe(savings - 3000);
-    expect(result.current.summary.balance.amount).toBe(balance + 3000);
   });
 
   it('пополнение цели списывается с баланса, удаление перевода уменьшает цель', () => {
@@ -186,7 +160,7 @@ describe('FinanceContext', () => {
   it('восстанавливает данные и настройки после перезагрузки', () => {
     const first = renderFinance();
     const goal = first.result.current.goals[0];
-    act(() => first.result.current.moveSavings('deposit', 2000));
+    act(() => first.result.current.addTransaction({ type: 'expense', amount: 2000, categoryId: 'food' }));
     act(() => first.result.current.depositToGoal(goal, 1000));
     act(() => first.result.current.setHideBalance(true));
     act(() => first.result.current.setSetting('currency', 'usd'));
@@ -195,7 +169,7 @@ describe('FinanceContext', () => {
 
     // «Перезагрузка»: новый провайдер читает localStorage
     const { result } = renderFinance();
-    expect(result.current.savingsBalance).toBe(saved.savingsBalance);
+    expect(result.current.transactions).toHaveLength(saved.transactions.length);
     expect(result.current.summary.balance.amount).toBe(DEMO_BALANCE - 3000);
     expect(result.current.goals[0].saved).toBe(goal.saved + 1000);
     expect(result.current.goals[0].icon).toBe(goal.icon);
@@ -207,25 +181,24 @@ describe('FinanceContext', () => {
 
   it('id новых записей не повторяются после перезагрузки', () => {
     const first = renderFinance();
-    act(() => first.result.current.moveSavings('deposit', 100));
+    act(() => first.result.current.addTransaction({ type: 'expense', amount: 100, categoryId: 'food' }));
     const firstId = first.result.current.transactions[0].id;
     first.unmount();
 
     const { result } = renderFinance();
-    act(() => result.current.moveSavings('deposit', 100));
+    act(() => result.current.addTransaction({ type: 'expense', amount: 100, categoryId: 'food' }));
     expect(result.current.transactions[0].id).not.toBe(firstId);
   });
 
   it('новые демо-данные заменяют изменения, «с нуля» — очищает всё', () => {
     const { result } = renderFinance();
-    act(() => result.current.moveSavings('deposit', 5000));
+    act(() => result.current.addTransaction({ type: 'expense', amount: 5000, categoryId: 'food' }));
     act(() => result.current.resetDemo());
     expect(result.current.summary.balance.amount).toBe(DEMO_BALANCE);
 
     act(() => result.current.startFromScratch());
     expect(result.current.transactions).toHaveLength(0);
     expect(result.current.goals).toHaveLength(0);
-    expect(result.current.savingsBalance).toBe(0);
     expect(result.current.summary.balance.amount).toBe(0);
     expect(result.current.monthCategories).toHaveLength(0);
     expect(result.current.isEmpty).toBe(true);
@@ -258,8 +231,8 @@ describe('FinanceContext', () => {
     expect(result.current.accounts[1].count).toBe(2);
     expect(result.current.imports[0]).toMatchObject({ accountId: cash.id, accountBadge: 'Наличные' });
 
-    // Переводы в накопления — всегда с основного счёта
-    act(() => result.current.moveSavings('deposit', 500));
+    // Пополнения целей — всегда с основного счёта
+    act(() => result.current.depositToGoal(result.current.goals[0], 500));
     expect(result.current.transactions[0].accountId).toBe(main.id);
 
     // Основной счёт не удаляется, другой — вместе с операциями и историей импорта
@@ -293,7 +266,8 @@ describe('FinanceContext', () => {
     const { result } = renderFinance();
     expect(result.current.summary.balance.amount).toBe(rub(1000 - 150 + 5000));
     expect(result.current.accounts).toEqual([expect.objectContaining({ id: 'main', openingBalance: rub(1000), count: 2 })]);
-    expect(result.current.savingsBalance).toBe(rub(500));
+    // Накопительного счёта больше нет: его история не переносится
+    expect(result.current).not.toHaveProperty('savingsBalance');
     expect(result.current.goals[0]).toMatchObject({ target: rub(100000), saved: rub(2500) });
     expect(result.current.settings.budgetLimit).toBe(rub(50000));
     expect(result.current.rawTransactions[1].importKey).toBe('28.10.2026 10:00|500000|');

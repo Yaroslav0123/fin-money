@@ -90,7 +90,7 @@ Netlify подключён к GitHub-репозиторию и после каж
 ## Структура
 
 - `src/screens/` — экраны приложения и лендинг;
-- `src/components/` — компоненты по разделам (`app`, `dashboard`, `savings`, `goals`, `analytics`, `settings`, `landing`, `ui`);
+- `src/components/` — компоненты по разделам (`app`, `dashboard`, `goals`, `analytics`, `settings`, `landing`, `ui`);
 - `src/context/` — общее состояние финансов (`FinanceContext`) и действия интерфейса (`AppActionsContext`);
 - `src/data/mockData.js` — все тексты и данные;
 - `src/theme/` — палитра и цвета акцентов.

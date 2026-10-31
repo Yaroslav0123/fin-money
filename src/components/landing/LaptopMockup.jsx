@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import DonutLegend from '../charts/DonutLegend.jsx';
 import { ExpenseDonut } from '../charts/lazy.jsx';
 import IconTile from '../ui/IconTile.jsx';
@@ -72,40 +73,44 @@ function PreviewDonut({ title, caption, total, categories }) {
   );
 }
 
-// Мини-карточка накопительного счёта
-function PreviewSavings({ savings, savingsIcon }) {
+// Мини-карточка лимитов по категориям: шкала зелёная, у превышенного лимита — красная
+function PreviewBudgets({ budgets }) {
   return (
-    <div className="flex flex-col gap-[0.8em] rounded-[0.9em] bg-card p-[1.1em] shadow-soft">
-      <IconTile icon={savingsIcon} accent="brand" size="em" />
-      <div>
-        <p className="text-[1.2em] font-bold">{savings.title}</p>
-        <p className="mt-[0.3em] text-[0.85em] text-ink-muted">{savings.description}</p>
-      </div>
-      <div className="grid grid-cols-3 gap-[0.4em] text-[0.85em]">
-        {savings.features.map((f) => {
-          const Icon = f.icon;
-          return (
-            <div key={f.id}>
-              <Icon className="h-[1.1em] w-[1.1em] text-ink-secondary" />
-              <p className="mt-[0.3em] font-semibold">{f.title}</p>
-              <p className="text-ink-muted">{f.caption}</p>
+    <div className="flex flex-col gap-[0.9em] rounded-[0.9em] bg-card p-[1.1em] shadow-soft">
+      <p className="text-[1.2em] font-bold">{budgets.title}</p>
+      {budgets.items.map((item) => {
+        const isOver = item.spent > item.limit;
+        return (
+          <div key={item.id} className="flex items-center gap-[0.6em]">
+            <IconTile icon={item.icon} accent={item.accent} size="em" />
+            <div className="min-w-0 flex-1">
+              <div className="flex justify-between gap-[0.4em]">
+                <span className="font-semibold">{item.name}</span>
+                <span className={isOver ? 'font-semibold text-negative' : 'text-ink-muted'}>
+                  {isOver ? budgets.over : `${Math.round((item.spent / item.limit) * 100)}%`}
+                </span>
+              </div>
+              <div className="mt-[0.35em] h-[0.45em] overflow-hidden rounded-full bg-ink/5">
+                {/* Ширина через framer-motion, без inline-стилей; превью статичное — без анимации */}
+                <motion.div
+                  className={`h-full rounded-full ${isOver ? 'bg-negative' : 'bg-gradient-to-r from-brand to-accent-green'}`}
+                  initial={false}
+                  animate={{ width: `${Math.min(100, (item.spent / item.limit) * 100)}%` }}
+                />
+              </div>
+              <p className="mt-[0.25em] text-[0.85em] text-ink-muted">
+                {formatMoney(item.spent)} / {formatMoney(item.limit)}
+              </p>
             </div>
-          );
-        })}
-      </div>
-      <div className="rounded-[0.8em] bg-surface p-[0.8em]">
-        <p className="text-ink-muted">{savings.balanceLabel}</p>
-        <p className="text-[1.6em] font-bold">{formatMoney(savings.balance)}</p>
-        <TrendBadge trend={savings.trend} size="em" />
-      </div>
-      <div className="rounded-[0.7em] bg-brand-fill py-[0.7em] text-center font-semibold text-white">
-        {savings.depositAction}
-      </div>
+          </div>
+        );
+      })}
+      <div className="mt-auto rounded-[0.7em] bg-brand-fill py-[0.7em] text-center font-semibold text-white">{budgets.action}</div>
     </div>
   );
 }
 
-export default function LaptopMockup({ appName, sidebar, summary, categories, savings, savingsIcon, donut }) {
+export default function LaptopMockup({ appName, sidebar, summary, categories, budgets, donut }) {
   return (
     <div className="relative w-full [container-type:inline-size]">
       {/* Крышка с экраном */}
@@ -136,7 +141,7 @@ export default function LaptopMockup({ appName, sidebar, summary, categories, sa
                 categories={categories}
               />
             </div>
-            <PreviewSavings savings={savings} savingsIcon={savingsIcon} />
+            <PreviewBudgets budgets={budgets} />
           </div>
         </div>
       </div>

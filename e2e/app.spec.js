@@ -14,7 +14,7 @@ test('лендинг открывается и ведёт в приложени�
 test('все разделы меню открываются', async ({ page }) => {
   await openAppWithDemo(page);
   const nav = page.getByRole('navigation', { name: 'Разделы приложения' });
-  for (const label of ['Аналитика', 'Операции', 'Накопления', 'Цели', 'Настройки', 'Главная']) {
+  for (const label of ['Аналитика', 'Операции', 'Цели', 'Настройки', 'Главная']) {
     await nav.getByRole('button', { name: label }).click();
     await expect(nav.getByRole('button', { name: label })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

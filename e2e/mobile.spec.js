@@ -22,11 +22,11 @@ test('на телефоне кнопка «+» открывает новую о�
   await expect(page.getByRole('dialog', { name: 'Новая операция' })).toBeVisible();
 });
 
-test('на телефоне «Накопления» и «Настройки» — в меню профиля, поиск операций прилипает к шапке', async ({ page }) => {
+test('на телефоне «Настройки» — в меню профиля, поиск операций прилипает к шапке', async ({ page }) => {
   await openAppWithDemo(page);
   await page.getByRole('button', { name: 'Меню профиля' }).click();
-  await page.getByRole('button', { name: 'Накопления' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Накопительный счёт' })).toBeVisible();
+  await page.getByRole('button', { name: 'Настройки' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Настройки' })).toBeVisible();
 
   await page.getByRole('navigation', { name: 'Разделы приложения' }).getByRole('button', { name: 'Операции' }).click();
   // Фильтры свёрнуты под кнопку

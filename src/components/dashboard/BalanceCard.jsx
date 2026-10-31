@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeftRight, Eye, EyeOff, Plus } from 'lucide-react';
+import { Eye, EyeOff, FileUp, Plus } from 'lucide-react';
 import AnimatedMoney from '../ui/AnimatedMoney.jsx';
 import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
@@ -9,13 +9,13 @@ import { currencySymbol } from '../../utils/format.js';
 
 /**
  * Главная карточка «Общий баланс» с возможностью скрыть сумму
- * и быстрыми действиями «Пополнить» / «Перевести».
+ * и быстрыми действиями «Загрузить выписку» / «Добавить операцию».
  * hiddenByDefault — сумма скрыта при открытии (настройка «Скрывать баланс»),
  * глазом её можно показать до ухода с экрана.
- * onDeposit / onTransfer — нажатия на кнопки быстрых действий.
+ * onImport / onAdd — нажатия на кнопки быстрых действий.
  * accounts — счета с балансами: если их больше одного, под суммой видно, сколько на каждом.
  */
-export default function BalanceCard({ balance, accounts = [], texts, hiddenByDefault = false, onDeposit, onTransfer }) {
+export default function BalanceCard({ balance, accounts = [], texts, hiddenByDefault = false, onImport, onAdd }) {
   const [isHidden, setIsHidden] = useState(hiddenByDefault);
   const EyeIcon = isHidden ? EyeOff : Eye;
 
@@ -69,13 +69,13 @@ export default function BalanceCard({ balance, accounts = [], texts, hiddenByDef
       </div>
 
       <div className="relative flex flex-wrap gap-3">
-        <Button size="md" pill onClick={onDeposit}>
-          <Plus className="h-4 w-4" />
-          {texts.actions.deposit}
+        <Button size="md" pill onClick={onImport}>
+          <FileUp className="h-4 w-4" />
+          {texts.actions.import}
         </Button>
-        <Button size="md" variant="secondary" pill onClick={onTransfer}>
-          <ArrowLeftRight className="h-4 w-4" />
-          {texts.actions.transfer}
+        <Button size="md" variant="secondary" pill onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+          {texts.actions.add}
         </Button>
       </div>
     </Card>
