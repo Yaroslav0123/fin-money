@@ -2,6 +2,7 @@ import ExpenseStructureCard from '../components/cards/ExpenseStructureCard.jsx';
 import StatCard from '../components/cards/StatCard.jsx';
 import BalanceCard from '../components/dashboard/BalanceCard.jsx';
 import BudgetsCard from '../components/dashboard/BudgetsCard.jsx';
+import DayPulse from '../components/dashboard/DayPulse.jsx';
 import ForecastCard from '../components/dashboard/ForecastCard.jsx';
 import GoalCard from '../components/dashboard/GoalCard.jsx';
 import InsightsCard from '../components/dashboard/InsightsCard.jsx';
@@ -12,7 +13,7 @@ import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
 import { DASHBOARD } from '../data/mockData.js';
 import { monthName } from '../utils/dates.js';
-import { isGoalDone, monthForecast } from '../utils/finance.js';
+import { dayPulse, isGoalDone, monthForecast } from '../utils/finance.js';
 import { fillTemplate } from '../utils/format.js';
 import { buildTips } from '../utils/tips.js';
 
@@ -31,7 +32,7 @@ const monthLeftStat = (summary) => {
 
 /**
  * Экран 2. Главная (веб-версия).
- * Сетка: приглашение загрузить выписку (пока ни одной не загружали) → баланс + цель → доходы, расходы, остаток месяца →
+ * Сетка: «пульс дня» (сегодняшние траты против обычного дня) → приглашение загрузить выписку (пока ни одной не загружали) → баланс + цель → доходы, расходы, остаток месяца →
  * прогноз на конец месяца + советы →
  * самые заполненные лимиты категорий → структура расходов + операции. На телефоне три показателя листаются вбок,
  * чтобы не занимать три экрана подряд.
@@ -50,6 +51,11 @@ export default function DashboardScreen({ onNavigate }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      {rawTransactions.length > 0 && (
+        <Reveal className="xl:col-span-3">
+          <DayPulse pulse={dayPulse(rawTransactions, today)} texts={DASHBOARD.pulse} hidden={hideBalance} />
+        </Reveal>
+      )}
       {imports.length === 0 && (
         <Reveal className="xl:col-span-3">
           <StatementCard texts={DASHBOARD.statement} />

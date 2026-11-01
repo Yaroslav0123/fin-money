@@ -24,7 +24,7 @@ export default function HowItWorksSection({ onTrySample }) {
           {how.steps.map((step, index) => (
             <li key={step.id}>
               <Reveal delay={index * 0.08} className="h-full">
-                <Card className="relative h-full p-6">
+                <Card className="relative h-full p-6 transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-lifted">
                   <span className="absolute right-6 top-4 text-5xl font-extrabold text-ink/[0.06]" aria-hidden="true">
                     {index + 1}
                   </span>

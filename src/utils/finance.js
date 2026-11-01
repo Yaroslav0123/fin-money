@@ -616,3 +616,19 @@ export function notificationData({ transactions, goals, monthSpent, budgetLimit,
 
   return items;
 }
+
+// Сколько прошлых дней берём для «обычного дня»
+const PULSE_DAYS = 30;
+
+/**
+ * «Пульс дня»: сколько потрачено сегодня (spent) и сколько обычно уходит за день (usual) —
+ * среднее за прошлые PULSE_DAYS дней. usual — null, если за эти дни операций не было.
+ */
+export function dayPulse(transactions, today) {
+  const dayStart = startOfDay(today);
+  const past = inRange(transactions, addDays(dayStart, -PULSE_DAYS), dayStart);
+  return {
+    spent: spent(inRange(transactions, dayStart, addDays(dayStart, 1))),
+    usual: past.length > 0 ? Math.round(spent(past) / PULSE_DAYS) : null,
+  };
+}

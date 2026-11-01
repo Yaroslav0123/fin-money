@@ -6,6 +6,7 @@ import {
   categoryBreakdown,
   categoryComparison,
   categoryHistory,
+  dayPulse,
   categoryGrowth,
   goalForecast,
   goalSpeedup,
@@ -316,5 +317,22 @@ describe('regularPayments', () => {
     const regular = regularPayments(items, TODAY);
     expect(regular.map((r) => r.name)).toEqual(['Коммунальные услуги', 'Интернет 7701']);
     expect(regular[1].monthly).toBe(rub(990));
+  });
+});
+
+describe('dayPulse', () => {
+  it('сегодняшние траты и обычный день — среднее за 30 прошлых дней', () => {
+    const transactions = [
+      expense(rub(500), new Date(2026, 9, 28, 9)),
+      income(rub(10000), new Date(2026, 9, 28, 10)),
+      expense(rub(30000), new Date(2026, 9, 10, 12)),
+      // Раньше 30 дней — не считается
+      expense(rub(99000), new Date(2026, 8, 1, 12)),
+    ];
+    expect(dayPulse(transactions, TODAY)).toEqual({ spent: rub(500), usual: rub(1000) });
+  });
+
+  it('без истории обычного дня нет', () => {
+    expect(dayPulse([], TODAY)).toEqual({ spent: 0, usual: null });
   });
 });
