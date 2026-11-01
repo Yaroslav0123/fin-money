@@ -3,6 +3,7 @@ import { ArrowRight, FileText } from 'lucide-react';
 import Button3D from '../ui/Button3D.jsx';
 import Container from './Container.jsx';
 import LaptopMockup from './LaptopMockup.jsx';
+import { RunnerArt } from './HeroArt.jsx';
 import Smesharik from './Smesharik.jsx';
 import { EXPENSE_CATEGORIES, LANDING, SUMMARY } from '../../data/mockData.js';
 
@@ -46,6 +47,10 @@ export default function HeroSection({ appName, onStart, onTrySample }) {
 
       {/* Смешарики по краям экрана — только там, где по бокам хватает места */}
       <Smesharik character="losyash" className="left-10 top-52 hidden h-52 w-52 min-[1680px]:block" />
+      {/* Свой герой под Лосяшем — бегущая монетка */}
+      <Smesharik className="left-16 top-[412px] hidden h-40 w-40 min-[1680px]:block" delay={0.8}>
+        <RunnerArt />
+      </Smesharik>
       <Smesharik character="krosh" className="right-36 top-3 hidden h-32 w-32 min-[1700px]:block" delay={0.6} />
       <Smesharik character="sovunya" className="right-24 top-[340px] hidden h-28 w-28 min-[1600px]:block" delay={1.2} />
 

@@ -15,11 +15,29 @@ const CROPS = {
   yozhik: 'w-[533%] left-[-323%] top-[-188%]',
 };
 
+// Нарисованные усы под носом: всегда тёмные (и в тёмной теме), положение — в процентах от размера круга
+function Mustache({ className }) {
+  return (
+    <svg viewBox="0 0 100 40" className={`absolute ${className}`}>
+      <path
+        className="fill-[#3b2a20]"
+        d="M50 12C44 4 30 2 20 10 12 16 6 16 0 12c4 14 18 22 32 16 8-3 14-8 18-12 4 4 10 9 18 12 14 6 28-2 32-16-6 4-12 4-20-2C70 2 56 4 50 12Z"
+      />
+    </svg>
+  );
+}
+
+// Кому что дорисовано поверх кадра
+const EXTRAS = {
+  krosh: <Mustache className="left-[29%] top-[73%] w-[40%]" />,
+};
+
 /**
  * Декоративный герой «Смешариков» в круглой рамке, который плавно «парит».
  * character — ключ из CROPS, className — положение, размер и с какой ширины экрана показывать.
+ * children — свой рисунок вместо кадра (герои из HeroArt.jsx), рамка и «парение» те же.
  */
-export default function Smesharik({ character, className = '', delay = 0 }) {
+export default function Smesharik({ character, className = '', delay = 0, children }) {
   return (
     <motion.div
       aria-hidden="true"
@@ -32,7 +50,12 @@ export default function Smesharik({ character, className = '', delay = 0 }) {
         y: { duration: 5, repeat: Infinity, ease: 'easeInOut', delay },
       }}
     >
-      <img src={smesharikiImage} alt="" className={`absolute max-w-none ${CROPS[character]}`} />
+      {children ?? (
+        <>
+          <img src={smesharikiImage} alt="" className={`absolute max-w-none ${CROPS[character]}`} />
+          {EXTRAS[character]}
+        </>
+      )}
     </motion.div>
   );
 }
