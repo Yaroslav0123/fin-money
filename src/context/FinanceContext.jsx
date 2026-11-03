@@ -29,7 +29,8 @@ import { CURRENT_VERSION } from './migrations.js';
  * Перевод из выписки на свой вклад можно засчитать в цель — тогда отметка связана с операцией (txId).
  * budgets — месячные лимиты категорий расходов: { [id категории]: лимит в копейках }.
  * hiddenSubscriptions — ключи регулярных платежей, которые пользователь отметил «Это не подписка»;
- * seenAchievements — id достижений, о которых уже сказали (null — ещё не знакомились: текущие отмечаются молча).
+ * seenAchievements — id достижений, о которых уже сказали (null — ещё не знакомились: текущие отмечаются молча);
+ * recapSeen — ключ месяца («2026-10»), итоги которого уже открывали: приглашение на «Главной» становится спокойнее.
  */
 
 const FinanceContext = createContext(null);
@@ -59,6 +60,7 @@ const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) =
   categoryRules: [],
   hiddenSubscriptions: [],
   seenAchievements: null,
+  recapSeen: null,
   settings,
   onboardingDone,
   nextId: FIRST_ID,
@@ -72,6 +74,7 @@ const withDefaults = (saved) => ({
   budgets: {},
   hiddenSubscriptions: [],
   seenAchievements: null,
+  recapSeen: null,
   ...saved,
   settings: { ...DEFAULT_SETTINGS, ...saved.settings },
 });
@@ -482,6 +485,9 @@ export function FinanceProvider({ children }) {
     [],
   );
 
+  // Итоги месяца monthKey открыли
+  const markRecapSeen = useCallback((key) => setState((prev) => (prev.recapSeen === key ? prev : { ...prev, recapSeen: key })), []);
+
   // Файл резервной копии со всем состоянием и восстановление из уже проверенной копии (parseBackup)
   const exportBackup = useCallback(() => createBackup(state), [state]);
   const restoreBackup = useCallback((data) => setState(withDefaults({ ...data, onboardingDone: true })), []);
@@ -588,6 +594,7 @@ export function FinanceProvider({ children }) {
       onboardingDone: state.onboardingDone,
       hiddenSubscriptions: state.hiddenSubscriptions,
       seenAchievements: state.seenAchievements,
+      recapSeen: state.recapSeen,
       isEmpty: state.transactions.length === 0 && state.goals.length === 0,
       // Действия
       addTransaction,
@@ -617,6 +624,7 @@ export function FinanceProvider({ children }) {
       hideSubscription,
       restoreSubscription,
       markAchievementsSeen,
+      markRecapSeen,
       exportBackup,
       restoreBackup,
     };
@@ -650,6 +658,7 @@ export function FinanceProvider({ children }) {
     hideSubscription,
     restoreSubscription,
     markAchievementsSeen,
+    markRecapSeen,
     exportBackup,
     restoreBackup,
   ]);

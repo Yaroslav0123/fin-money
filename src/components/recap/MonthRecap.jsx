@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDown, ArrowUp, CalendarDays, ChevronLeft, ChevronRight, Pause, PiggyBank, Play, Receipt, Sparkles, Trophy, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, CalendarDays, ChevronLeft, ChevronRight, Pause, PieChart, PiggyBank, Play, Receipt, Sparkles, Trophy, X } from 'lucide-react';
 import AnimatedMoney from '../ui/AnimatedMoney.jsx';
 import { useFinance } from '../../context/FinanceContext.jsx';
-import { MONTH_RECAP } from '../../data/mockData.js';
-import { formatDay, monthName } from '../../utils/dates.js';
+import { CATEGORY_ICONS, MONTH_RECAP } from '../../data/mockData.js';
+import { formatDay, monthKey, monthName } from '../../utils/dates.js';
 import { monthRecap, recapMonth } from '../../utils/finance.js';
 import { fillTemplate, formatMoney, plural, toPercent } from '../../utils/format.js';
 
 // Как часто обновляется полоска прогресса карточки
 const TICK_MS = 100;
 const FULL = 1;
+// Насколько заметна большая иконка на фоне: чуть видна, текст поверх читается
+const BACKGROUND_ICON_OPACITY = 0.12;
 // Фоны карточек по очереди: насыщенные, чтобы белый текст читался в обеих темах
 const BACKGROUNDS = [
   'from-[#134634] to-[#237A5B]',
@@ -102,7 +104,7 @@ function buildSlides(recap, describe) {
  * Показывает последний месяц с операциями (recapMonth). onAnalytics — «Открыть аналитику» на последней карточке.
  */
 export default function MonthRecap({ isOpen, onClose, onAnalytics }) {
-  const { rawTransactions, categories, goals, describe, today } = useFinance();
+  const { rawTransactions, categories, goals, describe, today, markRecapSeen } = useFinance();
   const [index, setIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -135,6 +137,12 @@ export default function MonthRecap({ isOpen, onClose, onAnalytics }) {
     };
   }, [isOpen]);
 
+  // Открыли — значит, итоги этого месяца посмотрели: приглашение на «Главной» станет спокойнее
+  const seenKey = monthStart ? monthKey(monthStart) : null;
+  useEffect(() => {
+    if (isOpen && seenKey) markRecapSeen(seenKey);
+  }, [isOpen, seenKey, markRecapSeen]);
+
   // Таймер карточки: полоска заполняется, затем — следующая. На последней останавливаемся.
   useEffect(() => {
     if (!isOpen || paused || isLast) return undefined;
@@ -164,6 +172,8 @@ export default function MonthRecap({ isOpen, onClose, onAnalytics }) {
 
   const background = BACKGROUNDS[index % BACKGROUNDS.length];
   const Icon = slide?.icon;
+  // Три точки «Другого» на фоне читаются как мусор — там вместо них диаграмма
+  const BackgroundIcon = Icon === CATEGORY_ICONS.other ? PieChart : Icon;
   const PauseIcon = paused ? Play : Pause;
 
   return (
@@ -189,6 +199,21 @@ export default function MonthRecap({ isOpen, onClose, onAnalytics }) {
             transition={{ type: 'spring', stiffness: 320, damping: 30 }}
             className={`relative flex h-full w-full flex-col overflow-hidden bg-gradient-to-br text-white shadow-lifted transition-colors duration-500 focus:outline-none sm:h-[min(720px,92vh)] sm:max-w-sm sm:rounded-panel ${background}`}
           >
+            {/* Фон: огромная полупрозрачная иконка карточки в углу, медленно поворачивается и сменяется вместе с карточкой */}
+            <AnimatePresence initial={false}>
+              <motion.span
+                key={slide.id}
+                className="pointer-events-none absolute -bottom-10 -right-12 text-white"
+                initial={{ opacity: 0, scale: 0.8, rotate: -30 }}
+                animate={{ opacity: BACKGROUND_ICON_OPACITY, scale: 1, rotate: [-15, -5, -15] }}
+                exit={{ opacity: 0, scale: 1.1 }}
+                transition={{ opacity: { duration: 0.5 }, scale: { duration: 0.5 }, rotate: { duration: 12, repeat: Infinity, ease: 'easeInOut' } }}
+                aria-hidden="true"
+              >
+                <BackgroundIcon className="h-72 w-72" strokeWidth={1.5} />
+              </motion.span>
+            </AnimatePresence>
+
             {/* Полоски прогресса: по одной на карточку */}
             <div className="flex gap-1.5 px-4 pt-[max(1rem,env(safe-area-inset-top))]" aria-hidden="true">
               {slides.map((item, i) => (
@@ -237,7 +262,7 @@ export default function MonthRecap({ isOpen, onClose, onAnalytics }) {
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={slide.id}
-                  className="flex flex-1 flex-col justify-center px-8 pb-6"
+                  className="flex flex-1 flex-col items-center justify-center px-8 pb-6 text-center"
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -16 }}
@@ -279,7 +304,7 @@ export default function MonthRecap({ isOpen, onClose, onAnalytics }) {
                   <button
                     type="button"
                     onClick={onAnalytics}
-                    className="h-11 flex-1 rounded-full bg-white px-4 text-sm font-bold text-ink transition-transform duration-200 hover:scale-[1.02]"
+                    className="h-11 flex-1 rounded-full bg-white px-4 text-sm font-bold text-[#14201B] transition-transform duration-200 hover:scale-[1.02]"
                   >
                     {MONTH_RECAP.slides.outro.analytics}
                   </button>

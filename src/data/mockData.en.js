@@ -862,7 +862,7 @@ export default {
   },
 
   MONTH_RECAP: {
-    banner: { title: '{month} recap', text: 'Your month in a few cards', action: 'Watch' },
+    banner: { title: '{month} recap', text: 'Your month in a few cards', action: 'Watch', again: 'Watch again' },
     title: 'Month recap',
     close: 'Close',
     prev: 'Previous card',

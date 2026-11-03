@@ -96,6 +96,9 @@ export const formatMonthRange = (start, last) =>
 const pad = (value) => String(value).padStart(2, '0');
 export const toDateInputValue = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
+// Ключ месяца: «2026-10» (например, какие итоги месяца уже посмотрели)
+export const monthKey = (date) => toDateInputValue(date).slice(0, 7);
+
 // Обратно из <input type="date"> с сохранением времени исходной даты
 export const fromDateInputValue = (value, timeSource = new Date()) => {
   const [year, month, day] = value.split('-').map(Number);

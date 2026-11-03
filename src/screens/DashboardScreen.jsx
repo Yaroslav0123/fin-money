@@ -15,7 +15,7 @@ import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
 import { ACHIEVEMENTS, DASHBOARD, MONTH_RECAP } from '../data/mockData.js';
 import { buildAchievements } from '../utils/achievements.js';
-import { monthName } from '../utils/dates.js';
+import { monthKey, monthName } from '../utils/dates.js';
 import { dayPulse, isGoalDone, monthForecast, recapMonth } from '../utils/finance.js';
 import { fillTemplate } from '../utils/format.js';
 import { buildTips } from '../utils/tips.js';
@@ -46,7 +46,7 @@ const monthLeftStat = (summary) => {
  */
 export default function DashboardScreen({ onNavigate }) {
   const finance = useFinance();
-  const { summary, accounts, monthCategories, budgets, budgetLimits, transactions, rawTransactions, categories, goals, imports, hideBalance, today } =
+  const { summary, accounts, monthCategories, budgets, budgetLimits, transactions, rawTransactions, categories, goals, imports, hideBalance, recapSeen, today } =
     finance;
   const { openTransaction, openAddTransaction, openImport, openRecap, openAchievements } = useAppActions();
   const recapStart = recapMonth(rawTransactions, today);
@@ -59,7 +59,7 @@ export default function DashboardScreen({ onNavigate }) {
       {rawTransactions.length > 0 && (
         <Reveal className="flex flex-wrap items-center gap-3 xl:col-span-3">
           <DayPulse pulse={dayPulse(rawTransactions, today)} texts={DASHBOARD.pulse} hidden={hideBalance} />
-          {recapStart && <RecapBanner monthStart={recapStart} texts={MONTH_RECAP.banner} onOpen={openRecap} />}
+          {recapStart && <RecapBanner monthStart={recapStart} seen={recapSeen === monthKey(recapStart)} texts={MONTH_RECAP.banner} onOpen={openRecap} />}
         </Reveal>
       )}
       {imports.length === 0 && (
