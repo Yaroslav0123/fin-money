@@ -7,13 +7,14 @@ import {
   IMPORT_FALLBACK_INCOME,
   IMPORT_TRANSFER,
   SETTINGS_PAGE,
+  storedText,
   SUMMARY,
 } from '../data/mockData.js';
 import { formatFullDate, formatTransactionDate } from '../utils/dates.js';
 import { budgetProgress, categoryBreakdown, goalMonthsLeft, isGoalDone, monthSummary } from '../utils/finance.js';
 import { fillTemplate, setDisplayCurrency } from '../utils/format.js';
 import { applyCategoryChoice, signedDraftAmount, TRANSFER_CHOICE } from '../utils/statement.js';
-import { clearFinanceState, loadFinanceState, saveFinanceState } from './financeStorage.js';
+import { clearFinanceState, createBackup, loadFinanceState, saveFinanceState } from './financeStorage.js';
 import { CURRENT_VERSION } from './migrations.js';
 
 /*
@@ -27,6 +28,8 @@ import { CURRENT_VERSION } from './migrations.js';
  * Цели — план, а не счёт: пополнение цели — отметка в её истории (contributions), баланс счетов оно не меняет.
  * Перевод из выписки на свой вклад можно засчитать в цель — тогда отметка связана с операцией (txId).
  * budgets — месячные лимиты категорий расходов: { [id категории]: лимит в копейках }.
+ * hiddenSubscriptions — ключи регулярных платежей, которые пользователь отметил «Это не подписка»;
+ * seenAchievements — id достижений, о которых уже сказали (null — ещё не знакомились: текущие отмечаются молча).
  */
 
 const FinanceContext = createContext(null);
@@ -54,6 +57,8 @@ const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) =
   ...data,
   imports: [],
   categoryRules: [],
+  hiddenSubscriptions: [],
+  seenAchievements: null,
   settings,
   onboardingDone,
   nextId: FIRST_ID,
@@ -61,10 +66,19 @@ const buildState = (data, settings = DEFAULT_SETTINGS, onboardingDone = false) =
 
 // Сохранённое состояние (уже в текущем формате, см. migrations.js) дополняем полями и настройками,
 // появившимися в новых версиях: у них есть значение по умолчанию, поэтому отдельный шаг миграции не нужен
+const withDefaults = (saved) => ({
+  imports: [],
+  categoryRules: [],
+  budgets: {},
+  hiddenSubscriptions: [],
+  seenAchievements: null,
+  ...saved,
+  settings: { ...DEFAULT_SETTINGS, ...saved.settings },
+});
+
 const restoreState = () => {
   const saved = loadFinanceState();
-  if (!saved) return buildState(createDemoData());
-  return { imports: [], categoryRules: [], budgets: {}, ...saved, settings: { ...DEFAULT_SETTINGS, ...saved.settings } };
+  return saved ? withDefaults(saved) : buildState(createDemoData());
 };
 
 const byDateDesc = (a, b) => new Date(b.date) - new Date(a.date);
@@ -450,26 +464,50 @@ export function FinanceProvider({ children }) {
 
   const completeOnboarding = useCallback(() => setState((prev) => ({ ...prev, onboardingDone: true })), []);
 
+  // ───── Подписки, достижения, резервная копия ─────
+
+  // «Это не подписка» и обратно; key — ключ описания из subscriptions()
+  const hideSubscription = useCallback(
+    (key) => setState((prev) => ({ ...prev, hiddenSubscriptions: [...new Set([...prev.hiddenSubscriptions, key])] })),
+    [],
+  );
+  const restoreSubscription = useCallback(
+    (key) => setState((prev) => ({ ...prev, hiddenSubscriptions: prev.hiddenSubscriptions.filter((k) => k !== key) })),
+    [],
+  );
+
+  // Запомнить, что о достижениях уже рассказали
+  const markAchievementsSeen = useCallback(
+    (ids) => setState((prev) => ({ ...prev, seenAchievements: [...new Set([...(prev.seenAchievements ?? []), ...ids])] })),
+    [],
+  );
+
+  // Файл резервной копии со всем состоянием и восстановление из уже проверенной копии (parseBackup)
+  const exportBackup = useCallback(() => createBackup(state), [state]);
+  const restoreBackup = useCallback((data) => setState(withDefaults({ ...data, onboardingDone: true })), []);
+
   // ───── То, что показывают экраны ─────
 
   const value = useMemo(() => {
     const today = new Date();
 
     // Категории с иконками; у удалённой категории операции уже переназначены
-    const categories = state.categories.map((c) => ({ ...c, icon: CATEGORY_ICONS[c.iconId] ?? CATEGORY_ICONS.other }));
+    // Названия «из коробки» показываются на языке интерфейса (storedText)
+    const categories = state.categories.map((c) => ({ ...c, name: storedText(c.name), icon: CATEGORY_ICONS[c.iconId] ?? CATEGORY_ICONS.other }));
     const categoryById = Object.fromEntries(categories.map((c) => [c.id, c]));
 
     // Счета с текущим балансом: начальный остаток + все операции счёта
     const accounts = state.accounts.map((account, index) => {
       const own = state.transactions.filter((tx) => tx.accountId === account.id);
-      return { ...account, isPrimary: index === 0, balance: account.openingBalance + sumAmounts(own), count: own.length };
+      return { ...account, name: storedText(account.name), isPrimary: index === 0, balance: account.openingBalance + sumAmounts(own), count: own.length };
     });
     const accountName = Object.fromEntries(accounts.map((a) => [a.id, a.name]));
     const openingBalance = state.accounts.reduce((total, a) => total + a.openingBalance, 0);
-    const goalNames = Object.fromEntries(state.goals.map((g) => [g.id, g.name]));
+    const goalNames = Object.fromEntries(state.goals.map((g) => [g.id, storedText(g.name)]));
 
     // Операция в виде для списков: иконка, цвет, заголовок, подпись категории и даты
-    const describeTx = (tx) => {
+    const describeTx = (stored) => {
+      const tx = { ...stored, comment: storedText(stored.comment) };
       const date = new Date(tx.date);
       const dateLabel = formatTransactionDate(date, today);
       // Перевод между своими счетами из выписки; засчитанный в цель подписан её названием
@@ -513,7 +551,7 @@ export function FinanceProvider({ children }) {
       const { deadline: texts } = GOALS_PAGE;
       // У достигнутой цели о сроке напоминать незачем: «Цель достигнута» показывает сама карточка
       const deadlineLabel = overdue ? `${texts.overdue} ${formatFullDate(deadline)}` : `${texts.before} ${formatFullDate(deadline)}`;
-      return { ...g, icon: CATEGORY_ICONS[g.iconId] ?? CATEGORY_ICONS.other, deadlineLabel, monthsLeft: goalMonthsLeft(g, today) };
+      return { ...g, name: storedText(g.name), icon: CATEGORY_ICONS[g.iconId] ?? CATEGORY_ICONS.other, deadlineLabel, monthsLeft: goalMonthsLeft(g, today) };
     });
 
     return {
@@ -548,6 +586,8 @@ export function FinanceProvider({ children }) {
       isDark,
       hideBalance: state.settings.hideBalance,
       onboardingDone: state.onboardingDone,
+      hiddenSubscriptions: state.hiddenSubscriptions,
+      seenAchievements: state.seenAchievements,
       isEmpty: state.transactions.length === 0 && state.goals.length === 0,
       // Действия
       addTransaction,
@@ -574,6 +614,11 @@ export function FinanceProvider({ children }) {
       resetDemo,
       startFromScratch,
       completeOnboarding,
+      hideSubscription,
+      restoreSubscription,
+      markAchievementsSeen,
+      exportBackup,
+      restoreBackup,
     };
   }, [
     state,
@@ -602,6 +647,11 @@ export function FinanceProvider({ children }) {
     resetDemo,
     startFromScratch,
     completeOnboarding,
+    hideSubscription,
+    restoreSubscription,
+    markAchievementsSeen,
+    exportBackup,
+    restoreBackup,
   ]);
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;

@@ -1,10 +1,11 @@
 // Форматирование чисел для интерфейса
+import { isEnglish, LOCALE } from '../data/language.js';
 import { CURRENCIES } from '../data/mockData.js';
 import { hasKopecks, rub, toRubles } from './money.js';
 
-const moneyFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
-const kopecksFormatter = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const preciseFormatter = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const moneyFormatter = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });
+const kopecksFormatter = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const preciseFormatter = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
 /*
  * Валюта отображения. Все суммы хранятся в копейках (utils/money.js), при показе пересчитываются
@@ -60,8 +61,10 @@ const PAYMENT_ROUND_TO = rub(100);
 export const monthlyPayment = (remaining, months) =>
   months > 0 ? Math.ceil(remaining / months / PAYMENT_ROUND_TO) * PAYMENT_ROUND_TO : remaining;
 
-// Форма слова для числа: plural(5, ['месяц', 'месяца', 'месяцев']) → «месяцев»
+// Форма слова для числа: plural(5, ['месяц', 'месяца', 'месяцев']) → «месяцев».
+// В английском форм две: 1 month, 2 months — берутся первая и последняя.
 export const plural = (count, [one, few, many]) => {
+  if (isEnglish) return Math.abs(count) === 1 ? one : many ?? few;
   const mod10 = count % 10;
   const mod100 = count % 100;
   if (mod10 === 1 && mod100 !== 11) return one;

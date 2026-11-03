@@ -1,19 +1,22 @@
 import ExpenseStructureCard from '../components/cards/ExpenseStructureCard.jsx';
 import StatCard from '../components/cards/StatCard.jsx';
 import BalanceCard from '../components/dashboard/BalanceCard.jsx';
+import AchievementsCard from '../components/dashboard/AchievementsCard.jsx';
 import BudgetsCard from '../components/dashboard/BudgetsCard.jsx';
 import DayPulse from '../components/dashboard/DayPulse.jsx';
 import ForecastCard from '../components/dashboard/ForecastCard.jsx';
 import GoalCard from '../components/dashboard/GoalCard.jsx';
 import InsightsCard from '../components/dashboard/InsightsCard.jsx';
+import RecapBanner from '../components/dashboard/RecapBanner.jsx';
 import StatementCard from '../components/dashboard/StatementCard.jsx';
 import TransactionsCard from '../components/dashboard/TransactionsCard.jsx';
 import Reveal from '../components/ui/Reveal.jsx';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
-import { DASHBOARD } from '../data/mockData.js';
+import { ACHIEVEMENTS, DASHBOARD, MONTH_RECAP } from '../data/mockData.js';
+import { buildAchievements } from '../utils/achievements.js';
 import { monthName } from '../utils/dates.js';
-import { dayPulse, isGoalDone, monthForecast } from '../utils/finance.js';
+import { dayPulse, isGoalDone, monthForecast, recapMonth } from '../utils/finance.js';
 import { fillTemplate } from '../utils/format.js';
 import { buildTips } from '../utils/tips.js';
 
@@ -32,9 +35,9 @@ const monthLeftStat = (summary) => {
 
 /**
  * Экран 2. Главная (веб-версия).
- * Сетка: «пульс дня» (сегодняшние траты против обычного дня) → приглашение загрузить выписку (пока ни одной не загружали) → баланс + цель → доходы, расходы, остаток месяца →
+ * Сетка: «пульс дня» (сегодняшние траты против обычного дня) и приглашение в «Итоги месяца» → приглашение загрузить выписку (пока ни одной не загружали) → баланс + цель → доходы, расходы, остаток месяца →
  * прогноз на конец месяца + советы →
- * самые заполненные лимиты категорий → структура расходов + операции. На телефоне три показателя листаются вбок,
+ * самые заполненные лимиты категорий → структура расходов + операции → достижения. На телефоне три показателя листаются вбок,
  * чтобы не занимать три экрана подряд.
  * Всё считается из истории операций за текущий месяц, поэтому сразу учитывает
  * новые, изменённые и удалённые операции и пополнения целей.
@@ -42,9 +45,11 @@ const monthLeftStat = (summary) => {
  * onNavigate — переход на другие экраны (например, в «Цели»).
  */
 export default function DashboardScreen({ onNavigate }) {
+  const finance = useFinance();
   const { summary, accounts, monthCategories, budgets, budgetLimits, transactions, rawTransactions, categories, goals, imports, hideBalance, today } =
-    useFinance();
-  const { openTransaction, openAddTransaction, openImport } = useAppActions();
+    finance;
+  const { openTransaction, openAddTransaction, openImport, openRecap, openAchievements } = useAppActions();
+  const recapStart = recapMonth(rawTransactions, today);
   const goal = featuredGoal(goals);
   const forecast = monthForecast(rawTransactions, today, budgetLimits);
   const tips = buildTips({ transactions: rawTransactions, categories, goals, today, forecast });
@@ -52,8 +57,9 @@ export default function DashboardScreen({ onNavigate }) {
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
       {rawTransactions.length > 0 && (
-        <Reveal className="xl:col-span-3">
+        <Reveal className="flex flex-wrap items-center gap-3 xl:col-span-3">
           <DayPulse pulse={dayPulse(rawTransactions, today)} texts={DASHBOARD.pulse} hidden={hideBalance} />
+          {recapStart && <RecapBanner monthStart={recapStart} texts={MONTH_RECAP.banner} onOpen={openRecap} />}
         </Reveal>
       )}
       {imports.length === 0 && (
@@ -131,6 +137,10 @@ export default function DashboardScreen({ onNavigate }) {
           onAdd={openAddTransaction}
           className="h-full"
         />
+      </Reveal>
+
+      <Reveal delay={0.1} className="xl:col-span-3">
+        <AchievementsCard achievements={buildAchievements(finance)} texts={ACHIEVEMENTS} onOpen={openAchievements} />
       </Reveal>
     </div>
   );

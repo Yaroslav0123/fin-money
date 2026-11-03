@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { TriangleAlert } from 'lucide-react';
 import AccountsCard from '../components/settings/AccountsCard.jsx';
+import BackupCard from '../components/settings/BackupCard.jsx';
 import BudgetCard from '../components/settings/BudgetCard.jsx';
 import CategoriesCard from '../components/settings/CategoriesCard.jsx';
 import CategoryBudgetsCard from '../components/settings/CategoryBudgetsCard.jsx';
@@ -15,15 +17,17 @@ import Reveal from '../components/ui/Reveal.jsx';
 import Tabs from '../components/ui/Tabs.jsx';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
+import { LANGUAGE, changeLanguage } from '../data/language.js';
 import { SETTINGS_PAGE } from '../data/mockData.js';
 import { monthName } from '../utils/dates.js';
+import { downloadBackup } from '../utils/download.js';
 
 // Раздел, если его не передали при переходе (первый в списке)
 const DEFAULT_SECTION = SETTINGS_PAGE.sections.items[0].id;
 
 /**
  * Экран «Настройки» (веб-версия). Карточки разложены по разделам-вкладкам:
- * «Деньги» — бюджет, лимиты категорий, счета, категории и правила; «Данные» — история импорта и демо-данные;
+ * «Деньги» — бюджет, лимиты категорий, счета, категории и правила; «Данные» — история импорта, резервная копия и демо-данные;
  * «Профиль» — личные данные и безопасность; «Приложение» — параметры и уведомления.
  * params.section — какой раздел открыть (профиль в шапке ведёт в «Профиль», лимиты на «Главной» — в «Деньги»).
  * onLogout — «выход из аккаунта» (в прототипе возвращает на лендинг).
@@ -43,6 +47,8 @@ export default function SettingsScreen({ params = {}, onLogout }) {
     undoImport,
     categoryRules,
     deleteCategoryRule,
+    exportBackup,
+    restoreBackup,
   } = useFinance();
   const { notify, openAbout, openImport } = useAppActions();
   const { demo, sections } = SETTINGS_PAGE;
@@ -106,6 +112,21 @@ export default function SettingsScreen({ params = {}, onLogout }) {
           />
         </Reveal>
         <Reveal delay={0.05}>
+          <BackupCard
+            texts={SETTINGS_PAGE.backup}
+            onDownload={() => {
+              downloadBackup(exportBackup());
+              notify(SETTINGS_PAGE.backup.downloaded);
+            }}
+            onRestore={(data) => {
+              restoreBackup(data);
+              notify(SETTINGS_PAGE.backup.restored);
+            }}
+            onError={(text) => notify(text, TriangleAlert)}
+            className="h-full"
+          />
+        </Reveal>
+        <Reveal delay={0.1}>
           <DemoDataCard
             texts={demo}
             onReset={() => {
@@ -140,7 +161,13 @@ export default function SettingsScreen({ params = {}, onLogout }) {
     app: (
       <>
         <Reveal className="xl:col-span-2">
-          <PreferencesCard texts={SETTINGS_PAGE.preferences} values={settings} onChange={setSetting} className="h-full" />
+          {/* Язык живёт отдельно от данных: при смене страница перезагружается с новыми текстами */}
+          <PreferencesCard
+            texts={SETTINGS_PAGE.preferences}
+            values={{ ...settings, language: LANGUAGE }}
+            onChange={(key, value) => (key === 'language' ? changeLanguage(value) : setSetting(key, value))}
+            className="h-full"
+          />
         </Reveal>
         <Reveal delay={0.05}>
           <ToggleListCard title={SETTINGS_PAGE.notifications.title} items={SETTINGS_PAGE.notifications.items} className="h-full" />

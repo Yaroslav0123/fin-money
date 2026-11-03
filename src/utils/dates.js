@@ -1,4 +1,5 @@
 // Работа с датами. Все расчёты — в местном времени пользователя.
+import { LOCALE } from '../data/language.js';
 import { DATE_TEXTS } from '../data/mockData.js';
 
 const DAYS_IN_WEEK = 7;
@@ -46,10 +47,10 @@ export const isInRange = (date, start, end) => date >= start && date < end;
 
 // ───── Подписи ─────
 
-const dayMonth = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
-const dayMonthYear = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-const time = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' });
-const weekdayLong = new Intl.DateTimeFormat('ru-RU', { weekday: 'long' });
+const dayMonth = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long' });
+const dayMonthYear = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' });
+const time = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' });
+const weekdayLong = new Intl.DateTimeFormat(LOCALE, { weekday: 'long' });
 
 // Название месяца в именительном падеже: «октябрь»
 export const monthName = (date) => DATE_TEXTS.months[date.getMonth()];
@@ -83,7 +84,7 @@ export const formatGroupDate = (date, today = new Date()) => {
 };
 
 // Диапазон: «1–28 октября 2026», «27 сент. – 3 окт.», «ноябрь 2025 — октябрь 2026»
-const rangeFormatter = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+const rangeFormatter = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' });
 export const formatDateRange = (start, lastDay) =>
   isSameDay(start, lastDay) ? formatFullDate(start) : rangeFormatter.formatRange(start, lastDay);
 

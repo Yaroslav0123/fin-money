@@ -2,7 +2,8 @@
  * Советы на «Главной»: короткие выводы из истории операций и прогноза месяца.
  * Цифры считает utils/finance.js, здесь — только выбор советов и тексты из mockData.
  */
-import { DASHBOARD, DATE_TEXTS } from '../data/mockData.js';
+import { LOCALE } from '../data/language.js';
+import { DASHBOARD, DATE_TEXTS, storedText } from '../data/mockData.js';
 import { categoryGrowth, goalPace, goalSpeedup, insightData, regularPayments } from './finance.js';
 import { fillTemplate, formatMoney, monthlyPayment, plural } from './format.js';
 import { KOPECKS_IN_RUBLE } from './money.js';
@@ -16,7 +17,7 @@ const CUT_PERCENT = 10;
 const CUT_ROUND_TO = 100 * KOPECKS_IN_RUBLE;
 
 // Коэффициент для текста: 1.47 → «1,5»
-const ratioFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
+const ratioFormatter = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 });
 
 const monthsText = (count) => `${count} ${plural(count, DATE_TEXTS.monthWords)}`;
 
@@ -41,7 +42,7 @@ export function buildTips({ transactions, categories, goals, today, forecast }) 
   if (regular.length > 0) {
     const list = regular
       .slice(0, REGULAR_SHOWN)
-      .map((item) => `${item.name} (${formatMoney(item.monthly)})`)
+      .map((item) => `${storedText(item.name)} (${formatMoney(item.monthly)})`)
       .join(', ');
     const total = regular.reduce((sum, item) => sum + item.monthly, 0);
     items.push({ id: 'regular', ...t.regular, text: fillTemplate(t.regular.text, { list, total: formatMoney(total) }) });

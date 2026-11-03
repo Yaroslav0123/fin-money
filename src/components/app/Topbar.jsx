@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Bell, Moon, Plus, Search, Sun, Upload } from 'lucide-react';
+import { Bell, Command, Moon, Plus, Search, Sun, Upload } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import LeafMark from '../ui/LeafMark.jsx';
 import ProfileMenu from './ProfileMenu.jsx';
-import { APP_SHELL } from '../../data/mockData.js';
+import { APP_SHELL, COMMAND_PALETTE } from '../../data/mockData.js';
 
 /**
  * Верхняя панель экрана: заголовок, поиск, уведомления, меню профиля (ProfileMenu: профиль, настройки).
@@ -12,8 +12,9 @@ import { APP_SHELL } from '../../data/mockData.js';
  * hasNotifications — показать красную точку на колокольчике.
  * theme — { isDark, toggleLabel, onToggle }: быстрое переключение светлой и тёмной темы.
  * onImport — загрузка выписки (на самых широких экранах — с подписью, иначе круглая кнопка).
+ * onCommand — быстрый поиск (Ctrl+K).
  */
-export default function Topbar({ title, subtitle, activeScreen, onNavigate, onExit, onAdd, onImport, onSearch, hasNotifications, onNotifications, theme }) {
+export default function Topbar({ title, subtitle, activeScreen, onNavigate, onExit, onAdd, onImport, onSearch, onCommand, hasNotifications, onNotifications, theme }) {
   const ThemeIcon = theme.isDark ? Sun : Moon;
   const [query, setQuery] = useState('');
 
@@ -49,6 +50,19 @@ export default function Topbar({ title, subtitle, activeScreen, onNavigate, onEx
               className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
             />
           </form>
+
+          {/* Быстрый поиск: на широких экранах — с подсказкой сочетания клавиш */}
+          <button
+            type="button"
+            aria-label={APP_SHELL.commandAction}
+            aria-keyshortcuts="Control+K Meta+K"
+            title={`${APP_SHELL.commandAction} · ${COMMAND_PALETTE.shortcut}`}
+            onClick={onCommand}
+            className="hidden h-11 w-11 items-center justify-center gap-1.5 rounded-full bg-card text-xs font-semibold text-ink shadow-soft transition-colors duration-200 hover:bg-brand-light sm:flex xl:w-auto xl:px-4"
+          >
+            <Command className="h-4 w-4" />
+            <span className="hidden xl:inline">{COMMAND_PALETTE.shortcut}</span>
+          </button>
 
           {/* На самых узких экранах прячем: тема есть в «Настройках» */}
           <button

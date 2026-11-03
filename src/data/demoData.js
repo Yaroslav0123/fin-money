@@ -61,6 +61,15 @@ const RANDOM_SPENDING = [
 ];
 const FREELANCE = { chance: 0.04, amount: [3000, 12000], hours: [11, 19], comments: ['Заказ на сайт', 'Разовый проект', ''] };
 
+// Подписки для раздела «Подписки»: день месяца, цена, час. Без случайных чисел — остальная история не меняется.
+// raise — с какого месяца назад (1 — прошлый) цена выросла; stoppedMonthsAgo — подписку отменили столько месяцев назад
+const DEMO_SUBSCRIPTIONS = [
+  { comment: 'Музыка Плюс', categoryId: 'fun', day: 3, hour: 9, amount: 199 },
+  { comment: 'Онлайн-кинотеатр', categoryId: 'fun', day: 12, hour: 21, amount: 299, raise: { monthsAgo: 1, amount: 349 } },
+  { comment: 'Облако для фото', categoryId: 'other', day: 18, hour: 8, amount: 149 },
+  { comment: 'Фитнес-клуб', categoryId: 'other', day: 9, hour: 19, amount: 2900, stoppedMonthsAgo: 3 },
+];
+
 // Месячные лимиты категорий (в рублях): чтобы на «Главной» сразу было видно, как работают бюджеты
 const DEMO_BUDGETS = { food: 25000, transport: 9000, fun: 7000 };
 
@@ -151,6 +160,17 @@ export function createDemoData(today = new Date()) {
         const when = at(day, GOAL_DEPOSITS.hour);
         if (when <= today) contributions[goalId].push({ id: nextId('contribution'), amount: rub(amount), date: when.toISOString() });
       }
+    }
+  }
+
+  // Подписки: каждый месяц в свой день, пока их не отменили
+  for (let monthsAgo = HISTORY_MONTHS - 1; monthsAgo >= 0; monthsAgo -= 1) {
+    const month = startOfMonth(addMonths(today, -monthsAgo));
+    for (const sub of DEMO_SUBSCRIPTIONS) {
+      if (sub.stoppedMonthsAgo !== undefined && monthsAgo < sub.stoppedMonthsAgo) continue;
+      const amount = sub.raise && monthsAgo <= sub.raise.monthsAgo ? sub.raise.amount : sub.amount;
+      const date = new Date(month.getFullYear(), month.getMonth(), sub.day, sub.hour, 0);
+      push({ type: 'expense', categoryId: sub.categoryId, comment: sub.comment, amount: -amount }, date);
     }
   }
 

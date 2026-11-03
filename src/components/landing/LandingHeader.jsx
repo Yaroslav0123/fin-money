@@ -4,15 +4,39 @@ import { Menu, X } from 'lucide-react';
 import Button from '../ui/Button.jsx';
 import IgnorePresence from '../ui/IgnorePresence.jsx';
 import Logo from '../ui/Logo.jsx';
+import { LANGUAGE, changeLanguage } from '../../data/language.js';
 import { LANDING } from '../../data/mockData.js';
 import Container from './Container.jsx';
 
 const MOBILE_MENU_ID = 'landing-mobile-menu';
 
+// Переключатель RU / EN: язык сайта и приложения (страница перезагружается)
+function LanguageSwitch({ className = '' }) {
+  return (
+    <div role="group" aria-label={LANDING.language.label} className={`rounded-full bg-ink/[0.04] p-0.5 ${className}`}>
+      {LANDING.language.options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          lang={option.id}
+          aria-pressed={option.id === LANGUAGE}
+          onClick={() => changeLanguage(option.id)}
+          className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors duration-200 ${
+            option.id === LANGUAGE ? 'bg-card text-ink shadow-soft' : 'text-ink-muted hover:text-ink'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Шапка лендинга: логотип, навигация по секциям и кнопка «Мои финансы».
  * Прилипает к верху страницы с размытием фона.
  * На телефонах разделы открываются кнопкой-«бургером» в выпадающей панели.
+ * Переключатель RU / EN меняет язык сайта и приложения (страница перезагружается).
  */
 export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
   const [activeId, setActiveId] = useState(nav[0].id);
@@ -41,8 +65,8 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
           <Logo name={appName} size="sm" />
         </a>
 
-        {/* Навигация (на мобильных — в выпадающем меню) */}
-        <nav className="hidden items-center gap-5 md:flex lg:gap-8">
+        {/* Навигация (на телефонах и планшетах — в выпадающем меню) */}
+        <nav className="hidden items-center gap-4 lg:flex xl:gap-8">
           {nav.map((item) => {
             const isActive = item.id === activeId;
             return (
@@ -71,7 +95,9 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button size="sm" pill onClick={onAction}>
+          {/* На телефоне места не хватает: там переключатель — в меню разделов */}
+          <LanguageSwitch className="hidden sm:flex" />
+          <Button size="sm" pill className="whitespace-nowrap" onClick={onAction}>
             {actionLabel}
           </Button>
           <button
@@ -80,7 +106,7 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
             aria-expanded={isMenuOpen}
             aria-controls={MOBILE_MENU_ID}
             onClick={() => setIsMenuOpen((open) => !open)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors duration-200 hover:bg-ink/5 md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors duration-200 hover:bg-ink/5 lg:hidden"
           >
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -96,7 +122,7 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="absolute inset-x-0 top-full border-b border-line/60 bg-surface shadow-soft md:hidden"
+            className="absolute inset-x-0 top-full border-b border-line/60 bg-surface shadow-soft lg:hidden"
           >
             <Container className="flex flex-col py-2">
               {nav.map((item) => {
@@ -115,6 +141,10 @@ export default function LandingHeader({ appName, nav, actionLabel, onAction }) {
                   </a>
                 );
               })}
+              <div className="flex items-center justify-between gap-3 px-3 py-3">
+                <span className="text-sm text-ink-secondary">{LANDING.language.label}</span>
+                <LanguageSwitch className="flex" />
+              </div>
             </Container>
           </motion.nav>
         )}

@@ -6,6 +6,7 @@ import CreateGoalDialog from '../components/goals/CreateGoalDialog.jsx';
 import GoalTile from '../components/goals/GoalTile.jsx';
 import GoalsDistributionCard from '../components/goals/GoalsDistributionCard.jsx';
 import NewGoalTile from '../components/goals/NewGoalTile.jsx';
+import WhatIfCard from '../components/goals/WhatIfCard.jsx';
 import AmountDialog from '../components/goals/AmountDialog.jsx';
 import Button from '../components/ui/Button.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
@@ -13,7 +14,7 @@ import Reveal from '../components/ui/Reveal.jsx';
 import SegmentedControl from '../components/ui/SegmentedControl.jsx';
 import { useAppActions } from '../context/AppActionsContext.jsx';
 import { useFinance } from '../context/FinanceContext.jsx';
-import { GOAL_ICON_OPTIONS, GOAL_TERM_OPTIONS, GOALS_PAGE } from '../data/mockData.js';
+import { GOAL_ICON_OPTIONS, GOAL_TERM_OPTIONS, GOALS_PAGE, QUOTED, WHAT_IF } from '../data/mockData.js';
 import { goalForecast, isGoalDone } from '../utils/finance.js';
 import { fillTemplate, formatMoney } from '../utils/format.js';
 
@@ -33,9 +34,10 @@ const FILTERS = {
  * переводы из выписки, засчитанные в неё (окно перевода в «Операциях»).
  * Цели можно создавать, изменять и удалять — изменения видны на «Главной» и на лендинге.
  * У каждой цели — прогноз даты по темпу пополнений; пополнение, которое закрывает цель, празднуется «конфетти».
+ * Внизу — калькулятор «А что если…»: насколько раньше придут цели, если тратить меньше на одну категорию.
  */
 export default function GoalsScreen() {
-  const { goals, depositToGoal, createGoal, updateGoal, deleteGoal, today } = useFinance();
+  const { goals, rawTransactions, categories, depositToGoal, createGoal, updateGoal, deleteGoal, today } = useFinance();
   const { notify } = useAppActions();
   const [filter, setFilter] = useState('all');
   const [depositGoal, setDepositGoal] = useState(null);
@@ -94,7 +96,7 @@ export default function GoalsScreen() {
   const depositTexts = {
     ...GOALS_PAGE.depositDialog,
     deposit: {
-      title: depositGoal ? `${GOALS_PAGE.depositDialog.titlePrefix} «${depositGoal.name}»` : '',
+      title: depositGoal ? `${GOALS_PAGE.depositDialog.titlePrefix} ${fillTemplate(QUOTED, { name: depositGoal.name })}` : '',
       confirm: GOALS_PAGE.depositDialog.confirm,
     },
   };
@@ -174,6 +176,10 @@ export default function GoalsScreen() {
         <Reveal delay={0.15}>
           <GoalsDistributionCard goals={goals} texts={GOALS_PAGE.distribution} className="xl:sticky xl:top-28" />
         </Reveal>
+
+        <Reveal delay={0.1} className="xl:col-span-3">
+          <WhatIfCard transactions={rawTransactions} categories={categories} goals={goals} today={today} texts={WHAT_IF} />
+        </Reveal>
       </div>
 
       <AmountDialog
@@ -199,7 +205,7 @@ export default function GoalsScreen() {
       <ConfirmDialog
         isOpen={Boolean(deletingGoal)}
         title={deleteDialog.title}
-        text={deletingGoal ? `«${deletingGoal.name}». ${deleteText}` : ''}
+        text={deletingGoal ? `${fillTemplate(QUOTED, { name: deletingGoal.name })}. ${deleteText}` : ''}
         confirmLabel={deleteDialog.confirm}
         cancelLabel={deleteDialog.cancel}
         onConfirm={handleDelete}

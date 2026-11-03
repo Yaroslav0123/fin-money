@@ -4,6 +4,7 @@ import Button from '../ui/Button.jsx';
 import Card from '../ui/Card.jsx';
 import IconTile from '../ui/IconTile.jsx';
 import ProgressRing, { MILESTONES } from '../ui/ProgressRing.jsx';
+import { QUOTED } from '../../data/mockData.js';
 import { monthName } from '../../utils/dates.js';
 import { fillTemplate, formatMoney, monthlyPayment, toPercent } from '../../utils/format.js';
 
@@ -96,12 +97,12 @@ export default function GoalTile({ goal, texts, forecast, celebrate = false, onD
           <p className="text-xs text-ink-muted">{goal.deadlineLabel}</p>
         </div>
         <div className="-mr-2 -mt-1 flex shrink-0">
-          <button type="button" aria-label={`${texts.edit} «${goal.name}»`} onClick={() => onEdit(goal)} className={iconButtonClass}>
+          <button type="button" aria-label={`${texts.edit} ${fillTemplate(QUOTED, { name: goal.name })}`} onClick={() => onEdit(goal)} className={iconButtonClass}>
             <Pencil className="h-4 w-4" />
           </button>
           <button
             type="button"
-            aria-label={`${texts.delete} «${goal.name}»`}
+            aria-label={`${texts.delete} ${fillTemplate(QUOTED, { name: goal.name })}`}
             onClick={() => onDelete(goal)}
             className={`${iconButtonClass} hover:bg-negative-bg hover:text-negative`}
           >

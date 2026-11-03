@@ -7,8 +7,11 @@ import { APP_SHELL } from './data/mockData.js';
 import LandingPage from './screens/LandingPage.jsx';
 import { trackScreen } from './utils/monitoring.js';
 
-// Экран-лендинг (сайт). Остальные экраны живут внутри каркаса веб-приложения.
+// Экран-лендинг (сайт) и страница «Как это сделано». Остальные экраны живут внутри каркаса веб-приложения.
 const LANDING_SCREEN = 'onboarding';
+const TECH_SCREEN = 'tech';
+// «Как это сделано» открывается и по прямой ссылке: …/#tech
+const TECH_HASH = '#tech';
 
 // Код приложения скачивается отдельно от лендинга: первая страница открывается быстрее.
 // Пока посетитель читает лендинг, браузер в свободное время подгружает приложение заранее.
@@ -19,9 +22,11 @@ const appModules = [
   () => import('./screens/GoalsScreen.jsx'),
   () => import('./screens/SettingsScreen.jsx'),
   () => import('./screens/TransactionsScreen.jsx'),
+  () => import('./screens/SubscriptionsScreen.jsx'),
 ];
-const [AppShell, DashboardScreen, AnalyticsScreen, GoalsScreen, SettingsScreen, TransactionsScreen] =
+const [AppShell, DashboardScreen, AnalyticsScreen, GoalsScreen, SettingsScreen, TransactionsScreen, SubscriptionsScreen] =
   appModules.map((load) => lazy(load));
+const TechPage = lazy(() => import('./screens/TechPage.jsx'));
 
 // В Safari нет requestIdleCallback — там просто ждём пару секунд
 const whenIdle = (callback) => (window.requestIdleCallback ? window.requestIdleCallback(callback) : setTimeout(callback, 2000));
@@ -44,10 +49,18 @@ const layoutTransition = {
 
 export default function App() {
   // Текущий экран и его параметры (например, поисковый запрос для «Операций»)
-  const [route, setRoute] = useState({ screen: LANDING_SCREEN, params: {} });
+  const [route, setRoute] = useState(() => ({ screen: window.location.hash === TECH_HASH ? TECH_SCREEN : LANDING_SCREEN, params: {} }));
   const activeScreen = route.screen;
   const isLanding = activeScreen === LANDING_SCREEN;
+  const isTech = activeScreen === TECH_SCREEN;
   const navigate = useCallback((screen, params = {}) => setRoute({ screen, params }), []);
+
+  // Адрес страницы «Как это сделано» — #tech: его можно скопировать и отправить
+  useEffect(() => {
+    const url = window.location.pathname + window.location.search;
+    if (isTech) window.history.replaceState(null, '', url + TECH_HASH);
+    else if (window.location.hash === TECH_HASH) window.history.replaceState(null, '', url);
+  }, [isTech]);
   const exitToLanding = useCallback(() => navigate(LANDING_SCREEN), [navigate]);
 
   // При смене экрана возвращаемся к началу страницы
@@ -76,6 +89,8 @@ export default function App() {
         return <SettingsScreen params={route.params} onLogout={exitToLanding} />;
       case 'transactions':
         return <TransactionsScreen params={route.params} />;
+      case 'subscriptions':
+        return <SubscriptionsScreen />;
       default:
         return <DashboardScreen onNavigate={navigate} />;
     }
@@ -91,6 +106,12 @@ export default function App() {
             {isLanding ? (
               <motion.div key="landing" className="min-h-full" {...layoutTransition}>
                 <LandingPage onStart={() => navigate('dashboard')} />
+              </motion.div>
+            ) : isTech ? (
+              <motion.div key="tech" className="min-h-full" {...layoutTransition}>
+                <Suspense fallback={<div className="min-h-screen bg-surface" />}>
+                  <TechPage onBack={exitToLanding} onStart={() => navigate('dashboard')} />
+                </Suspense>
               </motion.div>
             ) : (
               <motion.div key="app" className="min-h-full" {...layoutTransition}>

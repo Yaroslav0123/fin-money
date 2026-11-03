@@ -629,6 +629,198 @@ export function dayPulse(transactions, today) {
   const past = inRange(transactions, addDays(dayStart, -PULSE_DAYS), dayStart);
   return {
     spent: spent(inRange(transactions, dayStart, addDays(dayStart, 1))),
-    usual: past.length > 0 ? Math.round(spent(past) / PULSE_DAYS) : null,
+    // Обычный день — до рубля: копейки в среднем ничего не говорят
+    usual: past.length > 0 ? toRubles(spent(past) / PULSE_DAYS) : null,
   };
+}
+
+// ───── Итоги месяца ─────
+
+/**
+ * Какой месяц показать в «Итогах»: последний месяц с операциями до текущего (обычно прошлый),
+ * а если операции есть только в текущем — текущий. null — операций нет совсем.
+ */
+export function recapMonth(transactions, today) {
+  const current = startOfMonth(today);
+  const past = transactions.filter((tx) => txDate(tx) < current);
+  if (past.length > 0) return startOfMonth(new Date(Math.max(...past.map((tx) => txDate(tx).getTime()))));
+  return transactions.length > 0 ? current : null;
+}
+
+/**
+ * «Итоги месяца» в виде историй: всё о месяце monthStart (текущий — по сегодняшний день).
+ * Возвращает { start, count, spent, income, left, top (категория с суммой и долей), biggest (самая крупная трата),
+ * previousSpent (null — прошлого месяца в истории нет), daysWithout (дней без трат), days (дней в отчёте),
+ * busiestWeekday (0–6 — день недели с самыми большими тратами), saved (отложено на цели) }.
+ */
+export function monthRecap({ transactions, categories, goals, monthStart, today }) {
+  const start = startOfMonth(monthStart);
+  const monthEnd = addMonths(start, 1);
+  const end = monthEnd > today ? addDays(startOfDay(today), 1) : monthEnd;
+  const items = inRange(transactions, start, end);
+  const previous = inRange(transactions, addMonths(start, -1), start);
+  const purchases = expensesOf(items).filter((tx) => tx.amount < 0);
+  const totalSpent = spent(items);
+  const income = sum(incomeOf(items));
+
+  const spendDays = new Set(purchases.map((tx) => startOfDay(txDate(tx)).getTime()));
+  const byWeekday = Array.from({ length: DAYS_IN_WEEK }, () => 0);
+  purchases.forEach((tx) => {
+    byWeekday[txDate(tx).getDay()] -= tx.amount;
+  });
+  const busiest = Math.max(...byWeekday);
+  const days = daysBetween(start, end);
+
+  return {
+    start,
+    count: items.length,
+    spent: totalSpent,
+    income,
+    left: income - totalSpent,
+    top: categoryBreakdown(items, categories)[0] ?? null,
+    biggest: purchases.reduce((max, tx) => (!max || tx.amount < max.amount ? tx : max), null),
+    previousSpent: previous.length > 0 ? spent(previous) : null,
+    daysWithout: days - spendDays.size,
+    days,
+    busiestWeekday: busiest > 0 ? byWeekday.indexOf(busiest) : null,
+    saved: sum(inRange(goals.flatMap((g) => g.contributions ?? []), start, end)),
+  };
+}
+
+// ───── Подписки ─────
+
+// Сколько полных месяцев перед текущим смотрим и через сколько дней без списания подписка считается «уснувшей»
+const SUBSCRIPTION_LOOKBACK_MONTHS = 6;
+const SUBSCRIPTION_STALE_DAYS = 45;
+// Подорожание: последнее списание дороже прежнего среднего хотя бы на 5%
+const SUBSCRIPTION_PRICE_STEP = 1.05;
+
+/**
+ * Подписки и регулярные платежи для раздела «Подписки»: расходы с одним описанием минимум в REGULAR_MIN_MONTHS
+ * разных месяцах и с похожими суммами (как regularPayments, но за полгода и вместе с текущим месяцем).
+ * Возвращает [{ key, name, categoryId, monthly, yearly, last (последнее списание), lastDate, nextDate (ожидаемое следующее),
+ * months (сколько месяцев списывалась), stale (давно не списывалась), priceUp ({ from, to } или null) }]:
+ * сначала действующие, крупные — первыми.
+ */
+export function subscriptions(transactions, today) {
+  const since = addMonths(startOfMonth(today), -SUBSCRIPTION_LOOKBACK_MONTHS);
+  const groups = new Map();
+  for (const tx of expensesOf(inRange(transactions, since, addDays(startOfDay(today), 1)))) {
+    const key = descriptionKey(tx.comment);
+    if (!key || tx.amount >= 0) continue;
+    const group = groups.get(key) ?? { key, name: tx.comment.trim(), categoryId: tx.categoryId, months: new Map(), charges: [] };
+    const month = startOfMonth(txDate(tx)).getTime();
+    group.months.set(month, (group.months.get(month) ?? 0) - tx.amount);
+    group.charges.push(tx);
+    groups.set(key, group);
+  }
+
+  return [...groups.values()]
+    .filter(({ months }) => {
+      const amounts = [...months.values()];
+      return amounts.length >= REGULAR_MIN_MONTHS && Math.max(...amounts) <= Math.min(...amounts) * REGULAR_SPREAD;
+    })
+    .map(({ key, name, categoryId, months, charges }) => {
+      const [latest, ...earlier] = [...charges].sort((a, b) => txDate(b) - txDate(a));
+      const lastDate = txDate(latest);
+      const amounts = [...months.values()];
+      const earlierAvg = earlier.length > 0 ? (0 - sum(earlier)) / earlier.length : 0;
+      const last = -latest.amount;
+      const priceUp = earlierAvg > 0 && last >= earlierAvg * SUBSCRIPTION_PRICE_STEP ? { from: toRubles(earlierAvg), to: last } : null;
+      // В месяц — среднее до рубля, а у подорожавшей — уже новая цена
+      const monthly = priceUp ? last : toRubles(amounts.reduce((a, b) => a + b, 0) / amounts.length);
+      return {
+        key,
+        name,
+        categoryId,
+        monthly,
+        yearly: monthly * MONTHS_IN_YEAR,
+        last,
+        lastDate,
+        nextDate: addMonths(lastDate, 1),
+        months: months.size,
+        stale: daysBetween(lastDate, today) > SUBSCRIPTION_STALE_DAYS,
+        priceUp,
+      };
+    })
+    .sort((a, b) => Number(a.stale) - Number(b.stale) || b.monthly - a.monthly);
+}
+
+// ───── Серии и достижения ─────
+
+// За сколько дней ищем лучшую серию и дни без трат
+const STREAK_LOOKBACK_DAYS = 90;
+const NO_SPEND_LOOKBACK_DAYS = 30;
+
+/**
+ * Серия «в ритме»: дни подряд, когда траты не выше обычного дня (среднее за прошлые PULSE_DAYS дней).
+ * current — серия, которая длится сейчас (сегодня потрачено больше обычного — 0), best — лучшая за STREAK_LOOKBACK_DAYS дней,
+ * noSpendDays — дней совсем без трат за последние NO_SPEND_LOOKBACK_DAYS. Без истории (usual — null) серий нет.
+ */
+export function spendingStreak(transactions, today) {
+  const { usual } = dayPulse(transactions, today);
+  const dayStart = startOfDay(today);
+  const first = addDays(dayStart, -(STREAK_LOOKBACK_DAYS - 1));
+  const daily = new Map();
+  for (const tx of expensesOf(inRange(transactions, first, addDays(dayStart, 1)))) {
+    const day = startOfDay(txDate(tx)).getTime();
+    daily.set(day, (daily.get(day) ?? 0) - tx.amount);
+  }
+  const spentOn = (day) => daily.get(day.getTime()) ?? 0;
+  if (usual === null) return { current: 0, best: 0, noSpendDays: 0, usual };
+
+  let noSpendDays = 0;
+  for (let i = 0; i < NO_SPEND_LOOKBACK_DAYS; i += 1) {
+    if (spentOn(addDays(dayStart, -i)) <= 0) noSpendDays += 1;
+  }
+  let best = 0;
+  let run = 0;
+  for (let day = first; day <= dayStart; day = addDays(day, 1)) {
+    run = spentOn(day) <= usual ? run + 1 : 0;
+    best = Math.max(best, run);
+  }
+  return { current: run, best, noSpendDays, usual };
+}
+
+/**
+ * Прогресс достижений: { [id]: текущее значение } — сравнивается с target из ACHIEVEMENTS (mockData).
+ * defaultCategoryIds — категории «из коробки» (свои считаются отдельно), limits — лимиты категорий,
+ * fallbackIncomeId — «Прочие доходы», которые появляются сами при импорте.
+ */
+export function achievementProgress({ transactions, goals, imports, categories, limits, defaultCategoryIds, fallbackIncomeId, today }) {
+  const streak = spendingStreak(transactions, today);
+  const lastMonth = addMonths(startOfMonth(today), -1);
+  const lastItems = inRange(transactions, lastMonth, startOfMonth(today));
+  const lastIncome = sum(incomeOf(lastItems));
+  const withinLimits =
+    Object.keys(limits).length > 0 && lastItems.length > 0 && budgetProgress(lastItems, categories, limits, 100).every((b) => b.status !== 'over');
+
+  return {
+    firstStatement: imports.length,
+    firstGoal: goals.length,
+    halfway: goals.reduce((max, g) => Math.max(max, Math.min(100, toPercent(g.saved, g.target))), 0),
+    goalReached: goals.filter(isGoalDone).length,
+    noSpendDay: streak.noSpendDays,
+    streak7: streak.best,
+    streak30: streak.best,
+    budgetKeeper: withinLimits ? 1 : 0,
+    saver: lastIncome > 0 ? Math.max(0, toPercent(lastIncome - spent(lastItems), lastIncome)) : 0,
+    ownCategory: categories.filter((c) => !defaultCategoryIds.includes(c.id) && c.id !== fallbackIncomeId).length,
+    hundred: transactions.length,
+  };
+}
+
+// ───── «А что если…» ─────
+
+/**
+ * Сколько месяцев займёт цель, если откладывать на extra в месяц больше нынешнего темпа.
+ * Возвращает { before (месяцев при нынешнем темпе; null — темпа нет), after (месяцев с прибавкой), date (новая дата) }
+ * или null, если цель уже достигнута или откладывать нечего.
+ */
+export function goalWhatIf(goal, today, extra) {
+  const left = goal.target - goal.saved;
+  const pace = goalPace(goal, today);
+  if (left <= 0 || pace + extra <= 0) return null;
+  const after = Math.ceil(left / (pace + extra));
+  return { before: pace > 0 ? Math.ceil(left / pace) : null, after, date: addMonths(startOfMonth(today), after) };
 }

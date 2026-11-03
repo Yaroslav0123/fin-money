@@ -7,7 +7,13 @@ import {
   categoryComparison,
   categoryHistory,
   dayPulse,
+  achievementProgress,
   categoryGrowth,
+  goalWhatIf,
+  monthRecap,
+  recapMonth,
+  spendingStreak,
+  subscriptions,
   goalForecast,
   goalSpeedup,
   monthForecast,
@@ -334,5 +340,91 @@ describe('dayPulse', () => {
 
   it('без истории обычного дня нет', () => {
     expect(dayPulse([], TODAY)).toEqual({ spent: 0, usual: null });
+  });
+});
+
+describe('recapMonth и monthRecap', () => {
+  const items = [
+    expense(rub(1000), new Date(2026, 8, 4, 12), 'food'),
+    expense(rub(3000), new Date(2026, 8, 5, 12), 'fun'),
+    income(rub(10000), new Date(2026, 8, 5, 10)),
+    expense(rub(2000), new Date(2026, 7, 10, 12)),
+    expense(rub(700), new Date(2026, 9, 2, 12)),
+  ];
+  const categories = DEFAULT_CATEGORIES;
+
+  it('итоги — последний месяц с операциями до текущего; только текущий — текущий; пусто — null', () => {
+    expect(recapMonth(items, TODAY)).toEqual(new Date(2026, 8, 1));
+    expect(recapMonth([expense(1, new Date(2026, 9, 2))], TODAY)).toEqual(new Date(2026, 9, 1));
+    expect(recapMonth([], TODAY)).toBeNull();
+  });
+
+  it('траты, доходы, главная категория, крупнейшая трата, сравнение и дни без трат', () => {
+    const goals = [{ contributions: [{ amount: rub(500), date: new Date(2026, 8, 7).toISOString() }] }];
+    const recap = monthRecap({ transactions: items, categories, goals, monthStart: new Date(2026, 8, 1), today: TODAY });
+    expect(recap).toMatchObject({ count: 3, spent: rub(4000), income: rub(10000), left: rub(6000), previousSpent: rub(2000), days: 30, daysWithout: 28, saved: rub(500) });
+    expect(recap.top).toMatchObject({ id: 'fun', amount: rub(3000), share: 75 });
+    expect(recap.biggest.amount).toBe(-rub(3000));
+    // 5 сентября 2026 — суббота
+    expect(recap.busiestWeekday).toBe(6);
+  });
+});
+
+describe('subscriptions', () => {
+  // Списание каждого 3-го числа monthsAgo месяцев назад
+  const charge = (name, amount, monthsAgo, day = 3) => ({ ...expense(amount, new Date(2026, 9 - monthsAgo, day, 9), 'fun'), id: `${name}-${monthsAgo}`, comment: name });
+
+  it('регулярные платежи с ценой, следующим списанием, подорожанием и отменёнными', () => {
+    const items = [
+      ...[0, 1, 2, 3].map((m) => charge('Музыка', rub(m < 1 ? 239 : 199), m)),
+      ...[3, 4, 5].map((m) => charge('Фитнес', rub(2900), m, 9)),
+      charge('Разовая покупка', rub(5000), 1),
+    ];
+    const [music, fitness, ...rest] = subscriptions(items, TODAY);
+    expect(rest).toHaveLength(0);
+    expect(music).toMatchObject({ name: 'Музыка', months: 4, stale: false, priceUp: { from: rub(199), to: rub(239) } });
+    expect(music.nextDate).toEqual(new Date(2026, 10, 3, 9));
+    expect(fitness).toMatchObject({ name: 'Фитнес', stale: true, monthly: rub(2900), yearly: rub(2900) * 12, priceUp: null });
+  });
+});
+
+describe('spendingStreak и achievementProgress', () => {
+  // 30 прошлых дней по 1000 ₽: обычный день — 1000 ₽
+  const daily = Array.from({ length: 30 }, (_, i) => expense(rub(1000), new Date(2026, 9, 27 - i, 12)));
+
+  it('серия — дни подряд не выше обычного, без трат сегодня — тоже в ритме', () => {
+    const streak = spendingStreak(daily, TODAY);
+    expect(streak.usual).toBe(rub(1000));
+    expect(streak.current).toBeGreaterThanOrEqual(31);
+    expect(streak.noSpendDays).toBe(1);
+    const broken = spendingStreak([...daily, expense(rub(5000), new Date(2026, 9, 28, 9))], TODAY);
+    expect(broken.current).toBe(0);
+    expect(spendingStreak([], TODAY)).toMatchObject({ current: 0, best: 0, usual: null });
+  });
+
+  it('прогресс достижений из данных', () => {
+    const goals = [{ target: rub(1000), saved: rub(600), deadline: TODAY.toISOString() }];
+    const progress = achievementProgress({
+      transactions: daily,
+      goals,
+      imports: [{ id: 'import-1' }],
+      categories: [...DEFAULT_CATEGORIES, { id: 'category-1', type: 'expense' }],
+      limits: { food: rub(100000) },
+      defaultCategoryIds: DEFAULT_CATEGORIES.map((c) => c.id),
+      fallbackIncomeId: 'other-income',
+      today: TODAY,
+    });
+    expect(progress).toMatchObject({ firstStatement: 1, firstGoal: 1, halfway: 60, goalReached: 0, ownCategory: 1, hundred: 30, budgetKeeper: 1 });
+  });
+});
+
+describe('goalWhatIf', () => {
+  const goal = { target: rub(10000), saved: 0, contributions: [] };
+
+  it('без темпа — срок, если начать откладывать; с темпом — сколько месяцев было и стало', () => {
+    expect(goalWhatIf(goal, TODAY, rub(1000))).toMatchObject({ before: null, after: 10, date: new Date(2027, 7, 1) });
+    const paced = { ...goal, contributions: [{ amount: rub(3000), date: new Date(2026, 9, 1).toISOString() }] };
+    expect(goalWhatIf(paced, TODAY, rub(1000))).toMatchObject({ before: 10, after: 5 });
+    expect(goalWhatIf({ ...goal, saved: rub(10000) }, TODAY, rub(1000))).toBeNull();
   });
 });

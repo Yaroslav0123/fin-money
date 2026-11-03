@@ -4,14 +4,15 @@ import { useAppActions } from '../../context/AppActionsContext.jsx';
 /**
  * Маленькая серая ссылка «Все ›» в заголовках блоков.
  * to — экран, на который ведёт ссылка; params — его параметры (например, { categoryId }).
+ * onClick — своё действие вместо перехода (например, открыть окно).
  */
-export default function LinkArrow({ children, to, params, className = '' }) {
+export default function LinkArrow({ children, to, params, onClick, className = '' }) {
   const { navigate } = useAppActions();
 
   return (
     <button
       type="button"
-      onClick={() => navigate(to, params)}
+      onClick={onClick ?? (() => navigate(to, params))}
       className={`inline-flex items-center gap-0.5 text-xs font-semibold text-ink-muted transition-colors duration-200 hover:text-brand ${className}`}
     >
       {children}

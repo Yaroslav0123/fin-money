@@ -7,8 +7,10 @@ import {
   BarChart3,
   Bell,
   Briefcase,
+  Calculator,
   CalendarClock,
   CalendarDays,
+  Command,
   Download,
   Database,
   Car,
@@ -20,6 +22,8 @@ import {
   EyeOff,
   FileUp,
   Fingerprint,
+  Flag,
+  Flame,
   Gift,
   GraduationCap,
   Heart,
@@ -27,13 +31,17 @@ import {
   LayoutGrid,
   Mail,
   Laptop,
+  Leaf,
+  Palette,
   PawPrint,
   Percent,
   PiggyBank,
   Pill,
+  Plus,
   ReceiptText,
   Repeat,
   Plane,
+  ScanText,
   Settings,
   ShieldCheck,
   Shirt,
@@ -42,18 +50,29 @@ import {
   Smartphone,
   Sparkles,
   Star,
+  SunMoon,
   Target,
   TrendingDown,
   TrendingUp,
   TriangleAlert,
+  Trophy,
   Undo2,
+  Upload,
   User,
   Utensils,
   Wallet,
 } from 'lucide-react';
 import { rub } from '../utils/money.js';
+import { isEnglish } from './language.js';
+import EN from './mockData.en.js';
 
 export const APP_NAME = 'Fin Money';
+
+// Название в кавычках внутри текста: «Отпуск» (в английской версии — “Vacation”)
+export const QUOTED = isEnglish ? EN.QUOTED : '«{name}»';
+
+// Заголовок вкладки браузера для английской версии (русский — в index.html)
+export const PAGE_TITLE = 'Fin Money — spending tracker, forecast and money tips';
 
 // ───────────── Каркас веб-приложения ─────────────
 
@@ -62,6 +81,7 @@ export const APP_NAV = [
   { id: 'dashboard', label: 'Главная', icon: LayoutGrid, screen: 'dashboard' },
   { id: 'analytics', label: 'Аналитика', icon: BarChart3, screen: 'analytics' },
   { id: 'transactions', label: 'Операции', icon: ReceiptText, screen: 'transactions' },
+  { id: 'subscriptions', label: 'Подписки', icon: Repeat, screen: 'subscriptions' },
   { id: 'goals', label: 'Цели', icon: Target, screen: 'goals' },
   { id: 'settings', label: 'Настройки', icon: Settings, screen: 'settings' },
 ];
@@ -75,9 +95,10 @@ export const BOTTOM_NAV = [
   { id: 'goals', label: 'Цели', icon: Target, screen: 'goals' },
 ];
 
-// Меню профиля в шапке. На телефоне это вход в «Настройки» — их нет в нижней панели
+// Меню профиля в шапке. На телефоне это вход в «Подписки» и «Настройки» — их нет в нижней панели
 export const PROFILE_MENU = [
   { id: 'profile', label: 'Профиль', icon: User, screen: 'settings', params: { section: 'profile' } },
+  { id: 'subscriptions', label: 'Подписки', icon: Repeat, screen: 'subscriptions' },
   { id: 'settings', label: 'Настройки', icon: Settings, screen: 'settings' },
 ];
 
@@ -85,6 +106,8 @@ export const APP_SHELL = {
   navLabel: 'Разделы приложения',
   skipLink: 'Перейти к содержимому',
   searchPlaceholder: 'Поиск операций',
+  // Кнопка быстрого поиска (COMMAND_PALETTE) в шапке
+  commandAction: 'Быстрый поиск',
   addAction: 'Добавить операцию',
   // Загрузка выписки — главный сценарий, поэтому кнопка есть на каждом экране
   importAction: 'Загрузить выписку',
@@ -116,6 +139,7 @@ export const SCREEN_META = {
   goals: { title: 'Цели', subtitle: 'Копите на мечты шаг за шагом' },
   settings: { title: 'Настройки', subtitle: 'Деньги, данные, профиль и параметры' },
   transactions: { title: 'Операции', subtitle: 'Вся история основного счёта' },
+  subscriptions: { title: 'Подписки', subtitle: 'Регулярные платежи, найденные в выписках' },
 };
 
 // Знакомство с приложением при первом входе
@@ -768,7 +792,7 @@ export const SETTINGS_PAGE = {
     label: 'Разделы настроек',
     items: [
       { id: 'money', label: 'Деньги', icon: Wallet, hint: 'Бюджет, лимиты категорий, счета, категории и правила' },
-      { id: 'data', label: 'Данные', icon: Database, hint: 'Загруженные выписки и демо-данные' },
+      { id: 'data', label: 'Данные', icon: Database, hint: 'Загруженные выписки, резервная копия и демо-данные' },
       { id: 'profile', label: 'Профиль', icon: User, hint: 'Личные данные, вход и безопасность' },
       { id: 'app', label: 'Приложение', icon: SlidersHorizontal, hint: 'Тема, валюта, начало недели и уведомления' },
     ],
@@ -828,8 +852,8 @@ export const SETTINGS_PAGE = {
     weekStart: { label: 'Начало недели', options: [{ id: 'mon', label: 'Пн' }, { id: 'sun', label: 'Вс' }], default: 'mon' },
     language: {
       label: 'Язык',
-      // disabled — язык ещё не переведён
-      options: [{ id: 'ru', label: 'Русский' }, { id: 'en', label: 'English (скоро)', disabled: true }],
+      // Смена языка перезагружает страницу (см. data/language.js)
+      options: [{ id: 'ru', label: 'Русский' }, { id: 'en', label: 'English' }],
       default: 'ru',
     },
   },
@@ -884,6 +908,22 @@ export const SETTINGS_PAGE = {
     emptyConfirm: 'Удалить',
     emptyDone: 'Все данные удалены',
     about: 'О проекте и данных',
+  },
+  // Резервная копия всех данных одним файлом (JSON) и восстановление из неё
+  backup: {
+    title: 'Резервная копия',
+    description: 'Операции, цели, счета, лимиты и настройки — одним файлом. Пригодится, чтобы перенести данные в другой браузер или не потерять их при очистке.',
+    download: 'Скачать копию',
+    restore: 'Восстановить из файла',
+    fileName: 'fin-money-backup',
+    downloaded: 'Резервная копия скачана',
+    confirmQuestion: 'Заменить данные копией?',
+    confirmText: 'Копия от {date}: {count} {word}, целей — {goals}. Данные в этом браузере заменятся содержимым файла.',
+    countWords: ['операция', 'операции', 'операций'],
+    confirm: 'Заменить',
+    cancel: 'Отмена',
+    restored: 'Данные восстановлены из копии',
+    invalid: 'Это не резервная копия Fin Money, или файл повреждён',
   },
   imports: {
     title: 'История импорта',
@@ -1109,6 +1149,8 @@ export const LANDING = {
     { id: 'about', label: 'О приложении', href: '#about' },
   ],
   headerAction: 'Мои финансы',
+  // Переключатель языка в шапке
+  language: { label: 'Язык сайта', options: [{ id: 'ru', label: 'RU' }, { id: 'en', label: 'EN' }] },
   // Кнопка меню разделов на телефонах
   menuOpenLabel: 'Открыть меню',
   menuCloseLabel: 'Закрыть меню',
@@ -1215,7 +1257,9 @@ export const LANDING = {
   footer: {
     copyright: '© 2026 Fin Money. Учебный проект: считает ваши деньги, но не хранит и не переводит их.',
     // Открывают окно «О проекте» на нужном разделе (ABOUT_PROJECT.sections)
+    // screen — ссылка ведёт на отдельную страницу, а не в окно «О проекте»
     links: [
+      { id: 'tech', label: 'Как это сделано', screen: 'tech' },
       { id: 'about', label: 'О проекте' },
       { id: 'privacy', label: 'Данные и конфиденциальность' },
     ],
@@ -1242,3 +1286,259 @@ export const LANDING = {
     action: 'Задать лимит',
   },
 };
+
+// ───────────── Итоги месяца (истории на весь экран) ─────────────
+
+export const MONTH_RECAP = {
+  // Приглашение на «Главной»
+  banner: { title: 'Итоги: {month}', text: 'Ваш месяц в нескольких карточках', action: 'Смотреть' },
+  title: 'Итоги месяца',
+  close: 'Закрыть',
+  prev: 'Предыдущая карточка',
+  next: 'Следующая карточка',
+  pause: 'Пауза',
+  play: 'Продолжить',
+  progress: 'Карточка {current} из {total}',
+  // Сколько миллисекунд показывается одна карточка
+  slideMs: 6000,
+  countWords: ['операция', 'операции', 'операций'],
+  dayWords: ['день', 'дня', 'дней'],
+  // «по понедельникам»; порядок как у Date.getDay()
+  weekdaysPlural: ['воскресеньям', 'понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам'],
+  slides: {
+    intro: { eyebrow: 'Итоги месяца', title: '{month} {year}', text: 'В истории {count} {word}. Посмотрим, что из них получилось.' },
+    spent: {
+      eyebrow: 'Потрачено за месяц',
+      left: 'Доходы — {income}. Осталось {left}: это {percent}% от доходов.',
+      over: 'Доходы — {income}. Расходы обогнали их на {over}.',
+      noIncome: 'Доходов в этом месяце не было.',
+    },
+    top: { eyebrow: 'Главная категория', text: '{share}% всех трат месяца' },
+    biggest: { eyebrow: 'Самая крупная трата', text: '{date}' },
+    compare: {
+      eyebrow: 'По сравнению с прошлым месяцем',
+      less: 'На {amount} меньше, чем за {month}. Отличный результат!',
+      more: 'На {amount} больше, чем за {month}. Посмотрите, что выросло, в «Аналитике».',
+      same: 'Почти столько же, сколько за {month}.',
+    },
+    rhythm: { eyebrow: 'Ритм трат', title: '{count} {word} без трат', text: 'Больше всего денег уходит по {weekday}.' },
+    goals: { eyebrow: 'Отложено на цели', text: 'Каждый взнос приближает мечту.' },
+    outro: { title: 'Так держать!', text: 'Новые итоги появятся здесь в начале следующего месяца.', analytics: 'Открыть аналитику', done: 'Готово' },
+  },
+};
+
+// ───────────── Подписки ─────────────
+
+export const SUBSCRIPTIONS_PAGE = {
+  kpi: {
+    monthly: 'Подписки в месяц',
+    monthlyHint: 'все действующие',
+    yearly: 'За год',
+    yearlyHint: 'если ничего не менять',
+    count: 'Найдено',
+    countHint: 'действуют: {active}, отменены: {stale}',
+  },
+  title: 'Регулярные платежи',
+  caption: 'Одно описание почти каждый месяц и похожая сумма — так мы их находим в выписках',
+  perMonth: 'в месяц',
+  perYear: '{amount} в год',
+  next: 'Следующее списание ≈ {date}',
+  months: 'Списаний за полгода: {count}',
+  priceUp: 'Подорожала: {from} → {to}',
+  staleTitle: 'Больше не списываются',
+  stale: 'Последнее списание — {date}. Похоже, подписку уже отменили.',
+  showOperations: 'Операции',
+  showOperationsLabel: 'Показать операции «{name}»',
+  hide: 'Это не подписка',
+  hideLabel: 'Скрыть «{name}» из подписок',
+  hiddenDone: '«{name}» больше не считается подпиской',
+  hiddenTitle: 'Скрытые: {count}',
+  restore: 'Вернуть',
+  restoreLabel: 'Вернуть «{name}» в подписки',
+  restored: 'Вернули в подписки',
+  // Совет рядом со списком: подписка, которая подорожала сильнее всех
+  priceTip: 'Подписка «{name}» подорожала на {diff} в месяц — это {yearly} в год. Возможно, есть тариф подешевле.',
+  empty: 'Подписок пока не нашли. Загрузите выписки хотя бы за три месяца — регулярные платежи появятся здесь.',
+  emptyAction: 'Загрузить выписку',
+};
+
+// ───────────── «А что если…» (экран «Цели») ─────────────
+
+export const WHAT_IF = {
+  title: 'А что если…',
+  caption: 'Тратьте чуть меньше на одну категорию и откладывайте разницу — посмотрим, насколько быстрее придут цели',
+  categoryLabel: 'Категория',
+  cutLabel: 'Тратить меньше на',
+  usual: 'Обычно уходит {amount} в месяц',
+  saving: '+{amount} в месяц на цели',
+  yearly: '{amount} за год',
+  earlier: 'на {months} раньше — к {date}',
+  sameTime: 'к {date} — почти без разницы',
+  fromZero: 'к {date}, если начать откладывать',
+  done: 'уже достигнута',
+  noGoals: 'Поставьте цель — и увидите, когда она придёт с такой экономией.',
+  noData: 'Нужна история трат хотя бы за месяц: загрузите выписку или добавьте операции.',
+  // Ползунок: от 5 до 50% с шагом 5, по умолчанию 10%
+  range: { min: 5, max: 50, step: 5, default: 10 },
+};
+
+// ───────────── Достижения и серии ─────────────
+
+export const ACHIEVEMENTS = {
+  title: 'Достижения',
+  allLink: 'Все',
+  progress: '{done} из {total}',
+  streak: {
+    label: 'Серия в ритме',
+    words: ['день', 'дня', 'дней'],
+    hint: 'подряд траты не выше обычного дня',
+    best: 'Лучшая серия: {count} {word}',
+    none: 'Серия начнётся с первого дня, когда траты не выше обычного',
+  },
+  dialogTitle: 'Достижения',
+  unlocked: 'Получено',
+  locked: 'Ещё впереди',
+  value: '{current} из {target}',
+  newOne: 'Новое достижение: {title}',
+  newMany: 'Новые достижения: {count}',
+  close: 'Закрыть',
+  // target — сколько нужно набрать; unit — подпись к числам прогресса
+  items: [
+    { id: 'firstStatement', icon: FileUp, accent: 'blue', title: 'Первая выписка', hint: 'Загрузите выписку из банка', target: 1 },
+    { id: 'hundred', icon: ReceiptText, accent: 'brand', title: 'Сотня', hint: '100 операций в истории', target: 100 },
+    { id: 'firstGoal', icon: Target, accent: 'purple', title: 'Есть мечта', hint: 'Поставьте первую цель', target: 1 },
+    { id: 'halfway', icon: Flag, accent: 'orange', title: 'На полпути', hint: 'Накопите половину любой цели', target: 50, unit: '%' },
+    { id: 'goalReached', icon: Trophy, accent: 'green', title: 'Мечта сбылась', hint: 'Достигните цели', target: 1 },
+    { id: 'noSpendDay', icon: Leaf, accent: 'green', title: 'День без трат', hint: 'Проживите день совсем без расходов', target: 1 },
+    { id: 'streak7', icon: Flame, accent: 'orange', title: 'Неделя в ритме', hint: '7 дней подряд траты не выше обычного', target: 7 },
+    { id: 'streak30', icon: Flame, accent: 'pink', title: 'Месяц в ритме', hint: '30 дней подряд траты не выше обычного', target: 30 },
+    { id: 'budgetKeeper', icon: Gauge, accent: 'blue', title: 'В рамках лимитов', hint: 'Проведите прошлый месяц без превышения лимитов', target: 1 },
+    { id: 'saver', icon: PiggyBank, accent: 'brand', title: 'Копилка', hint: 'Сохраните 20% доходов за прошлый месяц', target: 20, unit: '%' },
+    { id: 'ownCategory', icon: Palette, accent: 'purple', title: 'Под себя', hint: 'Создайте свою категорию', target: 1 },
+  ],
+};
+
+// ───────────── Быстрый поиск (Ctrl+K) ─────────────
+
+export const COMMAND_PALETTE = {
+  title: 'Быстрый поиск',
+  placeholder: 'Раздел, действие, операция или цель…',
+  // Подсказка о сочетании клавиш (на Mac — ⌘K)
+  shortcut: 'Ctrl K',
+  shortcutMac: '⌘K',
+  empty: 'Ничего не нашлось',
+  hint: '↑ ↓ — выбрать · Enter — открыть · Esc — закрыть',
+  close: 'Закрыть',
+  icon: Command,
+  groups: { screens: 'Разделы', actions: 'Действия', transactions: 'Операции', goals: 'Цели' },
+  actions: [
+    { id: 'add', label: 'Добавить операцию', icon: Plus },
+    { id: 'import', label: 'Загрузить выписку', icon: Upload },
+    { id: 'recap', label: 'Итоги месяца', icon: Sparkles },
+    { id: 'achievements', label: 'Достижения', icon: Trophy },
+    { id: 'theme', label: 'Сменить тему', icon: SunMoon },
+    { id: 'backup', label: 'Скачать резервную копию', icon: Download },
+  ],
+  // Сколько операций и целей показывать в результатах
+  limit: 6,
+};
+
+// ───────────── Страница «Как это сделано» ─────────────
+
+export const TECH_PAGE = {
+  back: 'На сайт',
+  eyebrow: 'Как это сделано',
+  title: 'Внутри Fin Money',
+  intro: 'Учебный проект, сделанный всерьёз: разбор банковских выписок, расчёты в копейках, тесты и CI. Сервера нет — всё работает в браузере.',
+  appAction: 'Открыть приложение',
+  repoAction: 'Код на GitHub',
+  repoUrl: 'https://github.com/Yaroslav0123/fin-money',
+  stack: {
+    title: 'Стек',
+    items: [
+      { id: 'react', label: 'React 18', hint: 'интерфейс' },
+      { id: 'vite', label: 'Vite 6', hint: 'сборка' },
+      { id: 'tailwind', label: 'Tailwind CSS', hint: 'дизайн-система' },
+      { id: 'motion', label: 'Framer Motion', hint: 'анимации' },
+      { id: 'recharts', label: 'Recharts', hint: 'графики' },
+      { id: 'pdfjs', label: 'pdf.js', hint: 'чтение PDF' },
+      { id: 'vitest', label: 'Vitest', hint: 'модульные тесты' },
+      { id: 'playwright', label: 'Playwright', hint: 'тесты в браузере' },
+      { id: 'actions', label: 'GitHub Actions', hint: 'CI' },
+      { id: 'netlify', label: 'Netlify', hint: 'хостинг' },
+    ],
+  },
+  flow: {
+    title: 'Путь выписки через приложение',
+    steps: [
+      { id: 'file', icon: FileUp, title: 'Файл', text: 'PDF Сбербанка или CSV любого банка. Читается в браузере и никуда не отправляется.' },
+      { id: 'parse', icon: ScanText, title: 'Разбор', text: 'pdf.js достаёт текст, парсер собирает строки операций. В CSV столбцы находятся по названиям.' },
+      { id: 'categorize', icon: Sparkles, title: 'Категории', text: 'Словарь слов и правила «запомнить для похожих». Переводы между своими счетами и возвраты — отдельно.' },
+      { id: 'state', icon: Database, title: 'Состояние', text: 'Один React-контекст, сохранение в localStorage с номером версии и миграциями.' },
+      { id: 'calc', icon: Calculator, title: 'Расчёты', text: 'Чистые функции: баланс, прогноз, лимиты, подписки, серии. Всё выводится из истории операций.' },
+      { id: 'ui', icon: LayoutGrid, title: 'Экраны', text: 'Компоненты только показывают готовые цифры, тексты берут из одного файла.' },
+    ],
+  },
+  decisions: {
+    title: 'Ключевые решения',
+    items: [
+      { id: 'kopecks', title: 'Деньги — целые копейки', text: 'Никаких 0,1 + 0,2: суммы хранятся целыми числами, рубли появляются только при показе.' },
+      { id: 'local', title: 'Без сервера', text: 'Выписка не покидает устройство. Это честное преимущество прототипа: персональные данные не собираются.' },
+      { id: 'derive', title: 'Всё считается из истории', text: 'Баланс, графики и советы не хранятся, а вычисляются — правка операции сразу видна на всех экранах.' },
+      { id: 'migrations', title: 'Версии формата данных', text: 'В сохранённых данных есть номер версии: после обновления старые данные аккуратно переводятся в новый формат.' },
+      { id: 'texts', title: 'Тексты отдельно от кода', text: 'Все надписи — в одном файле. Поэтому английская версия появилась без переписывания компонентов.' },
+      { id: 'speed', title: 'Быстрая первая загрузка', text: 'Лендинг грузится отдельно, а приложение и чтение PDF — когда понадобятся.' },
+      { id: 'a11y', title: 'Доступность', text: 'Управление с клавиатуры, подписи для экранных дикторов, контраст по WCAG AA, бережные анимации.' },
+      { id: 'theme', title: 'Тёмная тема', text: 'Палитра на CSS-переменных: светлая, тёмная и «как в системе».' },
+    ],
+  },
+  quality: {
+    title: 'Качество',
+    items: [
+      { id: 'unit', value: '80+', label: 'модульных тестов на расчёты, разбор выписок и компоненты' },
+      { id: 'e2e', value: 'E2E', label: 'сценарии в настоящем браузере на Playwright: телефон и компьютер' },
+      { id: 'ci', value: 'CI', label: 'линтер и все тесты на каждый коммит в GitHub Actions' },
+      { id: 'server', value: '0', label: 'серверов и баз данных: выписка остаётся у пользователя' },
+    ],
+  },
+  footer: 'Fin Money — учебный проект для портфолио. Деньги в нём виртуальные.',
+};
+
+// ───────────── Английская версия ─────────────
+
+// Сохранённые русские названия «из коробки» → перевод (в русской версии пусто): см. storedText
+export const STORED_TEXTS = {};
+
+// Название из сохранённых данных на языке интерфейса: «Еда» → «Food», если пользователь его не менял
+export const storedText = (text) => STORED_TEXTS[text] ?? text;
+
+/*
+ * Перевод накладывается поверх русских текстов: объекты — по ключам, списки объектов — по порядку,
+ * списки строк и чисел заменяются целиком. Иконки, id и числа, которых нет в переводе, остаются как есть.
+ */
+const applyTranslation = (target, patch) => {
+  Object.entries(patch).forEach(([key, value]) => {
+    const isObjectList = Array.isArray(value) && value.some((item) => item !== null && typeof item === 'object' && !Array.isArray(item));
+    if (value !== null && typeof value === 'object' && (!Array.isArray(value) || isObjectList) && typeof target[key] === 'object') {
+      applyTranslation(target[key], value);
+    } else {
+      target[key] = value;
+    }
+  });
+};
+
+if (isEnglish) {
+  // Кавычки уже выбраны выше (QUOTED — строка, а не объект)
+  const texts = { ...EN };
+  delete texts.QUOTED;
+  applyTranslation(
+    {
+      APP_NAV, BOTTOM_NAV, PROFILE_MENU, APP_SHELL, SCREEN_META, ONBOARDING, ABOUT_PROJECT, DATE_TEXTS, CHART_A11Y,
+      CATEGORY_ICON_LABELS, ACCENT_LABELS, DEFAULT_CATEGORIES, SUMMARY, DEFAULT_ACCOUNT, ACCOUNT_SELECT, CATEGORY_BUDGETS,
+      EXPENSE_CATEGORIES, AMOUNT_LIMIT, ANALYTICS_PAGE, TRANSACTIONS_PAGE, IMPORT_TRANSFER, IMPORT_FALLBACK_INCOME,
+      SORT_OTHER_DIALOG, IMPORT_DIALOG, GOAL_ICON_OPTIONS, GOALS_PAGE, SETTINGS_PAGE, ADD_TRANSACTION, TRANSFER_DETAILS,
+      DASHBOARD, LANDING, MONTH_RECAP, SUBSCRIPTIONS_PAGE, WHAT_IF, ACHIEVEMENTS, COMMAND_PALETTE, TECH_PAGE, STORED_TEXTS,
+    },
+    texts,
+  );
+}

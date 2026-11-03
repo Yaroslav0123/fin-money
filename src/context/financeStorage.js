@@ -45,6 +45,24 @@ export const loadFinanceState = () => {
   }
 };
 
+// Метка резервной копии: по ней отличаем свой файл от любого другого JSON
+export const BACKUP_APP = 'fin-money';
+
+// Файл резервной копии: { app, exportedAt (ISO), data — состояние как в localStorage }
+export const createBackup = (state, date = new Date()) => JSON.stringify({ app: BACKUP_APP, exportedAt: date.toISOString(), data: state }, null, 2);
+
+// Состояние из файла копии (обновлённое до текущего формата) и дата копии или null, если файл не подходит
+export const parseBackup = (text) => {
+  try {
+    const backup = JSON.parse(text);
+    if (!backup || backup.app !== BACKUP_APP || !backup.data || typeof backup.data !== 'object') return null;
+    const data = migrateState(backup.data);
+    return isValid(data) ? { data, exportedAt: backup.exportedAt ? new Date(backup.exportedAt) : null } : null;
+  } catch {
+    return null;
+  }
+};
+
 export const clearFinanceState = () => {
   try {
     window.localStorage.removeItem(STORAGE_KEY);
